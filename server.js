@@ -320,6 +320,8 @@ wss.on('connection', (ws, request) => {
             sample_rate: 16000,
             channels: 1,
             endpointing: 500,
+            utterance_end_ms: 1000,
+            vad_events: true,
             interim_results: true,
             keep_alive: true  // Tell Deepgram to expect keepalives
         });
