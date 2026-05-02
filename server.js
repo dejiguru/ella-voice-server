@@ -66,7 +66,7 @@ wss.on('connection', (ws, request) => {
         try {
             const completion = await groq.chat.completions.create({
                 messages: [
-                    { role: "system", content: SYSTEM_PROMPT },
+                    { role: "system", content: SYSTEM_PROMPT + "\n\n" + latestContext },
                     ...chatHistory
                 ],
                 model: "meta-llama/llama-4-scout-17b-16e-instruct",
@@ -130,7 +130,18 @@ wss.on('connection', (ws, request) => {
         }
     });
 
-    ws.on('message', (message) => {
+    let latestContext = "";
+
+    ws.on('message', async (message) => {
+        try {
+            const data = JSON.parse(message);
+            if (data.type === "context") {
+                latestContext = data.text;
+                console.log("[Context Update] Sensors/Profile synced");
+                return;
+            }
+        } catch (e) {}
+
         if (Buffer.isBuffer(message)) {
             if (deepgramLive && deepgramLive.getReadyState() === 1) {
                 deepgramLive.send(message);
