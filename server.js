@@ -1,7 +1,7 @@
 const WebSocket = require('ws');
 const { createClient } = require('@deepgram/sdk');
 const Groq = require('groq-sdk');
-const fetch = require('node-fetch');
+// Node 18+ has native fetch — no require('node-fetch') needed
 require('dotenv').config();
 
 const port = process.env.PORT || 8080;
