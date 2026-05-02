@@ -13,19 +13,56 @@ const deepgram = createClient(process.env.DEEPGRAM_API_KEY);
 const MISTRAL_API_KEY = process.env.MISTRAL_API_KEY;
 const MISTRAL_AGENT_ID = "ag_019d4492c13a75ff8e9e139956e37489";
 const MISTRAL_AGENT_VERSION = 28;
+const DEEPGRAM_TTS_MODEL = process.env.DEEPGRAM_TTS_MODEL || "aura-2-thalia-en";
+const USE_DEEPGRAM_TTS = process.env.USE_DEEPGRAM_TTS !== "false";
 
 const audioCache = new Map();
-app.get("/audio/:id", (req, res) => {
+app.get(["/audio/:id", "/audio/:id.mp3"], (req, res) => {
     const audio = audioCache.get(req.params.id);
     if (audio) {
         console.log(`[Cache HIT] Serving audio ID: ${req.params.id}`);
-        res.set("Content-Type", "audio/mpeg");
+        res.set({
+            "Content-Type": "audio/mpeg",
+            "Content-Length": audio.length,
+            "Cache-Control": "no-store",
+            "Connection": "close"
+        });
         res.send(audio);
     } else {
         console.warn(`[Cache MISS] Audio ID not found: ${req.params.id}`);
         res.status(404).send("Audio not found or expired");
     }
 });
+
+const stripActionTags = (text) => text.replace(/\[[^\]]*\]/g, " ").replace(/\s+/g, " ").trim();
+
+const buildPublicUrl = (request, path) => {
+    const host = request.headers["x-forwarded-host"] || request.headers.host;
+    const proto = request.headers["x-forwarded-proto"] || (request.socket.encrypted ? "https" : "http");
+    return `${proto}://${host}${path}`;
+};
+
+const synthesizeDeepgramSpeech = async (text) => {
+    const cleanText = stripActionTags(text);
+    if (!USE_DEEPGRAM_TTS || !cleanText || !process.env.DEEPGRAM_API_KEY) return null;
+
+    const url = `https://api.deepgram.com/v1/speak?model=${encodeURIComponent(DEEPGRAM_TTS_MODEL)}&encoding=mp3&bit_rate=48000`;
+    const response = await fetch(url, {
+        method: "POST",
+        headers: {
+            "Authorization": `Token ${process.env.DEEPGRAM_API_KEY}`,
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ text: cleanText })
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text().catch(() => "");
+        throw new Error(`Deepgram TTS ${response.status}: ${errorText.substring(0, 300)}`);
+    }
+
+    return Buffer.from(await response.arrayBuffer());
+};
 
 wss.on('connection', (ws, request) => {
     console.log('ESP32 Connected!');
@@ -128,9 +165,22 @@ wss.on('connection', (ws, request) => {
             }
 
             console.log(`[AI] Mistral Reply: ${fullResponse}`);
-            // Keep TTS on the ESP32 Google path. Cached MP3 URLs require a
-            // second HTTPS audio fetch that the device audio library rejects.
-            ws.send(JSON.stringify({ type: "tts", text: fullResponse }));
+            try {
+                const audioBuffer = await synthesizeDeepgramSpeech(fullResponse);
+                if (audioBuffer) {
+                    const audioId = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
+                    audioCache.set(audioId, audioBuffer);
+                    setTimeout(() => audioCache.delete(audioId), 5 * 60 * 1000);
+                    const audioUrl = buildPublicUrl(request, `/audio/${audioId}.mp3`);
+                    console.log(`[Deepgram TTS] Cached ${audioBuffer.length} bytes at ${audioUrl}`);
+                    ws.send(JSON.stringify({ type: "tts_url", url: audioUrl, text: fullResponse }));
+                } else {
+                    ws.send(JSON.stringify({ type: "tts", text: fullResponse }));
+                }
+            } catch (ttsErr) {
+                console.error("[Deepgram TTS] Falling back to device TTS:", ttsErr.message);
+                ws.send(JSON.stringify({ type: "tts", text: fullResponse }));
+            }
 
             setTimeout(() => {
                 if (ws.readyState === WebSocket.OPEN) {
