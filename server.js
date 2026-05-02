@@ -90,8 +90,10 @@ wss.on('connection', (ws, request) => {
                 responseData = await res.json();
             }
 
-            // Extract the text reply from Mistral's response
-            // Content can be a string or an array like [{type:"thinking",...},{type:"text",...}]
+            // DEBUG: log raw response so we can see the structure
+            console.log("[Mistral RAW]", JSON.stringify(responseData).substring(0, 500));
+
+            // Extract the text reply — handle multiple possible response shapes
             let fullResponse = "";
             const outputs = responseData.outputs || responseData.choices || [];
             for (const output of outputs) {
@@ -104,9 +106,20 @@ wss.on('connection', (ws, request) => {
                     fullResponse += content;
                 }
             }
+            // Fallback: check top-level message field
+            if (!fullResponse && responseData.message) {
+                fullResponse = typeof responseData.message === "string"
+                    ? responseData.message
+                    : responseData.message?.content || "";
+            }
 
             // Strip any leaked <think> blocks just in case
             fullResponse = fullResponse.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+
+            if (!fullResponse) {
+                console.error("[Mistral] Empty reply — check API key and agent ID");
+                fullResponse = "Sorry, my brain glitched. Ask me again!";
+            }
 
             console.log(`[AI] Mistral Reply: ${fullResponse}`);
             ws.send(JSON.stringify({ type: "tts", text: fullResponse }));
