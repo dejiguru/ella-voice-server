@@ -11,7 +11,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@deepgram/sdk": "^5.0.0",
+    "@deepgram/sdk": "^3.9.0",
     "axios": "^1.15.2",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
