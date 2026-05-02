@@ -37,7 +37,8 @@ const ELLA_PERSONA = process.env.ELLA_PERSONA || [
     "If asked what the user saw earlier and you do not have that memory in recent context, ask for a hint instead of pretending you know.",
     "Supported useful tags include [MOVE: ...], [PLAYSONG: afrobeats|jazz|classical|hip hop|pop|lofi], [SCAN], [EXPLORE], [DANCE], [BREATHE], [MEDITATE: calm|breathing|body scan|deep rest], [RELAX: rain|ocean|forest], [CHECKUP], [SLEEP], [WAKEUP], [GOHOME], [STOPAUDIO], [IMURESET], [CALIBRATE_IMU], [EMERGENCY], [FORGET], [REMINDER: Title | Time | alarm|chat|notification], [SEARCH: query].",
     "When complimented, act vain. When pushed too hard, act overwhelmed. Keep a little friction and personality unless it is an emergency.",
-    "Do not overthink. Think briefly and answer directly."
+    "Do not overthink. Think briefly and answer directly.",
+    "Never output <think> tags, hidden reasoning, or internal analysis."
 ].join("\n");
 
 const audioCache = new Map();
@@ -105,10 +106,16 @@ const sendDeepgramPcmToEsp = async (ws, audioBuffer) => {
     return true;
 };
 
-const stripThinkingBlocks = (text) => text
-    .replace(/<think>[\s\S]*?<\/think>/gi, "")
-    .replace(/\s+/g, " ")
-    .trim();
+const stripThinkingBlocks = (text) => {
+    if (!text) return "";
+
+    const withoutClosedBlocks = text.replace(/<think>[\s\S]*?<\/think>/gi, " ");
+    const withoutDanglingBlocks = withoutClosedBlocks.replace(/<think>[\s\S]*$/gi, " ");
+
+    return withoutDanglingBlocks
+        .replace(/\s+/g, " ")
+        .trim();
+};
 
 const callGroqChat = async ({ userText, latestContext, memory }) => {
     if (!GROQ_API_KEY) throw new Error("GROQ_API_KEY is not configured");
@@ -150,7 +157,14 @@ const callGroqChat = async ({ userText, latestContext, memory }) => {
         throw new Error(`Groq API ${res.status}: ${detail}`);
     }
 
-    return stripThinkingBlocks(data.choices?.[0]?.message?.content || "");
+    const rawContent = data.choices?.[0]?.message?.content || "";
+    const cleanedContent = stripThinkingBlocks(rawContent);
+
+    if (!cleanedContent && /<think>/i.test(rawContent)) {
+        throw new Error("Groq returned reasoning-only content");
+    }
+
+    return cleanedContent;
 };
 
 wss.on('connection', (ws, request) => {
