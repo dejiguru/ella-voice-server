@@ -77,25 +77,7 @@ wss.on('connection', (ws, request) => {
             console.log(`Full AI Reply: ${fullResponse}`);
             ws.send(JSON.stringify({ type: "tts", text: fullResponse }));
 
-            // Generate TTS URL
-            const audioId = Math.random().toString(36).substring(2, 15);
-            const response = await fetch("https://api.deepgram.com/v1/speak?model=aura-asteria-en&encoding=mp3", {
-                method: "POST",
-                headers: {
-                    "Authorization": `Token ${process.env.DEEPGRAM_API_KEY}`,
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({ text: fullResponse.replace(/\[[^\]]*\]/g, '').trim() })
-            });
-
-            if (response.ok) {
-                const audioBuffer = Buffer.from(await response.arrayBuffer());
-                audioCache.set(audioId, audioBuffer);
-                setTimeout(() => audioCache.delete(audioId), 300000);
-                const audioUrl = `https://${host}/audio/${audioId}`;
-                ws.send(JSON.stringify({ type: "tts_url", url: audioUrl }));
-                console.log(`Sent audio URL: ${audioUrl}`);
-            }
+            ws.send(JSON.stringify({ type: "turn_complete" }));
 
             ws.send(JSON.stringify({ type: "turn_complete" }));
             mutedUntil = Date.now() + 1000;
