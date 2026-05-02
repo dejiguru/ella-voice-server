@@ -186,22 +186,7 @@ wss.on('connection', (ws, request) => {
             }
 
             console.log(`[AI] Mistral Reply: ${fullResponse}`);
-            try {
-                const audioBuffer = await synthesizeDeepgramSpeech(fullResponse);
-                if (audioBuffer) {
-                    console.log(`[Deepgram TTS] Streaming ${audioBuffer.length} PCM bytes over WebSocket`);
-                    ws.send(JSON.stringify({ type: "tts_audio", text: fullResponse }));
-                    await sendDeepgramPcmToEsp(ws, audioBuffer);
-                    if (ws.readyState === WebSocket.OPEN) {
-                        ws.send(JSON.stringify({ type: "tts_audio_done" }));
-                    }
-                } else {
-                    ws.send(JSON.stringify({ type: "tts", text: fullResponse }));
-                }
-            } catch (ttsErr) {
-                console.error("[Deepgram TTS] Falling back to device TTS:", ttsErr.message);
-                ws.send(JSON.stringify({ type: "tts", text: fullResponse }));
-            }
+            ws.send(JSON.stringify({ type: "tts", text: fullResponse }));
 
             setTimeout(() => {
                 if (ws.readyState === WebSocket.OPEN) {
