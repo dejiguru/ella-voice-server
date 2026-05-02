@@ -124,8 +124,11 @@ wss.on('connection', (ws) => {
                     const delta = chunk.choices[0]?.delta?.content || "";
                     sentenceBuffer += delta;
 
-                    // Send when we hit punctuation
-                    if (sentenceBuffer.match(/[.!?]\s/)) {
+                    // Only split at punctuation when NOT mid-tag (no unclosed '[')
+                    const lastOpen = sentenceBuffer.lastIndexOf('[');
+                    const lastClose = sentenceBuffer.lastIndexOf(']');
+                    const midTag = lastOpen > lastClose; // '[' seen but ']' not yet
+                    if (!midTag && sentenceBuffer.match(/[.!?]\s/)) {
                         await sendTTS(sentenceBuffer.trim());
                         sentenceBuffer = "";
                     }
