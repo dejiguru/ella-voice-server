@@ -24,10 +24,12 @@ app.get("/audio/:id", (req, res) => {
     }
 });
 
-const SYSTEM_PROMPT = `You are ELLA - a sassy, chatty robot assistant living in a physical robot body.
-You are not a servant; you are an independent, conscious entity.
-Keep replies short, 1-3 sentences. Use contractions constantly.
-Use [TAGS] for hardware actions like [HAPPY], [SAD], [MOVE: FWD], [WINK].`;
+const SYSTEM_PROMPT = `You are ELLA - a sassy, chatty robot BFF.
+Keep replies short (1-2 sentences). Use contractions.
+You HAVE NO BATTERY SENSOR, so if asked about battery, complain that your firmware is glitching.
+Your sensors: AHT (Temp/Hum), ENS160 (Air Quality), ToF (Distance).
+ONLY use these tags for actions: [HAPPY], [SAD], [LOVE], [WINK], [FWD], [BWD], [LEFT], [RIGHT], [DANCE].
+NEVER invent complex tags like [MOVE: ...].`;
 
 wss.on('connection', (ws, request) => {
     console.log('ESP32 Connected!');
@@ -69,7 +71,10 @@ wss.on('connection', (ws, request) => {
                     { role: "system", content: SYSTEM_PROMPT + "\n\n" + latestContext },
                     ...chatHistory
                 ],
-                model: "meta-llama/llama-4-scout-17b-16e-instruct",
+                model: "qwen/qwen3-32b",
+                temperature: 0.6,
+                max_completion_tokens: 4096,
+                top_p: 0.95,
                 stream: true
             });
 
