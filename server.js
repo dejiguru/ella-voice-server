@@ -53,49 +53,44 @@ wss.on('connection', (ws, request) => {
         console.log(`[AI] Starting handleFinalSpeech for: "${text}"`);
 
         try {
-            let responseData;
-
             const userInput = latestContext
                 ? `${text}\n\n[SYSTEM CONTEXT]\n${latestContext}`
                 : text;
 
-            if (!conversationId) {
-                // First turn — create a new Mistral conversation
-                const res = await fetch('https://api.mistral.ai/v1/conversations', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${MISTRAL_API_KEY}`
-                    },
-                    body: JSON.stringify({
-                        agent_id: MISTRAL_AGENT_ID,
-                        inputs: [{ role: 'user', content: userInput }]
-                    })
-                });
-                responseData = await res.json();
-                conversationId = responseData.conversation_id || responseData.id;
-                console.log(`[Mistral] New conversation: ${conversationId}`);
-            } else {
-                // Subsequent turns — append to existing conversation
-                const res = await fetch(`https://api.mistral.ai/v1/conversations/${conversationId}/messages`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${MISTRAL_API_KEY}`
-                    },
-                    body: JSON.stringify({
-                        inputs: [{ role: 'user', content: userInput }]
-                    })
-                });
-                responseData = await res.json();
+            const body = {
+                agent_id: MISTRAL_AGENT_ID,
+                inputs: [{ role: 'user', content: userInput }]
+            };
+            
+            // If we have a conversation ID, include it in the body instead of the URL
+            if (conversationId) {
+                body.conversation_id = conversationId;
             }
 
+            const res = await fetch('https://api.mistral.ai/v1/conversations', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${MISTRAL_API_KEY}`
+                },
+                body: JSON.stringify(body)
+            });
+
+            const responseData = await res.json();
+            
             // DEBUG: log raw response so we can see the structure
             console.log("[Mistral RAW]", JSON.stringify(responseData).substring(0, 500));
 
-            // Extract the text reply — handle multiple possible response shapes
+            // Store conversation ID if it's new
+            if (!conversationId) {
+                conversationId = responseData.conversation_id || responseData.id;
+                console.log(`[Mistral] New conversation: ${conversationId}`);
+            }
+
+            // Extract the text reply
             let fullResponse = "";
             const outputs = responseData.outputs || responseData.choices || [];
+            
             for (const output of outputs) {
                 const content = output.content || output.message?.content || "";
                 if (Array.isArray(content)) {
@@ -106,14 +101,14 @@ wss.on('connection', (ws, request) => {
                     fullResponse += content;
                 }
             }
-            // Fallback: check top-level message field
-            if (!fullResponse && responseData.message) {
-                fullResponse = typeof responseData.message === "string"
-                    ? responseData.message
-                    : responseData.message?.content || "";
+
+            // Fallback for different API response shapes
+            if (!fullResponse) {
+                if (responseData.message?.content) fullResponse = responseData.message.content;
+                else if (typeof responseData.message === "string") fullResponse = responseData.message;
             }
 
-            // Strip any leaked <think> blocks just in case
+            // Clean up the response
             fullResponse = fullResponse.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
 
             if (!fullResponse) {
