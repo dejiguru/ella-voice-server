@@ -35,7 +35,7 @@ wss.on('connection', (ws, request) => {
     let isThinking = false;
     let silenceTimer = null;
     let latestContext = "";
-    let conversationId = "conv_019de847e45f705eb37d0892a00858f9"; // Pre-seeded conversation
+    let conversationId = null; // Start fresh, let Mistral create a new one
 
     const resetSilenceTimer = () => {
         if (silenceTimer) clearTimeout(silenceTimer);
