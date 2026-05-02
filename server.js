@@ -61,7 +61,7 @@ wss.on('connection', (ws, request) => {
         encoding: "opus",
         sample_rate: 16000,
         channels: 1,
-        endpointing: 500, // 500ms silence timeout
+        endpointing: 300, // Faster endpointing for better responsiveness
     });
 
     deepgramLive.on("open", () => {
@@ -151,6 +151,10 @@ wss.on('connection', (ws, request) => {
                         
                         ws.send(JSON.stringify({ type: "tts_url", url: audioUrl }));
                         console.log(`Sent audio URL to ESP32: ${audioUrl} | spoken: "${spokenText}"`);
+
+                        // Echo suppression: Mute STT while we are actively sending audio URLs
+                        // plus a 2-second buffer for the actual playback time.
+                        mutedUntil = Date.now() + 2000; 
                     } catch (e) {
                         console.error("TTS Error:", e);
                     }
