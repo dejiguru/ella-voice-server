@@ -113,10 +113,16 @@ wss.on('connection', (ws, request) => {
         sample_rate: 16000,
         channels: 1,
         endpointing: 500, 
+        interim_results: true
     });
 
-    deepgramLive.on(LiveTranscriptionEvents.Open, () => console.log('Deepgram connected'));
-    deepgramLive.on(LiveTranscriptionEvents.Error, (e) => console.error('Deepgram Error:', e));
+    deepgramLive.on(LiveTranscriptionEvents.Open, () => console.log('Deepgram connected and listening'));
+    deepgramLive.on(LiveTranscriptionEvents.Error, (e) => {
+        console.error('Deepgram Error:', e);
+        // If Deepgram fails, we should notify the ESP32 to refresh
+    });
+    deepgramLive.on(LiveTranscriptionEvents.Close, () => console.log('Deepgram connection closed'));
+    deepgramLive.on(LiveTranscriptionEvents.Metadata, (data) => console.log('Deepgram Metadata:', data));
 
     deepgramLive.on(LiveTranscriptionEvents.Transcript, (data) => {
         const transcript = data.channel.alternatives[0].transcript;
@@ -130,7 +136,7 @@ wss.on('connection', (ws, request) => {
         const isFinal = data.is_final || data.speech_final;
 
         if (isFinal && transcriptBuffer.trim().length > 0) {
-            if (Date.now() < mutedUntil) {
+            if (isThinking) {
                 transcriptBuffer = "";
                 return;
             }
