@@ -35,6 +35,7 @@ app.get(["/audio/:id", "/audio/:id.mp3"], (req, res) => {
 });
 
 const stripActionTags = (text) => text.replace(/\[[^\]]*\]/g, " ").replace(/\s+/g, " ").trim();
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const buildPublicUrl = (request, path) => {
     const host = request.headers["x-forwarded-host"] || request.headers.host;
@@ -46,7 +47,7 @@ const synthesizeDeepgramSpeech = async (text) => {
     const cleanText = stripActionTags(text);
     if (!USE_DEEPGRAM_TTS || !cleanText || !process.env.DEEPGRAM_API_KEY) return null;
 
-    const url = `https://api.deepgram.com/v1/speak?model=${encodeURIComponent(DEEPGRAM_TTS_MODEL)}&encoding=mp3&bit_rate=48000`;
+    const url = `https://api.deepgram.com/v1/speak?model=${encodeURIComponent(DEEPGRAM_TTS_MODEL)}&encoding=linear16&sample_rate=24000&container=none`;
     const response = await fetch(url, {
         method: "POST",
         headers: {
@@ -62,6 +63,22 @@ const synthesizeDeepgramSpeech = async (text) => {
     }
 
     return Buffer.from(await response.arrayBuffer());
+};
+
+const sendDeepgramPcmToEsp = async (ws, audioBuffer) => {
+    const bytesPerSecond = 24000 * 2; // 24 kHz, 16-bit mono PCM
+    const chunkSize = 4096;
+
+    for (let offset = 0; offset < audioBuffer.length; offset += chunkSize) {
+        if (ws.readyState !== WebSocket.OPEN) return false;
+        const chunk = audioBuffer.subarray(offset, Math.min(offset + chunkSize, audioBuffer.length));
+        await new Promise((resolve, reject) => {
+            ws.send(chunk, { binary: true }, (err) => err ? reject(err) : resolve());
+        });
+        await sleep(Math.max(20, Math.round((chunk.length / bytesPerSecond) * 1000)));
+    }
+
+    return true;
 };
 
 wss.on('connection', (ws, request) => {
@@ -168,12 +185,9 @@ wss.on('connection', (ws, request) => {
             try {
                 const audioBuffer = await synthesizeDeepgramSpeech(fullResponse);
                 if (audioBuffer) {
-                    const audioId = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
-                    audioCache.set(audioId, audioBuffer);
-                    setTimeout(() => audioCache.delete(audioId), 5 * 60 * 1000);
-                    const audioUrl = buildPublicUrl(request, `/audio/${audioId}.mp3`);
-                    console.log(`[Deepgram TTS] Cached ${audioBuffer.length} bytes at ${audioUrl}`);
-                    ws.send(JSON.stringify({ type: "tts_url", url: audioUrl, text: fullResponse }));
+                    console.log(`[Deepgram TTS] Streaming ${audioBuffer.length} PCM bytes over WebSocket`);
+                    ws.send(JSON.stringify({ type: "tts_audio", text: fullResponse }));
+                    await sendDeepgramPcmToEsp(ws, audioBuffer);
                 } else {
                     ws.send(JSON.stringify({ type: "tts", text: fullResponse }));
                 }
