@@ -1,30 +1,12 @@
 const WebSocket = require('ws');
 const { createClient } = require('@deepgram/sdk');
 const Groq = require('groq-sdk');
-// Node 18+ has native fetch — no require('node-fetch') needed
-require('dotenv').config();
+const express = require('express');
+const http = require('http');
 
-const port = process.env.PORT || 8080;
-const express = require("express");
 const app = express();
-
-app.get("/ping", (req, res) => res.send("Alive"));
-
-const server = app.listen(port, () => console.log(`HTTP Server listening on port ${port}`));
-
-server.on('upgrade', (req, socket, head) => {
-    console.log("UPGRADE REQUEST RECEIVED!");
-    console.log("URL:", req.url);
-    console.log("Headers:", req.headers);
-});
-
-const wss = new WebSocket.Server({ noServer: true });
-
-server.on('upgrade', function upgrade(request, socket, head) {
-  wss.handleUpgrade(request, socket, head, function done(ws) {
-    wss.emit('connection', ws, request);
-  });
-});
+const server = http.createServer(app);
+const wss = new WebSocket.Server({ server });
 
 const deepgram = createClient(process.env.DEEPGRAM_API_KEY);
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
@@ -49,13 +31,80 @@ Use [TAGS] for hardware actions like [HAPPY], [SAD], [MOVE: FWD], [WINK].`;
 
 wss.on('connection', (ws, request) => {
     console.log('ESP32 Connected!');
-    const protocol = request.headers['x-forwarded-proto'] || 'http';
     const host = request.headers['host'];
     
     let deepgramLive = null;
     let transcriptBuffer = "";
     let isThinking = false;
-    let mutedUntil = 0; // Echo suppression: ignore transcripts briefly after we speak
+    let mutedUntil = 0; 
+    let silenceTimer = null;
+
+    const resetSilenceTimer = () => {
+        if (silenceTimer) clearTimeout(silenceTimer);
+        silenceTimer = setTimeout(() => {
+            if (transcriptBuffer.trim().length > 0 && !isThinking) {
+                console.log("[Silence Watchdog] Forcing turn end...");
+                handleFinalSpeech(transcriptBuffer.trim());
+            }
+        }, 1200); 
+    };
+
+    const handleFinalSpeech = async (text) => {
+        if (silenceTimer) clearTimeout(silenceTimer);
+        if (isThinking || !text) return;
+        
+        const userQuery = text;
+        transcriptBuffer = "";
+        isThinking = true;
+        console.log(`User said: ${userQuery}`);
+
+        try {
+            const completion = await groq.chat.completions.create({
+                messages: [
+                    { role: "system", content: SYSTEM_PROMPT },
+                    { role: "user", content: userQuery }
+                ],
+                model: "mistral-saba-24b",
+                stream: true
+            });
+
+            let fullResponse = "";
+            for await (const chunk of completion) {
+                const delta = chunk.choices[0]?.delta?.content || "";
+                fullResponse += delta;
+            }
+
+            console.log(`Full AI Reply: ${fullResponse}`);
+            ws.send(JSON.stringify({ type: "tts", text: fullResponse }));
+
+            // Generate TTS URL
+            const audioId = Math.random().toString(36).substring(2, 15);
+            const response = await fetch("https://api.deepgram.com/v1/speak?model=aura-asteria-en&encoding=mp3", {
+                method: "POST",
+                headers: {
+                    "Authorization": `Token ${process.env.DEEPGRAM_API_KEY}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ text: fullResponse.replace(/\[[^\]]*\]/g, '').trim() })
+            });
+
+            if (response.ok) {
+                const audioBuffer = Buffer.from(await response.arrayBuffer());
+                audioCache.set(audioId, audioBuffer);
+                setTimeout(() => audioCache.delete(audioId), 300000);
+                const audioUrl = `https://${host}/audio/${audioId}`;
+                ws.send(JSON.stringify({ type: "tts_url", url: audioUrl }));
+                console.log(`Sent audio URL: ${audioUrl}`);
+            }
+
+            ws.send(JSON.stringify({ type: "turn_complete" }));
+            mutedUntil = Date.now() + 2000;
+        } catch (err) {
+            console.error("Processing Error:", err);
+        } finally {
+            isThinking = false;
+        }
+    };
 
     deepgramLive = deepgram.listen.live({
         model: "nova-3",
@@ -63,147 +112,43 @@ wss.on('connection', (ws, request) => {
         encoding: "opus",
         sample_rate: 16000,
         channels: 1,
-        endpointing: 200, // Very fast endpointing for responsiveness
+        endpointing: 200, 
     });
 
-    deepgramLive.on("open", () => {
-        console.log("Deepgram connected");
-    });
+    deepgramLive.on("open", () => console.log('Deepgram connected'));
+    deepgramLive.on("error", (e) => console.error('Deepgram Error:', e));
 
-    deepgramLive.on("Results", async (data) => {
+    deepgramLive.on("transcriptReceived", (data) => {
         const transcript = data.channel.alternatives[0].transcript;
-        if (!transcript) return;
-
-        // Interim result: Deepgram is still listening — forward to ESP32 for live display
-        if (!data.is_final) {
-            console.log(`[Interim] ${transcript}`);
-            ws.send(JSON.stringify({ type: "interim", text: transcript }));
-            return;
+        if (transcript.trim().length > 0) {
+            transcriptBuffer += " " + transcript;
+            ws.send(JSON.stringify({ type: "interim", text: transcriptBuffer.trim() }));
+            resetSilenceTimer();
         }
 
-        // is_final: accumulate into buffer
-        transcriptBuffer += transcript + " ";
-
         if (data.speech_final && transcriptBuffer.trim().length > 0) {
-            // Echo suppression: discard transcript if we just finished speaking
             if (Date.now() < mutedUntil) {
-                console.log(`[Echo suppressed] Discarding: "${transcriptBuffer.trim()}"`);
                 transcriptBuffer = "";
                 return;
             }
-
-            console.log(`User said: ${transcriptBuffer}`);
-            const query = transcriptBuffer.trim();
-            transcriptBuffer = ""; // reset
-            
-            if (isThinking) return;
-            isThinking = true;
-
-            try {
-                // Instantly hit Groq
-                const completion = await groq.chat.completions.create({
-                    messages: [
-                        { role: "system", content: SYSTEM_PROMPT },
-                        { role: "user", content: query }
-                    ],
-                    model: "meta-llama/llama-4-scout-17b-16e-instruct",
-                    temperature: 1,
-                    max_tokens: 1024,
-                    top_p: 1,
-                    stream: true
-                });
-
-                let fullResponse = "";
-                
-                const sendTTS = async (text) => {
-                    // Strip ALL [TAG] tokens before sending to Deepgram TTS
-                    const spokenText = text.replace(/\[[^\]]*\]/g, '').replace(/\s{2,}/g, ' ').trim();
-                    if (!spokenText) return; 
-
-                    try {
-                        const audioId = Math.random().toString(36).substring(2, 15);
-                        // MP3 doesn't use container=none; simplified URL
-                        const url = "https://api.deepgram.com/v1/speak?model=aura-asteria-en&encoding=mp3";
-                        
-                        const response = await fetch(url, {
-                            method: "POST",
-                            headers: {
-                                "Authorization": `Token ${process.env.DEEPGRAM_API_KEY}`,
-                                "Content-Type": "application/json"
-                            },
-                            body: JSON.stringify({ text: spokenText })
-                        });
-
-                        if (!response.ok) {
-                            console.error(`TTS HTTP error: ${response.status} ${response.statusText}`);
-                            return;
-                        }
-
-                        const arrayBuf = await response.arrayBuffer();
-                        const audioBuffer = Buffer.from(arrayBuf);
-                        
-                        // Store in cache for 5 minutes (helps during Render deployment overlaps)
-                        audioCache.set(audioId, audioBuffer);
-                        setTimeout(() => audioCache.delete(audioId), 300000);
-
-                        const audioUrl = `https://${host}/audio/${audioId}`;
-                        
-                        ws.send(JSON.stringify({ type: "tts_url", url: audioUrl }));
-                        console.log(`Sent final audio URL to ESP32: ${audioUrl}`);
-                    } catch (e) {
-                        console.error("TTS Error:", e);
-                    }
-                };
-
-                for await (const chunk of completion) {
-                    const delta = chunk.choices[0]?.delta?.content || "";
-                    fullResponse += delta;
-                }
-
-                console.log(`Full AI Reply: ${fullResponse}`);
-                // Send text to ESP32 first for hardware tags
-                ws.send(JSON.stringify({ type: "tts", text: fullResponse }));
-                // Then generate and send the audio URL
-                await sendTTS(fullResponse);
-                
-                // Tell ESP32 the turn is done, suppress echo for 2s
-                ws.send(JSON.stringify({ type: "turn_complete" }));
-                mutedUntil = Date.now() + 2000;
-                transcriptBuffer = ""; // Clear any buffered echo transcript
-
-            } catch (err) {
-                console.error("Groq Error:", err);
-            } finally {
-                isThinking = false;
-            }
+            handleFinalSpeech(transcriptBuffer.trim());
         }
     });
 
-    deepgramLive.on("error", (error) => console.error("Deepgram Error:", error));
-
     ws.on('message', (message) => {
-        // If message is binary, pipe to Deepgram
         if (Buffer.isBuffer(message)) {
             if (deepgramLive && deepgramLive.getReadyState() === 1) {
                 deepgramLive.send(message);
-            }
-        } else {
-            // String message from ESP32
-            try {
-                const data = JSON.parse(message.toString());
-                if (data.type === "context") {
-                    console.log("Got hardware context:", data);
-                }
-            } catch (e) {
-                console.error("Invalid JSON from ESP32");
             }
         }
     });
 
     ws.on('close', () => {
         console.log('ESP32 Disconnected');
-        if (deepgramLive) {
-            deepgramLive.finish();
-        }
+        if (deepgramLive) deepgramLive.finish();
+        if (silenceTimer) clearTimeout(silenceTimer);
     });
 });
+
+const PORT = process.env.PORT || 10000;
+server.listen(PORT, () => console.log(`Server listening on port ${PORT}`));
