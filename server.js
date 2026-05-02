@@ -111,13 +111,9 @@ wss.on('connection', (ws, request) => {
                     stream: true
                 });
 
-                let sentenceBuffer = "";
+                let fullResponse = "";
                 
                 const sendTTS = async (text) => {
-                    // Send full text (with tags) to ESP32 for hardware command parsing
-                    ws.send(JSON.stringify({ type: "tts", text: text }));
-                    console.log(`Sent text to ESP32: ${text}`);
-
                     // Strip ALL [TAG] tokens before sending to Deepgram TTS
                     const spokenText = text.replace(/\[[^\]]*\]/g, '').replace(/\s{2,}/g, ' ').trim();
                     if (!spokenText) return; 
@@ -148,14 +144,10 @@ wss.on('connection', (ws, request) => {
                         audioCache.set(audioId, audioBuffer);
                         setTimeout(() => audioCache.delete(audioId), 300000);
 
-                        const audioUrl = `http://${host}/audio/${audioId}`;
+                        const audioUrl = `https://${host}/audio/${audioId}`;
                         
                         ws.send(JSON.stringify({ type: "tts_url", url: audioUrl }));
-                        console.log(`Sent audio URL to ESP32: ${audioUrl} | spoken: "${spokenText}"`);
-
-                        // Echo suppression: Mute STT while we are actively sending audio URLs
-                        // plus a 2-second buffer for the actual playback time.
-                        mutedUntil = Date.now() + 2000; 
+                        console.log(`Sent final audio URL to ESP32: ${audioUrl}`);
                     } catch (e) {
                         console.error("TTS Error:", e);
                     }
@@ -163,26 +155,18 @@ wss.on('connection', (ws, request) => {
 
                 for await (const chunk of completion) {
                     const delta = chunk.choices[0]?.delta?.content || "";
-                    sentenceBuffer += delta;
+                    fullResponse += delta;
+                }
 
-                    // Only split at punctuation when NOT mid-tag (no unclosed '[')
-                    const lastOpen = sentenceBuffer.lastIndexOf('[');
-                    const lastClose = sentenceBuffer.lastIndexOf(']');
-                    const midTag = lastOpen > lastClose; // '[' seen but ']' not yet
-                    if (!midTag && sentenceBuffer.match(/[.!?]\s/)) {
-                        await sendTTS(sentenceBuffer.trim());
-                        sentenceBuffer = "";
-                    }
-                }
+                console.log(`Full AI Reply: ${fullResponse}`);
+                // Send text to ESP32 first for hardware tags
+                ws.send(JSON.stringify({ type: "tts", text: fullResponse }));
+                // Then generate and send the audio URL
+                await sendTTS(fullResponse);
                 
-                // Flush remainder
-                if (sentenceBuffer.trim().length > 0) {
-                    await sendTTS(sentenceBuffer.trim());
-                }
-                
-                // Tell ESP32 the turn is done, suppress echo for 1.5s
+                // Tell ESP32 the turn is done, suppress echo for 2s
                 ws.send(JSON.stringify({ type: "turn_complete" }));
-                mutedUntil = Date.now() + 1500;
+                mutedUntil = Date.now() + 2000;
                 transcriptBuffer = ""; // Clear any buffered echo transcript
 
             } catch (err) {
