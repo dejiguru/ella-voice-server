@@ -40,6 +40,7 @@ wss.on('connection', (ws) => {
     let deepgramLive = null;
     let transcriptBuffer = "";
     let isThinking = false;
+    let mutedUntil = 0; // Echo suppression: ignore transcripts briefly after we speak
 
     deepgramLive = deepgram.listen.live({
         model: "nova-3",
@@ -61,6 +62,13 @@ wss.on('connection', (ws) => {
         }
         
         if (data.speech_final && transcriptBuffer.trim().length > 0) {
+            // Echo suppression: discard transcript if we just finished speaking
+            if (Date.now() < mutedUntil) {
+                console.log(`[Echo suppressed] Discarding: "${transcriptBuffer.trim()}"`);
+                transcriptBuffer = "";
+                return;
+            }
+
             console.log(`User said: ${transcriptBuffer}`);
             const query = transcriptBuffer.trim();
             transcriptBuffer = ""; // reset
@@ -122,8 +130,10 @@ wss.on('connection', (ws) => {
                     await sendTTS(sentenceBuffer.trim());
                 }
                 
-                // Tell ESP32 the turn is done
+                // Tell ESP32 the turn is done, suppress echo for 1.5s
                 ws.send(JSON.stringify({ type: "turn_complete" }));
+                mutedUntil = Date.now() + 1500;
+                transcriptBuffer = ""; // Clear any buffered echo transcript
 
             } catch (err) {
                 console.error("Groq Error:", err);
