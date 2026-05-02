@@ -144,8 +144,9 @@ wss.on('connection', (ws, request) => {
                         const arrayBuf = await response.arrayBuffer();
                         const audioBuffer = Buffer.from(arrayBuf);
                         
+                        // Store in cache for 5 minutes (helps during Render deployment overlaps)
                         audioCache.set(audioId, audioBuffer);
-                        setTimeout(() => audioCache.delete(audioId), 60000);
+                        setTimeout(() => audioCache.delete(audioId), 300000);
 
                         const audioUrl = `http://${host}/audio/${audioId}`;
                         
