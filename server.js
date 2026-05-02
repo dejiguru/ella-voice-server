@@ -63,8 +63,7 @@ wss.on('connection', (ws, request) => {
         encoding: "opus",
         sample_rate: 16000,
         channels: 1,
-        endpointing: 250, // Even faster endpointing
-        utterance_end_ms: 1000, // Force end after 1s of silence
+        endpointing: 200, // Very fast endpointing for responsiveness
     });
 
     deepgramLive.on("open", () => {
