@@ -37,6 +37,7 @@ wss.on('connection', (ws, request) => {
     let silenceTimer = null;
     let latestContext = "";
     let conversationId = null; // Start fresh, let Mistral create a new one
+    let lastAppendedFinalTranscript = "";
 
     const resetSilenceTimer = () => {
         if (silenceTimer) clearTimeout(silenceTimer);
@@ -127,6 +128,8 @@ wss.on('connection', (ws, request) => {
             }
 
             console.log(`[AI] Mistral Reply: ${fullResponse}`);
+            // Keep TTS on the ESP32 Google path. Cached MP3 URLs require a
+            // second HTTPS audio fetch that the device audio library rejects.
             ws.send(JSON.stringify({ type: "tts", text: fullResponse }));
 
             setTimeout(() => {
@@ -179,30 +182,35 @@ wss.on('connection', (ws, request) => {
     }, 8000);
 
     const transcriptHandler = (data) => {
-        const transcript = data.channel.alternatives[0].transcript;
+        const transcript = (data.channel.alternatives[0].transcript || "").trim();
         if (transcript.trim().length > 0) {
             console.log(`[STT] Recv: "${transcript}"`);
 
-            // Only accumulate FINAL results to prevent phrase duplication
-            if (data.is_final || data.speech_final) {
+            // Accumulate finalized Deepgram segments, but do not treat every
+            // segment final as the end of the user's whole utterance.
+            if ((data.is_final || data.speech_final) && transcript !== lastAppendedFinalTranscript) {
                 transcriptBuffer += " " + transcript;
+                lastAppendedFinalTranscript = transcript;
             }
 
             // Always show interim for display purposes
-            ws.send(JSON.stringify({ type: "interim", text: (transcriptBuffer + " " + transcript).trim() }));
+            const displayText = (data.is_final || data.speech_final)
+                ? transcriptBuffer.trim()
+                : (transcriptBuffer + " " + transcript).trim();
+            ws.send(JSON.stringify({ type: "interim", text: displayText }));
             resetSilenceTimer();
         }
 
-        const isFinal = data.is_final || data.speech_final;
-
-        if (isFinal && transcriptBuffer.trim().length > 0) {
+        if (data.speech_final && transcriptBuffer.trim().length > 0) {
             if (isThinking) {
                 transcriptBuffer = "";
+                lastAppendedFinalTranscript = "";
                 return;
             }
             if (silenceTimer) clearTimeout(silenceTimer);
             const textToProcess = transcriptBuffer.trim();
             transcriptBuffer = ""; 
+            lastAppendedFinalTranscript = "";
             console.log(`[STT] Finalizing turn: "${textToProcess}"`);
             ws.send(JSON.stringify({ type: "thinking" }));
             handleFinalSpeech(textToProcess);
