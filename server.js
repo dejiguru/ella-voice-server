@@ -13,8 +13,18 @@ const deepgram = createClient(process.env.DEEPGRAM_API_KEY);
 const MISTRAL_API_KEY = process.env.MISTRAL_API_KEY;
 const MISTRAL_AGENT_ID = "ag_019d4492c13a75ff8e9e139956e37489";
 const MISTRAL_AGENT_VERSION = 28;
+const GROQ_API_KEY = process.env.GROQ_API_KEY;
+const GROQ_MODEL = process.env.GROQ_MODEL || "qwen/qwen3-32b";
+const AI_PROVIDER = process.env.AI_PROVIDER || "groq";
 const DEEPGRAM_TTS_MODEL = process.env.DEEPGRAM_TTS_MODEL || "aura-2-thalia-en";
 const USE_DEEPGRAM_TTS = process.env.USE_DEEPGRAM_TTS !== "false";
+const ELLA_PERSONA = process.env.ELLA_PERSONA || [
+    "You are ELLA, a physical robot assistant with a playful, sassy personality.",
+    "Keep replies short, usually 1-3 sentences.",
+    "Use action/emotion tags when useful: [HAPPY], [WINK], [LOVE], [THINKING], [EXCITED], [MOVE: CENTER], [PLAYSONG: afrobeats].",
+    "Do not claim to remember sights or events unless they are present in recent conversation or system context.",
+    "If the user asks what they saw earlier and you do not have that memory, ask for a hint instead of guessing."
+].join("\n");
 
 const audioCache = new Map();
 app.get(["/audio/:id", "/audio/:id.mp3"], (req, res) => {
@@ -81,6 +91,54 @@ const sendDeepgramPcmToEsp = async (ws, audioBuffer) => {
     return true;
 };
 
+const stripThinkingBlocks = (text) => text
+    .replace(/<think>[\s\S]*?<\/think>/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const callGroqChat = async ({ userText, latestContext, memory }) => {
+    if (!GROQ_API_KEY) throw new Error("GROQ_API_KEY is not configured");
+
+    const messages = [
+        { role: "system", content: ELLA_PERSONA }
+    ];
+
+    if (latestContext) {
+        messages.push({ role: "system", content: `[SYSTEM CONTEXT]\n${latestContext}` });
+    }
+
+    for (const turn of memory) {
+        messages.push({ role: "user", content: turn.user });
+        messages.push({ role: "assistant", content: turn.assistant });
+    }
+
+    messages.push({ role: "user", content: userText });
+
+    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${GROQ_API_KEY}`
+        },
+        body: JSON.stringify({
+            model: GROQ_MODEL,
+            messages,
+            temperature: 0.8,
+            max_tokens: 160
+        })
+    });
+
+    const data = await res.json();
+    console.log("[Groq RAW]", JSON.stringify(data).substring(0, 500));
+
+    if (!res.ok) {
+        const detail = data.error?.message || data.message || res.statusText;
+        throw new Error(`Groq API ${res.status}: ${detail}`);
+    }
+
+    return stripThinkingBlocks(data.choices?.[0]?.message?.content || "");
+};
+
 wss.on('connection', (ws, request) => {
     console.log('ESP32 Connected!');
     const host = request.headers['host'];
@@ -92,6 +150,71 @@ wss.on('connection', (ws, request) => {
     let latestContext = "";
     let conversationId = null; // Start fresh, let Mistral create a new one
     let lastAppendedFinalTranscript = "";
+    const conversationMemory = [];
+
+    const rememberTurn = (user, assistant) => {
+        conversationMemory.push({ user, assistant });
+        while (conversationMemory.length > 8) conversationMemory.shift();
+    };
+
+    const callMistralAgent = async (userInput) => {
+        const body = {
+            inputs: [{ role: 'user', content: userInput }]
+        };
+        let mistralUrl = 'https://api.mistral.ai/v1/conversations';
+
+        if (conversationId) {
+            // Append to the existing conversation. Agent/model fields are only used when starting.
+            mistralUrl = `${mistralUrl}/${encodeURIComponent(conversationId)}`;
+        } else {
+            // Start a new conversation with the configured agent.
+            body.agent_id = MISTRAL_AGENT_ID;
+            body.agent_version = MISTRAL_AGENT_VERSION;
+        }
+
+        const res = await fetch(mistralUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${MISTRAL_API_KEY}`
+            },
+            body: JSON.stringify(body)
+        });
+
+        const responseData = await res.json();
+        console.log("[Mistral RAW]", JSON.stringify(responseData).substring(0, 500));
+
+        if (!res.ok) {
+            const detail = responseData.detail || responseData.message || responseData.error || res.statusText;
+            throw new Error(`Mistral API ${res.status}: ${JSON.stringify(detail).substring(0, 500)}`);
+        }
+
+        if (responseData.conversation_id || responseData.id) {
+            conversationId = responseData.conversation_id || responseData.id;
+            console.log(`[Mistral] Conversation: ${conversationId}`);
+        }
+
+        let fullResponse = "";
+        const outputs = responseData.outputs || responseData.choices || [];
+
+        for (const output of outputs) {
+            const content = output.content || output.message?.content || "";
+            if (Array.isArray(content)) {
+                for (const part of content) {
+                    if (part.type === "text") fullResponse += part.text;
+                }
+            } else if (typeof content === "string") {
+                fullResponse += content;
+            }
+        }
+
+        if (!fullResponse) {
+            if (responseData.message?.content) fullResponse = responseData.message.content;
+            else if (typeof responseData.message === "string") fullResponse = responseData.message;
+        }
+
+        return stripThinkingBlocks(fullResponse);
+    };
 
     const resetSilenceTimer = () => {
         if (silenceTimer) clearTimeout(silenceTimer);
@@ -116,76 +239,31 @@ wss.on('connection', (ws, request) => {
             const userInput = latestContext
                 ? `${text}\n\n[SYSTEM CONTEXT]\n${latestContext}`
                 : text;
-
-            const body = {
-                inputs: [{ role: 'user', content: userInput }]
-            };
-            let mistralUrl = 'https://api.mistral.ai/v1/conversations';
-
-            if (conversationId) {
-                // Append to the existing conversation. Agent/model fields are only used when starting.
-                mistralUrl = `${mistralUrl}/${encodeURIComponent(conversationId)}`;
-            } else {
-                // Start a new conversation with the configured agent.
-                body.agent_id = MISTRAL_AGENT_ID;
-                body.agent_version = MISTRAL_AGENT_VERSION;
-            }
-
-            const res = await fetch(mistralUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${MISTRAL_API_KEY}`
-                },
-                body: JSON.stringify(body)
-            });
-
-            const responseData = await res.json();
-            
-            // DEBUG: log raw response so we can see the structure
-            console.log("[Mistral RAW]", JSON.stringify(responseData).substring(0, 500));
-
-            if (!res.ok) {
-                const detail = responseData.detail || responseData.message || responseData.error || res.statusText;
-                throw new Error(`Mistral API ${res.status}: ${JSON.stringify(detail).substring(0, 500)}`);
-            }
-
-            // Store the latest conversation ID. Mistral may return a new ID after appends.
-            if (responseData.conversation_id || responseData.id) {
-                conversationId = responseData.conversation_id || responseData.id;
-                console.log(`[Mistral] Conversation: ${conversationId}`);
-            }
-
-            // Extract the text reply
             let fullResponse = "";
-            const outputs = responseData.outputs || responseData.choices || [];
-            
-            for (const output of outputs) {
-                const content = output.content || output.message?.content || "";
-                if (Array.isArray(content)) {
-                    for (const part of content) {
-                        if (part.type === "text") fullResponse += part.text;
-                    }
-                } else if (typeof content === "string") {
-                    fullResponse += content;
+
+            if (AI_PROVIDER === "mistral") {
+                fullResponse = await callMistralAgent(userInput);
+            } else {
+                try {
+                    console.log(`[Groq] Calling ${GROQ_MODEL}`);
+                    fullResponse = await callGroqChat({
+                        userText: text,
+                        latestContext,
+                        memory: conversationMemory
+                    });
+                } catch (groqErr) {
+                    console.error("[Groq] Error, falling back to Mistral:", groqErr.message);
+                    fullResponse = await callMistralAgent(userInput);
                 }
             }
 
-            // Fallback for different API response shapes
             if (!fullResponse) {
-                if (responseData.message?.content) fullResponse = responseData.message.content;
-                else if (typeof responseData.message === "string") fullResponse = responseData.message;
-            }
-
-            // Clean up the response
-            fullResponse = fullResponse.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
-
-            if (!fullResponse) {
-                console.error("[Mistral] Empty reply — check API key and agent ID");
+                console.error("[AI] Empty reply");
                 fullResponse = "Sorry, my brain glitched. Ask me again!";
             }
 
-            console.log(`[AI] Mistral Reply: ${fullResponse}`);
+            rememberTurn(text, fullResponse);
+            console.log(`[AI] Reply: ${fullResponse}`);
             ws.send(JSON.stringify({ type: "tts", text: fullResponse }));
 
             setTimeout(() => {
