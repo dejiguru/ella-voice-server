@@ -54,9 +54,9 @@ wss.on('connection', (ws, request) => {
         if (isThinking || !text) return;
         
         const userQuery = text;
+        console.log(`[AI] Starting handleFinalSpeech for: "${userQuery}"`);
         transcriptBuffer = "";
         isThinking = true;
-        console.log(`User said: ${userQuery}`);
 
         try {
             const completion = await groq.chat.completions.create({
@@ -127,11 +127,15 @@ wss.on('connection', (ws, request) => {
             resetSilenceTimer();
         }
 
-        if (data.is_final && transcriptBuffer.trim().length > 0) {
+        const isFinal = data.is_final || data.speech_final;
+
+        if (isFinal && transcriptBuffer.trim().length > 0) {
             if (Date.now() < mutedUntil) {
                 transcriptBuffer = "";
                 return;
             }
+            console.log(`[STT] Finalizing turn: "${transcriptBuffer.trim()}"`);
+            ws.send(JSON.stringify({ type: "thinking" }));
             handleFinalSpeech(transcriptBuffer.trim());
         }
     });
