@@ -1,5 +1,5 @@
 const WebSocket = require('ws');
-const { createClient } = require('@deepgram/sdk');
+const { createClient, LiveTranscriptionEvents } = require('@deepgram/sdk');
 const Groq = require('groq-sdk');
 const express = require('express');
 const http = require('http');
@@ -109,24 +109,25 @@ wss.on('connection', (ws, request) => {
     deepgramLive = deepgram.listen.live({
         model: "nova-3",
         smart_format: true,
-        encoding: "opus",
-        container: "none",
+        encoding: "linear16",
+        sample_rate: 16000,
+        channels: 1,
         endpointing: 500, 
     });
 
-    deepgramLive.on("open", () => console.log('Deepgram connected'));
-    deepgramLive.on("error", (e) => console.error('Deepgram Error:', e));
+    deepgramLive.on(LiveTranscriptionEvents.Open, () => console.log('Deepgram connected'));
+    deepgramLive.on(LiveTranscriptionEvents.Error, (e) => console.error('Deepgram Error:', e));
 
-    deepgramLive.on("transcriptReceived", (data) => {
+    deepgramLive.on(LiveTranscriptionEvents.Transcript, (data) => {
         const transcript = data.channel.alternatives[0].transcript;
-        console.log(`[STT] Recv: "${transcript}" (Final: ${data.is_final})`);
         if (transcript.trim().length > 0) {
+            console.log(`[STT] Recv: "${transcript}"`);
             transcriptBuffer += " " + transcript;
             ws.send(JSON.stringify({ type: "interim", text: transcriptBuffer.trim() }));
             resetSilenceTimer();
         }
 
-        if (data.speech_final && transcriptBuffer.trim().length > 0) {
+        if (data.is_final && transcriptBuffer.trim().length > 0) {
             if (Date.now() < mutedUntil) {
                 transcriptBuffer = "";
                 return;
