@@ -1,5 +1,4 @@
 const WebSocket = require('ws');
-const { createClient, LiveTranscriptionEvents } = require('@deepgram/sdk');
 const express = require('express');
 const http = require('http');
 const fetch = (...args) => import('node-fetch').then(({default: f}) => f(...args));
@@ -8,8 +7,7 @@ const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-const deepgram = createClient(process.env.DEEPGRAM_API_KEY);
-
+const DEEPGRAM_API_KEY = process.env.DEEPGRAM_API_KEY;
 const MISTRAL_API_KEY = process.env.MISTRAL_API_KEY;
 const MISTRAL_AGENT_ID = "ag_019d4492c13a75ff8e9e139956e37489";
 const MISTRAL_AGENT_VERSION = 28;
@@ -64,21 +62,15 @@ app.get(["/audio/:id", "/audio/:id.mp3"], (req, res) => {
 const stripActionTags = (text) => text.replace(/\[[^\]]*\]/g, " ").replace(/\s+/g, " ").trim();
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const buildPublicUrl = (request, path) => {
-    const host = request.headers["x-forwarded-host"] || request.headers.host;
-    const proto = request.headers["x-forwarded-proto"] || (request.socket.encrypted ? "https" : "http");
-    return `${proto}://${host}${path}`;
-};
-
 const synthesizeDeepgramSpeech = async (text) => {
     const cleanText = stripActionTags(text);
-    if (!USE_DEEPGRAM_TTS || !cleanText || !process.env.DEEPGRAM_API_KEY) return null;
+    if (!USE_DEEPGRAM_TTS || !cleanText || !DEEPGRAM_API_KEY) return null;
 
     const url = `https://api.deepgram.com/v1/speak?model=${encodeURIComponent(DEEPGRAM_TTS_MODEL)}&encoding=linear16&sample_rate=24000&container=none`;
     const response = await fetch(url, {
         method: "POST",
         headers: {
-            "Authorization": `Token ${process.env.DEEPGRAM_API_KEY}`,
+            "Authorization": `Token ${DEEPGRAM_API_KEY}`,
             "Content-Type": "application/json"
         },
         body: JSON.stringify({ text: cleanText })
@@ -172,7 +164,6 @@ const callGroqChat = async ({ userText, latestContext, memory }) => {
 
 wss.on('connection', (ws, request) => {
     console.log('ESP32 Connected!');
-    const host = request.headers['host'];
     
     let deepgramLive = null;
     let transcriptBuffer = "";
@@ -229,7 +220,7 @@ wss.on('connection', (ws, request) => {
     };
 
     const flushPendingAudio = () => {
-        if (!deepgramLive || !deepgramOpen || deepgramLive.getReadyState() !== 1) return;
+        if (!deepgramLive || !deepgramOpen || deepgramLive.readyState !== WebSocket.OPEN) return;
         if (pendingAudioChunks.length > 0) {
             console.log(`[Deepgram] Flushing ${pendingAudioChunks.length} queued audio chunks (${pendingAudioBytes} bytes)`);
         }
@@ -243,7 +234,7 @@ wss.on('connection', (ws, request) => {
     const forwardAudioToDeepgram = (chunk) => {
         logAudioStats(chunk);
 
-        if (deepgramLive && deepgramOpen && deepgramLive.getReadyState() === 1) {
+        if (deepgramLive && deepgramOpen && deepgramLive.readyState === WebSocket.OPEN) {
             deepgramLive.send(chunk);
             return;
         }
@@ -327,7 +318,7 @@ wss.on('connection', (ws, request) => {
                 ws.send(JSON.stringify({ type: "thinking" }));
                 handleFinalSpeech(textToProcess);
             }
-        }, 800); 
+        }, 1200); 
     };
 
     const handleFinalSpeech = async (text) => {
@@ -373,7 +364,7 @@ wss.on('connection', (ws, request) => {
             }, 100);
 
         } catch (err) {
-            console.error("[AI] Mistral Error:", err.message);
+            console.error("[AI] Error:", err.message);
             if (ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({ type: "turn_complete" }));
             }
@@ -401,68 +392,77 @@ wss.on('connection', (ws, request) => {
     };
 
     const startDeepgram = () => {
-        deepgramLive = deepgram.listen.live({
-            model: "nova-3",
-            smart_format: true,
-            encoding: "linear16",
-            sample_rate: 16000,
-            channels: 1,
-            endpointing: 500,
-            utterance_end_ms: 1000,
-            vad_events: true,
-            interim_results: true,
-            keep_alive: true 
+        // Raw WebSocket connection to Deepgram v2 for Flux model
+        const dgUrl = `wss://api.deepgram.com/v2/listen?model=flux-general-en&encoding=linear16&sample_rate=16000&channels=1&smart_format=true&interim_results=true&eot_threshold=0.6&eot_timeout_ms=1500`;
+        
+        console.log("[Deepgram] Connecting to Flux v2...");
+        deepgramLive = new WebSocket(dgUrl, {
+            headers: {
+                "Authorization": `Token ${DEEPGRAM_API_KEY}`
+            }
         });
 
-        deepgramLive.on(LiveTranscriptionEvents.Open, () => {
+        deepgramLive.on('open', () => {
             deepgramOpen = true;
-            console.log('Deepgram connected and listening (Nova-3)');
+            console.log('Deepgram Flux v2 Connected');
             flushPendingAudio();
         });
-        deepgramLive.on(LiveTranscriptionEvents.Error, (e) => {
-            console.error('Deepgram Error:', e);
+
+        deepgramLive.on('message', (data) => {
+            try {
+                const msg = JSON.parse(data.toString());
+                
+                // Handle StartOfTurn / EndOfTurn events if needed
+                if (msg.event === "EndOfTurn") {
+                    console.log(`[Deepgram] EndOfTurn (Confidence: ${msg.end_of_turn_confidence})`);
+                    finalizeTranscriptTurn("flux_eot");
+                    return;
+                }
+
+                // Standard transcript handling
+                if (msg.channel && msg.channel.alternatives) {
+                    const transcript = (msg.channel.alternatives[0].transcript || "").trim();
+                    const isFinal = msg.is_final || msg.speech_final;
+
+                    if (transcript.length > 0) {
+                        if (isFinal && transcript !== lastAppendedFinalTranscript) {
+                            transcriptBuffer += " " + transcript;
+                            lastAppendedFinalTranscript = transcript;
+                        }
+
+                        const displayText = isFinal
+                            ? transcriptBuffer.trim()
+                            : (transcriptBuffer + " " + transcript).trim();
+
+                        if (displayText !== lastSentInterim) {
+                            console.log(`[STT] Recv: "${transcript}" (final=${isFinal})`);
+                            ws.send(JSON.stringify({ type: "interim", text: displayText }));
+                            lastSentInterim = displayText;
+                            resetSilenceTimer();
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error("[Deepgram] Parse error:", e.message);
+            }
         });
-        deepgramLive.on(LiveTranscriptionEvents.Close, () => {
+
+        deepgramLive.on('error', (err) => console.error('[Deepgram] Error:', err));
+        
+        deepgramLive.on('close', () => {
             deepgramOpen = false;
-            console.log('Deepgram connection closed — reconnecting...');
+            console.log('[Deepgram] Connection closed — reconnecting...');
             if (ws.readyState === WebSocket.OPEN) {
                 setTimeout(() => startDeepgram(), 1000);
             }
         });
-        deepgramLive.on(LiveTranscriptionEvents.Transcript, transcriptHandler);
-        deepgramLive.on(LiveTranscriptionEvents.UtteranceEnd, () => finalizeTranscriptTurn("utterance_end"));
     };
 
     const dgKeepAliveInterval = setInterval(() => {
-        if (deepgramLive && deepgramLive.getReadyState() === 1) {
-            deepgramLive.keepAlive();
+        if (deepgramLive && deepgramLive.readyState === WebSocket.OPEN) {
+            deepgramLive.send(JSON.stringify({ type: "KeepAlive" }));
         }
     }, 8000);
-
-    const transcriptHandler = (data) => {
-        const transcript = (data.channel.alternatives[0].transcript || "").trim();
-        if (transcript.length > 0) {
-            if ((data.is_final || data.speech_final) && transcript !== lastAppendedFinalTranscript) {
-                transcriptBuffer += " " + transcript;
-                lastAppendedFinalTranscript = transcript;
-            }
-
-            const displayText = (data.is_final || data.speech_final)
-                ? transcriptBuffer.trim()
-                : (transcriptBuffer + " " + transcript).trim();
-
-            if (displayText !== lastSentInterim) {
-                console.log(`[STT] Recv: "${transcript}" (final=${data.is_final||false}, speech_final=${data.speech_final||false})`);
-                ws.send(JSON.stringify({ type: "interim", text: displayText }));
-                lastSentInterim = displayText;
-                resetSilenceTimer();
-            }
-        }
-
-        if (data.speech_final) {
-            finalizeTranscriptTurn("speech_final");
-        }
-    };
 
     startDeepgram();
 
@@ -487,7 +487,7 @@ wss.on('connection', (ws, request) => {
     ws.on('close', () => {
         console.log('ESP32 Disconnected');
         clearInterval(dgKeepAliveInterval);
-        if (deepgramLive) deepgramLive.finish();
+        if (deepgramLive) deepgramLive.close();
         if (silenceTimer) clearTimeout(silenceTimer);
     });
 });
