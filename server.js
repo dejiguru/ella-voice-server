@@ -52,13 +52,12 @@ wss.on('connection', (ws, request) => {
     };
 
     const handleFinalSpeech = async (text) => {
-        if (silenceTimer) clearTimeout(silenceTimer);
-        if (isThinking || !text) return;
+        if (!text) return;
         
-        const userQuery = text;
-        console.log(`[AI] Starting handleFinalSpeech for: "${userQuery}"`);
-        transcriptBuffer = "";
+        // If we're already thinking, we'll allow this new speech to "interrupt" 
+        // by resetting the state and proceeding.
         isThinking = true;
+        const userQuery = text;
 
         chatHistory.push({ role: "user", content: userQuery });
         // Keep history manageable
@@ -135,9 +134,12 @@ wss.on('connection', (ws, request) => {
                 transcriptBuffer = "";
                 return;
             }
-            console.log(`[STT] Finalizing turn: "${transcriptBuffer.trim()}"`);
+            if (silenceTimer) clearTimeout(silenceTimer);
+            const textToProcess = transcriptBuffer.trim();
+            transcriptBuffer = ""; 
+            console.log(`[STT] Finalizing turn: "${textToProcess}"`);
             ws.send(JSON.stringify({ type: "thinking" }));
-            handleFinalSpeech(transcriptBuffer.trim());
+            handleFinalSpeech(textToProcess);
         }
     });
 
