@@ -64,7 +64,7 @@ wss.on('connection', (ws, request) => {
                     { role: "system", content: SYSTEM_PROMPT },
                     { role: "user", content: userQuery }
                 ],
-                model: "mistral-saba-24b",
+                model: "meta-llama/llama-4-scout-17b-16e-instruct",
                 stream: true
             });
 
