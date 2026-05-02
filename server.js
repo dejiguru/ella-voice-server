@@ -180,11 +180,80 @@ wss.on('connection', (ws, request) => {
     let latestContext = "";
     let conversationId = null; // Start fresh, let Mistral create a new one
     let lastAppendedFinalTranscript = "";
+    let deepgramOpen = false;
+    let pendingAudioBytes = 0;
+    let pendingAudioChunks = [];
+    let audioStatsBytes = 0;
+    let audioStatsChunks = 0;
+    let audioStatsRmsSum = 0;
+    let audioStatsRmsCount = 0;
+    let lastAudioStatsLog = Date.now();
     const conversationMemory = [];
 
     const rememberTurn = (user, assistant) => {
         conversationMemory.push({ user, assistant });
         while (conversationMemory.length > 4) conversationMemory.shift();
+    };
+
+    const audioRms = (buffer) => {
+        if (!buffer || buffer.length < 2) return 0;
+        let sum = 0;
+        let count = 0;
+        for (let i = 0; i + 1 < buffer.length; i += 2) {
+            const sample = buffer.readInt16LE(i);
+            sum += sample * sample;
+            count++;
+        }
+        return count > 0 ? Math.round(Math.sqrt(sum / count)) : 0;
+    };
+
+    const logAudioStats = (chunk) => {
+        const rms = audioRms(chunk);
+        audioStatsBytes += chunk.length;
+        audioStatsChunks++;
+        audioStatsRmsSum += rms;
+        audioStatsRmsCount++;
+
+        const now = Date.now();
+        if (now - lastAudioStatsLog >= 2000) {
+            const avgRms = audioStatsRmsCount > 0 ? Math.round(audioStatsRmsSum / audioStatsRmsCount) : 0;
+            console.log(`[Audio->DG] chunks=${audioStatsChunks} bytes=${audioStatsBytes} avgRMS=${avgRms} dgOpen=${deepgramOpen}`);
+            audioStatsBytes = 0;
+            audioStatsChunks = 0;
+            audioStatsRmsSum = 0;
+            audioStatsRmsCount = 0;
+            lastAudioStatsLog = now;
+        }
+    };
+
+    const flushPendingAudio = () => {
+        if (!deepgramLive || !deepgramOpen || deepgramLive.getReadyState() !== 1) return;
+        if (pendingAudioChunks.length > 0) {
+            console.log(`[Deepgram] Flushing ${pendingAudioChunks.length} queued audio chunks (${pendingAudioBytes} bytes)`);
+        }
+        for (const chunk of pendingAudioChunks) {
+            deepgramLive.send(chunk);
+        }
+        pendingAudioChunks = [];
+        pendingAudioBytes = 0;
+    };
+
+    const forwardAudioToDeepgram = (chunk) => {
+        logAudioStats(chunk);
+
+        if (deepgramLive && deepgramOpen && deepgramLive.getReadyState() === 1) {
+            deepgramLive.send(chunk);
+            return;
+        }
+
+        pendingAudioChunks.push(chunk);
+        pendingAudioBytes += chunk.length;
+
+        const maxPendingBytes = 16000 * 2 * 3; // keep at most 3 seconds of 16 kHz mono PCM
+        while (pendingAudioBytes > maxPendingBytes && pendingAudioChunks.length > 0) {
+            const dropped = pendingAudioChunks.shift();
+            pendingAudioBytes -= dropped.length;
+        }
     };
 
     const callMistralAgent = async (userInput) => {
@@ -312,6 +381,23 @@ wss.on('connection', (ws, request) => {
         }
     };
 
+    const finalizeTranscriptTurn = (reason) => {
+        if (transcriptBuffer.trim().length === 0) return;
+        if (isThinking) {
+            transcriptBuffer = "";
+            lastAppendedFinalTranscript = "";
+            return;
+        }
+
+        if (silenceTimer) clearTimeout(silenceTimer);
+        const textToProcess = transcriptBuffer.trim();
+        transcriptBuffer = "";
+        lastAppendedFinalTranscript = "";
+        console.log(`[STT] Finalizing turn (${reason}): "${textToProcess}"`);
+        ws.send(JSON.stringify({ type: "thinking" }));
+        handleFinalSpeech(textToProcess);
+    };
+
     const startDeepgram = () => {
         deepgramLive = deepgram.listen.live({
             model: "nova-3",
@@ -327,10 +413,13 @@ wss.on('connection', (ws, request) => {
         });
 
         deepgramLive.on(LiveTranscriptionEvents.Open, () => {
+            deepgramOpen = true;
             console.log('Deepgram connected and listening');
+            flushPendingAudio();
         });
         deepgramLive.on(LiveTranscriptionEvents.Error, (e) => console.error('Deepgram Error:', e));
         deepgramLive.on(LiveTranscriptionEvents.Close, () => {
+            deepgramOpen = false;
             console.log('Deepgram connection closed — reconnecting...');
             // Auto-reconnect if ESP32 is still connected
             if (ws.readyState === WebSocket.OPEN) {
@@ -338,6 +427,7 @@ wss.on('connection', (ws, request) => {
             }
         });
         deepgramLive.on(LiveTranscriptionEvents.Transcript, transcriptHandler);
+        deepgramLive.on(LiveTranscriptionEvents.UtteranceEnd, () => finalizeTranscriptTurn("utterance_end"));
     };
 
     // Keepalive: send a ping to Deepgram every 8s so it doesn't close during AI thinking
@@ -367,34 +457,21 @@ wss.on('connection', (ws, request) => {
             resetSilenceTimer();
         }
 
-        if (data.speech_final && transcriptBuffer.trim().length > 0) {
-            if (isThinking) {
-                transcriptBuffer = "";
-                lastAppendedFinalTranscript = "";
-                return;
-            }
-            if (silenceTimer) clearTimeout(silenceTimer);
-            const textToProcess = transcriptBuffer.trim();
-            transcriptBuffer = ""; 
-            lastAppendedFinalTranscript = "";
-            console.log(`[STT] Finalizing turn: "${textToProcess}"`);
-            ws.send(JSON.stringify({ type: "thinking" }));
-            handleFinalSpeech(textToProcess);
-        }
+        if (data.speech_final) finalizeTranscriptTurn("speech_final");
     };
 
     // Start Deepgram
     startDeepgram();
 
     // CRITICAL: Handle messages from ESP32 — binary = mic audio, text = JSON control
-    ws.on('message', (message) => {
-        if (Buffer.isBuffer(message)) {
+    ws.on('message', (message, isBinary) => {
+        if (isBinary) {
             // Raw binary PCM mic audio → forward directly to Deepgram
-            if (deepgramLive && deepgramLive.getReadyState() === 1) {
-                deepgramLive.send(message);
-            }
+            const chunk = Buffer.isBuffer(message) ? message : Buffer.from(message);
+            forwardAudioToDeepgram(chunk);
             return;
         }
+
         // Text frame = JSON control message (context updates etc.)
         try {
             const data = JSON.parse(message.toString());
