@@ -59,14 +59,18 @@ wss.on('connection', (ws, request) => {
                 : text;
 
             const body = {
-                agent_id: MISTRAL_AGENT_ID,
-                agent_version: MISTRAL_AGENT_VERSION,
                 inputs: [{ role: 'user', content: userInput }]
             };
             
-            // If we have a conversation ID, include it in the body instead of the URL
+            // Turn 1 vs Subsequent Turns logic
             if (conversationId) {
+                // For continuing conversations, agent_id is forbidden. Use model instead.
                 body.conversation_id = conversationId;
+                body.model = "magistral-medium-latest"; 
+            } else {
+                // For starting new conversations, agent_id is required.
+                body.agent_id = MISTRAL_AGENT_ID;
+                body.agent_version = MISTRAL_AGENT_VERSION;
             }
 
             const res = await fetch('https://api.mistral.ai/v1/conversations', {
