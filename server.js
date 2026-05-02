@@ -92,9 +92,13 @@ wss.on('connection', (ws, request) => {
             console.log(`Full AI Reply: ${fullResponse}`);
             ws.send(JSON.stringify({ type: "tts", text: fullResponse }));
 
-            ws.send(JSON.stringify({ type: "turn_complete" }));
+            // Small delay to ensure ESP32 starts speaking before turn_complete arrives
+            setTimeout(() => {
+                if (ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({ type: "turn_complete" }));
+                }
+            }, 100);
 
-            ws.send(JSON.stringify({ type: "turn_complete" }));
             mutedUntil = Date.now() + 1000;
         } catch (err) {
             console.error("Processing Error:", err);
