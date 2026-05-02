@@ -145,7 +145,8 @@ const callGroqChat = async ({ userText, latestContext, memory }) => {
             model: GROQ_MODEL,
             messages,
             temperature: 0.8,
-            max_tokens: 160
+            max_tokens: 160,
+            reasoning_format: "hidden"
         })
     });
 
