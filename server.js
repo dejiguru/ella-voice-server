@@ -33,9 +33,11 @@ const audioCache = new Map();
 app.get("/audio/:id", (req, res) => {
     const audio = audioCache.get(req.params.id);
     if (audio) {
+        console.log(`[Cache HIT] Serving audio ID: ${req.params.id}`);
         res.set("Content-Type", "audio/mpeg");
         res.send(audio);
     } else {
+        console.warn(`[Cache MISS] Audio ID not found: ${req.params.id}`);
         res.status(404).send("Audio not found or expired");
     }
 });
@@ -61,7 +63,8 @@ wss.on('connection', (ws, request) => {
         encoding: "opus",
         sample_rate: 16000,
         channels: 1,
-        endpointing: 300, // Faster endpointing for better responsiveness
+        endpointing: 250, // Even faster endpointing
+        utterance_end_ms: 1000, // Force end after 1s of silence
     });
 
     deepgramLive.on("open", () => {
