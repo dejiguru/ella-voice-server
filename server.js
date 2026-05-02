@@ -111,8 +111,25 @@ wss.on('connection', (ws) => {
                             },
                             body: JSON.stringify({ text: spokenText })
                         });
-                        const arrayBuf = await response.arrayBuffer();
-                        const audioBuffer = Buffer.from(arrayBuf);
+
+                        if (!response.ok) {
+                            console.error(`TTS HTTP error: ${response.status} ${response.statusText}`);
+                            return;
+                        }
+
+                        // Deepgram returns chunked transfer encoding — accumulate ALL chunks
+                        // before sending to ESP32 (arrayBuffer() may return only first chunk)
+                        const chunks = [];
+                        for await (const chunk of response.body) {
+                            chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+                        }
+                        const audioBuffer = Buffer.concat(chunks);
+
+                        if (audioBuffer.length === 0) {
+                            console.error("TTS: Deepgram returned empty audio");
+                            return;
+                        }
+
                         ws.send(audioBuffer);
                         console.log(`Sent audio binary to ESP32: ${audioBuffer.length} bytes | spoken: "${spokenText}"`);
                     } catch (e) {
