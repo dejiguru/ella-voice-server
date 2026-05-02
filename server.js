@@ -147,7 +147,7 @@ wss.on('connection', (ws, request) => {
                         audioCache.set(audioId, audioBuffer);
                         setTimeout(() => audioCache.delete(audioId), 60000);
 
-                        const audioUrl = `${protocol}://${host}/audio/${audioId}`;
+                        const audioUrl = `http://${host}/audio/${audioId}`;
                         
                         ws.send(JSON.stringify({ type: "tts_url", url: audioUrl }));
                         console.log(`Sent audio URL to ESP32: ${audioUrl} | spoken: "${spokenText}"`);
