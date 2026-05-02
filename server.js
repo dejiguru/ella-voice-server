@@ -392,10 +392,9 @@ wss.on('connection', (ws, request) => {
     };
 
     const startDeepgram = () => {
-        // MATCHING THE USER'S PROVIDED SCRIPT EXACTLY:
         // Endpoint: /v2/listen
         // Params: eot_threshold=0.7&eot_timeout_ms=5000&model=flux-general-en&encoding=linear16&sample_rate=16000
-        const dgUrl = `wss://api.deepgram.com/v2/listen?model=flux-general-en&encoding=linear16&sample_rate=16000&eot_threshold=0.7&eot_timeout_ms=5000&smart_format=true`;
+        const dgUrl = `wss://api.deepgram.com/v2/listen?model=flux-general-en&encoding=linear16&sample_rate=16000&eot_threshold=0.7&eot_timeout_ms=5000`;
         
         if (!DEEPGRAM_API_KEY) {
             console.error("[Deepgram] API KEY MISSING");
@@ -455,6 +454,18 @@ wss.on('connection', (ws, request) => {
 
         deepgramLive.on('error', (err) => {
             console.error('[Deepgram] Error:', err.message || err);
+        });
+
+        deepgramLive.on('unexpected-response', (_request, response) => {
+            let body = "";
+
+            response.on('data', (chunk) => {
+                body += chunk.toString();
+            });
+
+            response.on('end', () => {
+                console.error(`[Deepgram] Handshake rejected: ${response.statusCode} ${response.statusMessage || ""} ${body.substring(0, 500)}`.trim());
+            });
         });
         
         deepgramLive.on('close', (code, reason) => {
