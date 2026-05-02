@@ -93,8 +93,14 @@ wss.on('connection', (ws) => {
                 let sentenceBuffer = "";
                 
                 const sendTTS = async (text) => {
+                    // Send full text (with tags) to ESP32 for hardware command parsing
                     ws.send(JSON.stringify({ type: "tts", text: text }));
                     console.log(`Sent text to ESP32: ${text}`);
+
+                    // Strip ALL [TAG] tokens before sending to Deepgram TTS
+                    const spokenText = text.replace(/\[[^\]]*\]/g, '').replace(/\s{2,}/g, ' ').trim();
+                    if (!spokenText) return; // nothing left after stripping
+
                     try {
                         const url = "https://api.deepgram.com/v1/speak?model=aura-asteria-en&encoding=linear16&sample_rate=24000&container=none";
                         const response = await fetch(url, {
@@ -103,12 +109,12 @@ wss.on('connection', (ws) => {
                                 "Authorization": `Token ${process.env.DEEPGRAM_API_KEY}`,
                                 "Content-Type": "application/json"
                             },
-                            body: JSON.stringify({ text })
+                            body: JSON.stringify({ text: spokenText })
                         });
                         const arrayBuf = await response.arrayBuffer();
                         const audioBuffer = Buffer.from(arrayBuf);
-                        ws.send(audioBuffer); // Binary frame
-                        console.log(`Sent audio binary to ESP32: ${audioBuffer.length} bytes`);
+                        ws.send(audioBuffer);
+                        console.log(`Sent audio binary to ESP32: ${audioBuffer.length} bytes | spoken: "${spokenText}"`);
                     } catch (e) {
                         console.error("TTS Error:", e);
                     }
