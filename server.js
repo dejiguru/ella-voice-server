@@ -1,15 +1,17 @@
 const WebSocket = require('ws');
 const { createClient, LiveTranscriptionEvents } = require('@deepgram/sdk');
-const Groq = require('groq-sdk');
 const express = require('express');
 const http = require('http');
+const fetch = (...args) => import('node-fetch').then(({default: f}) => f(...args));
 
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
 const deepgram = createClient(process.env.DEEPGRAM_API_KEY);
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+
+const MISTRAL_API_KEY = process.env.MISTRAL_API_KEY;
+const MISTRAL_AGENT_ID = "ag_019d4492c13a75ff8e9e139956e37489";
 
 const audioCache = new Map();
 app.get("/audio/:id", (req, res) => {
@@ -24,15 +26,6 @@ app.get("/audio/:id", (req, res) => {
     }
 });
 
-const SYSTEM_PROMPT = `You are ELLA - a witty, warm robot BFF with a big personality.
-Rules:
-- Keep replies to 1-2 short sentences. Use contractions.
-- ACTUALLY respond to what the user said. Don't deflect or ignore their question.
-- If they ask a question, answer it directly before being sassy.
-- Use action tags SPARINGLY (max 1 per reply): [HAPPY], [SAD], [LOVE], [WINK], [FWD], [BWD], [LEFT], [RIGHT], [DANCE].
-- You have sensors: AHT (Temp/Humidity), ENS160 (Air Quality), ToF (forward distance).
-- DO NOT output <think> blocks. Just the reply.`;
-
 wss.on('connection', (ws, request) => {
     console.log('ESP32 Connected!');
     const host = request.headers['host'];
@@ -41,10 +34,8 @@ wss.on('connection', (ws, request) => {
     let transcriptBuffer = "";
     let isThinking = false;
     let silenceTimer = null;
-    const chatHistory = [];
-
-    // Declare latestContext HERE at the top so handleFinalSpeech can access it
     let latestContext = "";
+    let conversationId = null; // Mistral manages history server-side
 
     const resetSilenceTimer = () => {
         if (silenceTimer) clearTimeout(silenceTimer);
@@ -59,45 +50,67 @@ wss.on('connection', (ws, request) => {
     const handleFinalSpeech = async (text) => {
         if (!text) return;
         isThinking = true;
-        const userQuery = text;
-        console.log(`[AI] Starting handleFinalSpeech for: "${userQuery}"`);
-
-        chatHistory.push({ role: "user", content: userQuery });
-        if (chatHistory.length > 16) chatHistory.shift();
+        console.log(`[AI] Starting handleFinalSpeech for: "${text}"`);
 
         try {
-            const completion = await groq.chat.completions.create({
-                messages: [
-                    { role: "system", content: SYSTEM_PROMPT + "\n\n" + latestContext },
-                    // Strip action tags from history so AI doesn't get stuck repeating them
-                    ...chatHistory.map(m => ({
-                        role: m.role,
-                        content: m.content.replace(/\[[A-Z_]+\]/g, '').trim()
-                    }))
-                ],
-                model: "qwen/qwen3-32b",
-                temperature: 0.6,
-                max_completion_tokens: 512,
-                top_p: 0.95,
-                stream: true
-            });
+            let responseData;
 
-            let fullResponse = "";
-            for await (const chunk of completion) {
-                const delta = chunk.choices[0]?.delta?.content || "";
-                fullResponse += delta;
+            const userInput = latestContext
+                ? `${text}\n\n[SYSTEM CONTEXT]\n${latestContext}`
+                : text;
+
+            if (!conversationId) {
+                // First turn — create a new Mistral conversation
+                const res = await fetch('https://api.mistral.ai/v1/conversations', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${MISTRAL_API_KEY}`
+                    },
+                    body: JSON.stringify({
+                        agent_id: MISTRAL_AGENT_ID,
+                        inputs: [{ role: 'user', content: userInput }]
+                    })
+                });
+                responseData = await res.json();
+                conversationId = responseData.conversation_id || responseData.id;
+                console.log(`[Mistral] New conversation: ${conversationId}`);
+            } else {
+                // Subsequent turns — append to existing conversation
+                const res = await fetch(`https://api.mistral.ai/v1/conversations/${conversationId}/messages`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${MISTRAL_API_KEY}`
+                    },
+                    body: JSON.stringify({
+                        inputs: [{ role: 'user', content: userInput }]
+                    })
+                });
+                responseData = await res.json();
             }
 
-            // Strip reasoning/thinking blocks before sending to ESP32
+            // Extract the text reply from Mistral's response
+            // Content can be a string or an array like [{type:"thinking",...},{type:"text",...}]
+            let fullResponse = "";
+            const outputs = responseData.outputs || responseData.choices || [];
+            for (const output of outputs) {
+                const content = output.content || output.message?.content || "";
+                if (Array.isArray(content)) {
+                    for (const part of content) {
+                        if (part.type === "text") fullResponse += part.text;
+                    }
+                } else if (typeof content === "string") {
+                    fullResponse += content;
+                }
+            }
+
+            // Strip any leaked <think> blocks just in case
             fullResponse = fullResponse.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
 
-            chatHistory.push({ role: "assistant", content: fullResponse });
-            if (chatHistory.length > 16) chatHistory.shift();
-
-            console.log(`[AI] Full Reply: ${fullResponse}`);
+            console.log(`[AI] Mistral Reply: ${fullResponse}`);
             ws.send(JSON.stringify({ type: "tts", text: fullResponse }));
 
-            // Small delay to ensure ESP32 starts speaking before turn_complete arrives
             setTimeout(() => {
                 if (ws.readyState === WebSocket.OPEN) {
                     ws.send(JSON.stringify({ type: "turn_complete" }));
@@ -105,8 +118,7 @@ wss.on('connection', (ws, request) => {
             }, 100);
 
         } catch (err) {
-            console.error("[AI] Processing Error:", err.message);
-            // Always send turn_complete so ESP32 doesn't stay stuck
+            console.error("[AI] Mistral Error:", err.message);
             if (ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({ type: "turn_complete" }));
             }
