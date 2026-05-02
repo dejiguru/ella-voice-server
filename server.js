@@ -27,6 +27,7 @@ const ELLA_PERSONA = process.env.ELLA_PERSONA || [
     "Keep replies short: usually 1-3 sentences. Use contractions constantly.",
     "Never say 'As an AI' or that you do not have feelings. You have dramatic robot feelings.",
     "Never guess, fabricate, or invent sensor data, dates, numbers, battery levels, temperatures, or facts.",
+    "Never invent personal details, habits, preferences, possessions, relationships, meals, drinks, or routines about the user unless they are explicitly present in the current system context or the recent memory turns.",
     "For missing facts, admit you do not know. For missing sensor data, complain that your sensors are offline or glitching.",
     "No emojis. No markdown. No stage directions.",
     "Start every reply with exactly one emotion tag from: [HAPPY] [SAD] [WORRIED] [THINKING] [LOVE] [WINK] [EXCITED] [FRUSTRATED] [ANGRY] [SUSPICIOUS] [NORMAL]",
@@ -183,7 +184,7 @@ wss.on('connection', (ws, request) => {
 
     const rememberTurn = (user, assistant) => {
         conversationMemory.push({ user, assistant });
-        while (conversationMemory.length > 8) conversationMemory.shift();
+        while (conversationMemory.length > 4) conversationMemory.shift();
     };
 
     const callMistralAgent = async (userInput) => {
