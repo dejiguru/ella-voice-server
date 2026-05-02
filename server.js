@@ -59,19 +59,20 @@ wss.on('connection', (ws, request) => {
                 : text;
 
             const body = {
-                agent_id: MISTRAL_AGENT_ID,
                 inputs: [{ role: 'user', content: userInput }]
             };
-            
+            let mistralUrl = 'https://api.mistral.ai/v1/conversations';
+
             if (conversationId) {
-                // Subsequent turns: ONLY agent_id and conversation_id
-                body.conversation_id = conversationId;
+                // Append to the existing conversation. Agent/model fields are only used when starting.
+                mistralUrl = `${mistralUrl}/${encodeURIComponent(conversationId)}`;
             } else {
-                // First turn: agent_id and agent_version
+                // Start a new conversation with the configured agent.
+                body.agent_id = MISTRAL_AGENT_ID;
                 body.agent_version = MISTRAL_AGENT_VERSION;
             }
 
-            const res = await fetch('https://api.mistral.ai/v1/conversations', {
+            const res = await fetch(mistralUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -85,10 +86,15 @@ wss.on('connection', (ws, request) => {
             // DEBUG: log raw response so we can see the structure
             console.log("[Mistral RAW]", JSON.stringify(responseData).substring(0, 500));
 
-            // Store conversation ID if it's new
-            if (!conversationId) {
+            if (!res.ok) {
+                const detail = responseData.detail || responseData.message || responseData.error || res.statusText;
+                throw new Error(`Mistral API ${res.status}: ${JSON.stringify(detail).substring(0, 500)}`);
+            }
+
+            // Store the latest conversation ID. Mistral may return a new ID after appends.
+            if (responseData.conversation_id || responseData.id) {
                 conversationId = responseData.conversation_id || responseData.id;
-                console.log(`[Mistral] New conversation: ${conversationId}`);
+                console.log(`[Mistral] Conversation: ${conversationId}`);
             }
 
             // Extract the text reply
