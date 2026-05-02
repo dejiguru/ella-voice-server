@@ -401,32 +401,31 @@ wss.on('connection', (ws, request) => {
 
     const startDeepgram = () => {
         deepgramLive = deepgram.listen.live({
-            model: "nova-3",
+            model: "flux-general-en",
             smart_format: true,
             encoding: "linear16",
             sample_rate: 16000,
             channels: 1,
-            endpointing: 500,
-            utterance_end_ms: 1000,
-            vad_events: true,
+            eot_threshold: 0.6,
+            eot_timeout_ms: 1200,
             interim_results: true,
             keep_alive: true 
         });
 
         deepgramLive.on(LiveTranscriptionEvents.Open, () => {
             deepgramOpen = true;
-            console.log('Deepgram connected and listening');
+            console.log('Deepgram Flux connected and listening');
             flushPendingAudio();
         });
         deepgramLive.on(LiveTranscriptionEvents.Error, (e) => {
-            console.error('Deepgram Error:', e);
+            console.error('Deepgram Flux Error:', e);
             if (e.message) console.error('Error Details:', e.message);
         });
         deepgramLive.on(LiveTranscriptionEvents.Close, () => {
             deepgramOpen = false;
             console.log('Deepgram connection closed — reconnecting...');
             if (ws.readyState === WebSocket.OPEN) {
-                setTimeout(() => startDeepgram(), 1000); // Increased retry delay
+                setTimeout(() => startDeepgram(), 1000);
             }
         });
         deepgramLive.on(LiveTranscriptionEvents.Transcript, transcriptHandler);
@@ -441,18 +440,22 @@ wss.on('connection', (ws, request) => {
 
     const transcriptHandler = (data) => {
         const transcript = (data.channel.alternatives[0].transcript || "").trim();
+        
+        // Flux provides model-level turn detection. If it says speech is final, we trust it.
+        const isFinal = data.is_final || data.speech_final;
+
         if (transcript.length > 0) {
-            if ((data.is_final || data.speech_final) && transcript !== lastAppendedFinalTranscript) {
+            if (isFinal && transcript !== lastAppendedFinalTranscript) {
                 transcriptBuffer += " " + transcript;
                 lastAppendedFinalTranscript = transcript;
             }
 
-            const displayText = (data.is_final || data.speech_final)
+            const displayText = isFinal
                 ? transcriptBuffer.trim()
                 : (transcriptBuffer + " " + transcript).trim();
 
             if (displayText !== lastSentInterim) {
-                console.log(`[STT] Recv: "${transcript}" (final=${data.is_final||false}, speech_final=${data.speech_final||false})`);
+                console.log(`[STT] Recv: "${transcript}" (final=${isFinal}, eot=${data.speech_final||false})`);
                 ws.send(JSON.stringify({ type: "interim", text: displayText }));
                 lastSentInterim = displayText;
                 resetSilenceTimer();
@@ -460,7 +463,7 @@ wss.on('connection', (ws, request) => {
         }
 
         if (data.speech_final) {
-            finalizeTranscriptTurn("speech_final");
+            finalizeTranscriptTurn("flux_eot");
         }
     };
 
