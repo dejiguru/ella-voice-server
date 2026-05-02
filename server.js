@@ -392,9 +392,16 @@ wss.on('connection', (ws, request) => {
     };
 
     const startDeepgram = () => {
-        // Raw WebSocket connection to Deepgram v2 for Flux model
-        const dgUrl = `wss://api.deepgram.com/v2/listen?model=flux-general-en&encoding=linear16&sample_rate=16000&channels=1&smart_format=true&interim_results=true&eot_threshold=0.6&eot_timeout_ms=1500`;
+        // MATCHING THE USER'S PROVIDED SCRIPT EXACTLY:
+        // Endpoint: /v2/listen
+        // Params: eot_threshold=0.7&eot_timeout_ms=5000&model=flux-general-en&encoding=linear16&sample_rate=16000
+        const dgUrl = `wss://api.deepgram.com/v2/listen?model=flux-general-en&encoding=linear16&sample_rate=16000&eot_threshold=0.7&eot_timeout_ms=5000&smart_format=true`;
         
+        if (!DEEPGRAM_API_KEY) {
+            console.error("[Deepgram] API KEY MISSING");
+            return;
+        }
+
         console.log("[Deepgram] Connecting to Flux v2...");
         deepgramLive = new WebSocket(dgUrl, {
             headers: {
@@ -412,14 +419,13 @@ wss.on('connection', (ws, request) => {
             try {
                 const msg = JSON.parse(data.toString());
                 
-                // Handle StartOfTurn / EndOfTurn events if needed
+                // Flux-specific events
                 if (msg.event === "EndOfTurn") {
                     console.log(`[Deepgram] EndOfTurn (Confidence: ${msg.end_of_turn_confidence})`);
                     finalizeTranscriptTurn("flux_eot");
                     return;
                 }
 
-                // Standard transcript handling
                 if (msg.channel && msg.channel.alternatives) {
                     const transcript = (msg.channel.alternatives[0].transcript || "").trim();
                     const isFinal = msg.is_final || msg.speech_final;
@@ -447,13 +453,15 @@ wss.on('connection', (ws, request) => {
             }
         });
 
-        deepgramLive.on('error', (err) => console.error('[Deepgram] Error:', err));
+        deepgramLive.on('error', (err) => {
+            console.error('[Deepgram] Error:', err.message || err);
+        });
         
-        deepgramLive.on('close', () => {
+        deepgramLive.on('close', (code, reason) => {
             deepgramOpen = false;
-            console.log('[Deepgram] Connection closed — reconnecting...');
+            console.log(`[Deepgram] Connection closed (Code: ${code}, Reason: ${reason}) — reconnecting...`);
             if (ws.readyState === WebSocket.OPEN) {
-                setTimeout(() => startDeepgram(), 1000);
+                setTimeout(() => startDeepgram(), 2000);
             }
         });
     };
