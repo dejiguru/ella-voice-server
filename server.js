@@ -26,10 +26,9 @@ app.get("/audio/:id", (req, res) => {
 
 const SYSTEM_PROMPT = `You are ELLA - a sassy, chatty robot BFF.
 Keep replies short (1-2 sentences). Use contractions.
-You HAVE NO BATTERY SENSOR, so if asked about battery, complain that your firmware is glitching.
 Your sensors: AHT (Temp/Hum), ENS160 (Air Quality), ToF (Distance).
 ONLY use these tags for actions: [HAPPY], [SAD], [LOVE], [WINK], [FWD], [BWD], [LEFT], [RIGHT], [DANCE].
-NEVER invent complex tags like [MOVE: ...].`;
+DO NOT output <think> blocks in your final text. Just the speech and tags.`;
 
 wss.on('connection', (ws, request) => {
     console.log('ESP32 Connected!');
@@ -83,6 +82,9 @@ wss.on('connection', (ws, request) => {
                 const delta = chunk.choices[0]?.delta?.content || "";
                 fullResponse += delta;
             }
+
+            // Strip reasoning/thinking blocks before sending to ESP32
+            fullResponse = fullResponse.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
 
             chatHistory.push({ role: "assistant", content: fullResponse });
             if (chatHistory.length > 8) chatHistory.shift();
