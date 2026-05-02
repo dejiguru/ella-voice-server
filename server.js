@@ -12,6 +12,7 @@ const deepgram = createClient(process.env.DEEPGRAM_API_KEY);
 
 const MISTRAL_API_KEY = process.env.MISTRAL_API_KEY;
 const MISTRAL_AGENT_ID = "ag_019d4492c13a75ff8e9e139956e37489";
+const MISTRAL_AGENT_VERSION = 28;
 
 const audioCache = new Map();
 app.get("/audio/:id", (req, res) => {
@@ -59,6 +60,7 @@ wss.on('connection', (ws, request) => {
 
             const body = {
                 agent_id: MISTRAL_AGENT_ID,
+                agent_version: MISTRAL_AGENT_VERSION,
                 inputs: [{ role: 'user', content: userInput }]
             };
             
