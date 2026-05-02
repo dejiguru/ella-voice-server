@@ -57,10 +57,18 @@ wss.on('connection', (ws) => {
 
     deepgramLive.on("Results", async (data) => {
         const transcript = data.channel.alternatives[0].transcript;
-        if (transcript) {
-            transcriptBuffer += transcript + " ";
+        if (!transcript) return;
+
+        // Interim result: Deepgram is still listening — forward to ESP32 for live display
+        if (!data.is_final) {
+            console.log(`[Interim] ${transcript}`);
+            ws.send(JSON.stringify({ type: "interim", text: transcript }));
+            return;
         }
-        
+
+        // is_final: accumulate into buffer
+        transcriptBuffer += transcript + " ";
+
         if (data.speech_final && transcriptBuffer.trim().length > 0) {
             // Echo suppression: discard transcript if we just finished speaking
             if (Date.now() < mutedUntil) {
