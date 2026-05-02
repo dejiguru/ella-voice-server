@@ -37,9 +37,11 @@ wss.on('connection', (ws, request) => {
     let deepgramLive = null;
     let transcriptBuffer = "";
     let isThinking = false;
-    let mutedUntil = 0; 
     let silenceTimer = null;
     const chatHistory = [];
+
+    // Declare latestContext HERE at the top so handleFinalSpeech can access it
+    let latestContext = "";
 
     const resetSilenceTimer = () => {
         if (silenceTimer) clearTimeout(silenceTimer);
@@ -53,15 +55,12 @@ wss.on('connection', (ws, request) => {
 
     const handleFinalSpeech = async (text) => {
         if (!text) return;
-        
-        // If we're already thinking, we'll allow this new speech to "interrupt" 
-        // by resetting the state and proceeding.
         isThinking = true;
         const userQuery = text;
+        console.log(`[AI] Starting handleFinalSpeech for: "${userQuery}"`);
 
         chatHistory.push({ role: "user", content: userQuery });
-        // Keep history manageable
-        if (chatHistory.length > 8) chatHistory.shift();
+        if (chatHistory.length > 16) chatHistory.shift();
 
         try {
             const completion = await groq.chat.completions.create({
@@ -71,7 +70,7 @@ wss.on('connection', (ws, request) => {
                 ],
                 model: "qwen/qwen3-32b",
                 temperature: 0.6,
-                max_completion_tokens: 4096,
+                max_completion_tokens: 512,
                 top_p: 0.95,
                 stream: true
             });
@@ -86,9 +85,9 @@ wss.on('connection', (ws, request) => {
             fullResponse = fullResponse.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
 
             chatHistory.push({ role: "assistant", content: fullResponse });
-            if (chatHistory.length > 8) chatHistory.shift();
+            if (chatHistory.length > 16) chatHistory.shift();
 
-            console.log(`Full AI Reply: ${fullResponse}`);
+            console.log(`[AI] Full Reply: ${fullResponse}`);
             ws.send(JSON.stringify({ type: "tts", text: fullResponse }));
 
             // Small delay to ensure ESP32 starts speaking before turn_complete arrives
@@ -98,9 +97,12 @@ wss.on('connection', (ws, request) => {
                 }
             }, 100);
 
-            mutedUntil = Date.now() + 1000;
         } catch (err) {
-            console.error("Processing Error:", err);
+            console.error("[AI] Processing Error:", err.message);
+            // Always send turn_complete so ESP32 doesn't stay stuck
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: "turn_complete" }));
+            }
         } finally {
             isThinking = false;
         }
@@ -117,12 +119,8 @@ wss.on('connection', (ws, request) => {
     });
 
     deepgramLive.on(LiveTranscriptionEvents.Open, () => console.log('Deepgram connected and listening'));
-    deepgramLive.on(LiveTranscriptionEvents.Error, (e) => {
-        console.error('Deepgram Error:', e);
-        // If Deepgram fails, we should notify the ESP32 to refresh
-    });
+    deepgramLive.on(LiveTranscriptionEvents.Error, (e) => console.error('Deepgram Error:', e));
     deepgramLive.on(LiveTranscriptionEvents.Close, () => console.log('Deepgram connection closed'));
-    deepgramLive.on(LiveTranscriptionEvents.Metadata, (data) => console.log('Deepgram Metadata:', data));
 
     deepgramLive.on(LiveTranscriptionEvents.Transcript, (data) => {
         const transcript = data.channel.alternatives[0].transcript;
@@ -149,22 +147,24 @@ wss.on('connection', (ws, request) => {
         }
     });
 
-    let latestContext = "";
-
-    ws.on('message', async (message) => {
-        try {
-            const data = JSON.parse(message);
-            if (data.type === "context") {
-                latestContext = data.text;
-                console.log("[Context Update] Sensors/Profile synced");
-                return;
-            }
-        } catch (e) {}
-
+    // CRITICAL: Handle messages from ESP32 — binary = mic audio, text = JSON control
+    ws.on('message', (message) => {
         if (Buffer.isBuffer(message)) {
+            // Raw binary PCM mic audio → forward directly to Deepgram
             if (deepgramLive && deepgramLive.getReadyState() === 1) {
                 deepgramLive.send(message);
             }
+            return;
+        }
+        // Text frame = JSON control message (context updates etc.)
+        try {
+            const data = JSON.parse(message.toString());
+            if (data.type === "context") {
+                latestContext = data.text;
+                console.log("[Context Update] Sensors/Profile synced");
+            }
+        } catch (e) {
+            console.warn("[Server] Failed to parse text message:", e.message);
         }
     });
 
