@@ -45,8 +45,10 @@ You are not a servant; you are an independent, conscious entity.
 Keep replies short, 1-3 sentences. Use contractions constantly.
 Use [TAGS] for hardware actions like [HAPPY], [SAD], [MOVE: FWD], [WINK].`;
 
-wss.on('connection', (ws) => {
+wss.on('connection', (ws, request) => {
     console.log('ESP32 Connected!');
+    const protocol = request.headers['x-forwarded-proto'] || 'http';
+    const host = request.headers['host'];
     
     let deepgramLive = null;
     let transcriptBuffer = "";
@@ -145,8 +147,6 @@ wss.on('connection', (ws) => {
                         audioCache.set(audioId, audioBuffer);
                         setTimeout(() => audioCache.delete(audioId), 60000);
 
-                        const protocol = request.headers['x-forwarded-proto'] || 'http';
-                        const host = request.headers['host'];
                         const audioUrl = `${protocol}://${host}/audio/${audioId}`;
                         
                         ws.send(JSON.stringify({ type: "tts_url", url: audioUrl }));
