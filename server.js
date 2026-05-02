@@ -11,7 +11,20 @@ const app = express();
 app.get("/ping", (req, res) => res.send("Alive"));
 
 const server = app.listen(port, () => console.log(`HTTP Server listening on port ${port}`));
-const wss = new WebSocket.Server({ server });
+
+server.on('upgrade', (req, socket, head) => {
+    console.log("UPGRADE REQUEST RECEIVED!");
+    console.log("URL:", req.url);
+    console.log("Headers:", req.headers);
+});
+
+const wss = new WebSocket.Server({ noServer: true });
+
+server.on('upgrade', function upgrade(request, socket, head) {
+  wss.handleUpgrade(request, socket, head, function done(ws) {
+    wss.emit('connection', ws, request);
+  });
+});
 
 const deepgram = createClient(process.env.DEEPGRAM_API_KEY);
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
@@ -28,7 +41,6 @@ wss.on('connection', (ws) => {
     let transcriptBuffer = "";
     let isThinking = false;
 
-    // Start Deepgram Stream
     deepgramLive = deepgram.listen.live({
         model: "nova-3",
         smart_format: true,
@@ -135,7 +147,6 @@ wss.on('connection', (ws) => {
                 const data = JSON.parse(message.toString());
                 if (data.type === "context") {
                     console.log("Got hardware context:", data);
-                    // could inject hardware context into the system prompt here
                 }
             } catch (e) {
                 console.error("Invalid JSON from ESP32");
@@ -150,5 +161,3 @@ wss.on('connection', (ws) => {
         }
     });
 });
-
-console.log(`Node.js Voice Server listening on port ${port}`);
