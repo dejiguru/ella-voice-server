@@ -178,8 +178,9 @@ wss.on('connection', (ws, request) => {
     let isThinking = false;
     let silenceTimer = null;
     let latestContext = "";
-    let conversationId = null; // Start fresh, let Mistral create a new one
+    let conversationId = null; 
     let lastAppendedFinalTranscript = "";
+    let lastSentInterim = "";
     let deepgramOpen = false;
     let pendingAudioBytes = 0;
     let pendingAudioChunks = [];
@@ -263,10 +264,8 @@ wss.on('connection', (ws, request) => {
         let mistralUrl = 'https://api.mistral.ai/v1/conversations';
 
         if (conversationId) {
-            // Append to the existing conversation. Agent/model fields are only used when starting.
             mistralUrl = `${mistralUrl}/${encodeURIComponent(conversationId)}`;
         } else {
-            // Start a new conversation with the configured agent.
             body.agent_id = MISTRAL_AGENT_ID;
             body.agent_version = MISTRAL_AGENT_VERSION;
         }
@@ -322,11 +321,12 @@ wss.on('connection', (ws, request) => {
                 const textToProcess = transcriptBuffer.trim();
                 transcriptBuffer = "";
                 lastAppendedFinalTranscript = "";
+                lastSentInterim = "";
                 console.log("[Silence Watchdog] Forcing turn end...");
                 ws.send(JSON.stringify({ type: "thinking" }));
                 handleFinalSpeech(textToProcess);
             }
-        }, 1200); 
+        }, 800); 
     };
 
     const handleFinalSpeech = async (text) => {
@@ -393,6 +393,7 @@ wss.on('connection', (ws, request) => {
         const textToProcess = transcriptBuffer.trim();
         transcriptBuffer = "";
         lastAppendedFinalTranscript = "";
+        lastSentInterim = "";
         console.log(`[STT] Finalizing turn (${reason}): "${textToProcess}"`);
         ws.send(JSON.stringify({ type: "thinking" }));
         handleFinalSpeech(textToProcess);
@@ -405,11 +406,11 @@ wss.on('connection', (ws, request) => {
             encoding: "linear16",
             sample_rate: 16000,
             channels: 1,
-            endpointing: 500,
-            utterance_end_ms: 1000,
+            endpointing: 300,
+            utterance_end_ms: 600,
             vad_events: true,
             interim_results: true,
-            keep_alive: true  // Tell Deepgram to expect keepalives
+            keep_alive: true 
         });
 
         deepgramLive.on(LiveTranscriptionEvents.Open, () => {
@@ -421,7 +422,6 @@ wss.on('connection', (ws, request) => {
         deepgramLive.on(LiveTranscriptionEvents.Close, () => {
             deepgramOpen = false;
             console.log('Deepgram connection closed — reconnecting...');
-            // Auto-reconnect if ESP32 is still connected
             if (ws.readyState === WebSocket.OPEN) {
                 setTimeout(() => startDeepgram(), 500);
             }
@@ -430,7 +430,6 @@ wss.on('connection', (ws, request) => {
         deepgramLive.on(LiveTranscriptionEvents.UtteranceEnd, () => finalizeTranscriptTurn("utterance_end"));
     };
 
-    // Keepalive: send a ping to Deepgram every 8s so it doesn't close during AI thinking
     const dgKeepAliveInterval = setInterval(() => {
         if (deepgramLive && deepgramLive.getReadyState() === 1) {
             deepgramLive.keepAlive();
@@ -439,40 +438,38 @@ wss.on('connection', (ws, request) => {
 
     const transcriptHandler = (data) => {
         const transcript = (data.channel.alternatives[0].transcript || "").trim();
-        if (transcript.trim().length > 0) {
-            console.log(`[STT] Recv: "${transcript}"`);
-
-            // Accumulate finalized Deepgram segments, but do not treat every
-            // segment final as the end of the user's whole utterance.
+        if (transcript.length > 0) {
             if ((data.is_final || data.speech_final) && transcript !== lastAppendedFinalTranscript) {
                 transcriptBuffer += " " + transcript;
                 lastAppendedFinalTranscript = transcript;
             }
 
-            // Always show interim for display purposes
             const displayText = (data.is_final || data.speech_final)
                 ? transcriptBuffer.trim()
                 : (transcriptBuffer + " " + transcript).trim();
-            ws.send(JSON.stringify({ type: "interim", text: displayText }));
-            resetSilenceTimer();
+
+            if (displayText !== lastSentInterim) {
+                console.log(`[STT] Recv: "${transcript}" (final=${data.is_final||false}, speech_final=${data.speech_final||false})`);
+                ws.send(JSON.stringify({ type: "interim", text: displayText }));
+                lastSentInterim = displayText;
+                resetSilenceTimer();
+            }
         }
 
-        if (data.speech_final) finalizeTranscriptTurn("speech_final");
+        if (data.speech_final) {
+            finalizeTranscriptTurn("speech_final");
+        }
     };
 
-    // Start Deepgram
     startDeepgram();
 
-    // CRITICAL: Handle messages from ESP32 — binary = mic audio, text = JSON control
     ws.on('message', (message, isBinary) => {
         if (isBinary) {
-            // Raw binary PCM mic audio → forward directly to Deepgram
             const chunk = Buffer.isBuffer(message) ? message : Buffer.from(message);
             forwardAudioToDeepgram(chunk);
             return;
         }
 
-        // Text frame = JSON control message (context updates etc.)
         try {
             const data = JSON.parse(message.toString());
             if (data.type === "context") {
