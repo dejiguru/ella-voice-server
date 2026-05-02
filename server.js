@@ -464,6 +464,17 @@ wss.on('connection', (ws, request) => {
                     return;
                 }
 
+                // Flux v2 connection lifecycle messages
+                if (msg.type === "Connected") {
+                    console.log(`[Deepgram] Connected (request_id: ${msg.request_id})`);
+                    return;
+                }
+
+                if (msg.type === "Error") {
+                    console.error(`[Deepgram] Server error: ${msg.code} — ${msg.description}`);
+                    return;
+                }
+
                 // Fallback: v1 format (shouldn't happen with Flux, but handle just in case)
                 if (msg.channel && msg.channel.alternatives) {
                     const transcript = (msg.channel.alternatives[0].transcript || "").trim();
@@ -521,12 +532,8 @@ wss.on('connection', (ws, request) => {
         });
     };
 
-    const dgKeepAliveInterval = setInterval(() => {
-        if (deepgramLive && deepgramLive.readyState === WebSocket.OPEN) {
-            deepgramLive.send(JSON.stringify({ type: "KeepAlive" }));
-        }
-    }, 5000);
-
+    // Flux v2 does not support KeepAlive — only CloseStream or Configure.
+    // Connection stays alive via audio streaming; reconnects automatically when idle.
     startDeepgram();
 
     ws.on('message', (message, isBinary) => {
