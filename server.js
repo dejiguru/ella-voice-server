@@ -38,6 +38,7 @@ wss.on('connection', (ws, request) => {
     let isThinking = false;
     let mutedUntil = 0; 
     let silenceTimer = null;
+    const chatHistory = [];
 
     const resetSilenceTimer = () => {
         if (silenceTimer) clearTimeout(silenceTimer);
@@ -58,11 +59,15 @@ wss.on('connection', (ws, request) => {
         transcriptBuffer = "";
         isThinking = true;
 
+        chatHistory.push({ role: "user", content: userQuery });
+        // Keep history manageable
+        if (chatHistory.length > 8) chatHistory.shift();
+
         try {
             const completion = await groq.chat.completions.create({
                 messages: [
                     { role: "system", content: SYSTEM_PROMPT },
-                    { role: "user", content: userQuery }
+                    ...chatHistory
                 ],
                 model: "meta-llama/llama-4-scout-17b-16e-instruct",
                 stream: true
@@ -73,6 +78,9 @@ wss.on('connection', (ws, request) => {
                 const delta = chunk.choices[0]?.delta?.content || "";
                 fullResponse += delta;
             }
+
+            chatHistory.push({ role: "assistant", content: fullResponse });
+            if (chatHistory.length > 8) chatHistory.shift();
 
             console.log(`Full AI Reply: ${fullResponse}`);
             ws.send(JSON.stringify({ type: "tts", text: fullResponse }));
