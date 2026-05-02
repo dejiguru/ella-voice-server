@@ -98,7 +98,7 @@ wss.on('connection', (ws, request) => {
             }
 
             ws.send(JSON.stringify({ type: "turn_complete" }));
-            mutedUntil = Date.now() + 2000;
+            mutedUntil = Date.now() + 1000;
         } catch (err) {
             console.error("Processing Error:", err);
         } finally {
@@ -110,9 +110,8 @@ wss.on('connection', (ws, request) => {
         model: "nova-3",
         smart_format: true,
         encoding: "opus",
-        sample_rate: 16000,
-        channels: 1,
-        endpointing: 200, 
+        container: "none",
+        endpointing: 500, 
     });
 
     deepgramLive.on("open", () => console.log('Deepgram connected'));
@@ -120,6 +119,7 @@ wss.on('connection', (ws, request) => {
 
     deepgramLive.on("transcriptReceived", (data) => {
         const transcript = data.channel.alternatives[0].transcript;
+        console.log(`[STT] Recv: "${transcript}" (Final: ${data.is_final})`);
         if (transcript.trim().length > 0) {
             transcriptBuffer += " " + transcript;
             ws.send(JSON.stringify({ type: "interim", text: transcriptBuffer.trim() }));
