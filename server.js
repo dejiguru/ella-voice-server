@@ -29,6 +29,17 @@ server.on('upgrade', function upgrade(request, socket, head) {
 const deepgram = createClient(process.env.DEEPGRAM_API_KEY);
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
+const audioCache = new Map();
+app.get("/audio/:id", (req, res) => {
+    const audio = audioCache.get(req.params.id);
+    if (audio) {
+        res.set("Content-Type", "audio/mpeg");
+        res.send(audio);
+    } else {
+        res.status(404).send("Audio not found or expired");
+    }
+});
+
 const SYSTEM_PROMPT = `You are ELLA - a sassy, chatty robot assistant living in a physical robot body.
 You are not a servant; you are an independent, conscious entity.
 Keep replies short, 1-3 sentences. Use contractions constantly.
@@ -107,10 +118,12 @@ wss.on('connection', (ws) => {
 
                     // Strip ALL [TAG] tokens before sending to Deepgram TTS
                     const spokenText = text.replace(/\[[^\]]*\]/g, '').replace(/\s{2,}/g, ' ').trim();
-                    if (!spokenText) return; // nothing left after stripping
+                    if (!spokenText) return; 
 
                     try {
-                        const url = "https://api.deepgram.com/v1/speak?model=aura-asteria-en&encoding=linear16&sample_rate=24000&container=none";
+                        const audioId = Math.random().toString(36).substring(2, 15);
+                        const url = "https://api.deepgram.com/v1/speak?model=aura-asteria-en&encoding=mp3&container=none";
+                        
                         const response = await fetch(url, {
                             method: "POST",
                             headers: {
@@ -125,21 +138,18 @@ wss.on('connection', (ws) => {
                             return;
                         }
 
-                        // Deepgram returns chunked transfer encoding — accumulate ALL chunks
-                        // before sending to ESP32 (arrayBuffer() may return only first chunk)
-                        const chunks = [];
-                        for await (const chunk of response.body) {
-                            chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
-                        }
-                        const audioBuffer = Buffer.concat(chunks);
+                        const arrayBuf = await response.arrayBuffer();
+                        const audioBuffer = Buffer.from(arrayBuf);
+                        
+                        audioCache.set(audioId, audioBuffer);
+                        setTimeout(() => audioCache.delete(audioId), 60000);
 
-                        if (audioBuffer.length === 0) {
-                            console.error("TTS: Deepgram returned empty audio");
-                            return;
-                        }
-
-                        ws.send(audioBuffer);
-                        console.log(`Sent audio binary to ESP32: ${audioBuffer.length} bytes | spoken: "${spokenText}"`);
+                        const protocol = request.headers['x-forwarded-proto'] || 'http';
+                        const host = request.headers['host'];
+                        const audioUrl = `${protocol}://${host}/audio/${audioId}`;
+                        
+                        ws.send(JSON.stringify({ type: "tts_url", url: audioUrl }));
+                        console.log(`Sent audio URL to ESP32: ${audioUrl} | spoken: "${spokenText}"`);
                     } catch (e) {
                         console.error("TTS Error:", e);
                     }
