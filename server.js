@@ -97,14 +97,18 @@ wss.on('connection', (ws, request) => {
         if (silenceTimer) clearTimeout(silenceTimer);
         silenceTimer = setTimeout(() => {
             if (transcriptBuffer.trim().length > 0 && !isThinking) {
+                const textToProcess = transcriptBuffer.trim();
+                transcriptBuffer = "";
+                lastAppendedFinalTranscript = "";
                 console.log("[Silence Watchdog] Forcing turn end...");
-                handleFinalSpeech(transcriptBuffer.trim());
+                ws.send(JSON.stringify({ type: "thinking" }));
+                handleFinalSpeech(textToProcess);
             }
         }, 1200); 
     };
 
     const handleFinalSpeech = async (text) => {
-        if (!text) return;
+        if (!text || isThinking) return;
         isThinking = true;
         console.log(`[AI] Starting handleFinalSpeech for: "${text}"`);
 
