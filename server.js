@@ -108,21 +108,40 @@ wss.on('connection', (ws, request) => {
         }
     };
 
-    deepgramLive = deepgram.listen.live({
-        model: "nova-3",
-        smart_format: true,
-        encoding: "linear16",
-        sample_rate: 16000,
-        channels: 1,
-        endpointing: 500, 
-        interim_results: true
-    });
+    const startDeepgram = () => {
+        deepgramLive = deepgram.listen.live({
+            model: "nova-3",
+            smart_format: true,
+            encoding: "linear16",
+            sample_rate: 16000,
+            channels: 1,
+            endpointing: 500,
+            interim_results: true,
+            keep_alive: true  // Tell Deepgram to expect keepalives
+        });
 
-    deepgramLive.on(LiveTranscriptionEvents.Open, () => console.log('Deepgram connected and listening'));
-    deepgramLive.on(LiveTranscriptionEvents.Error, (e) => console.error('Deepgram Error:', e));
-    deepgramLive.on(LiveTranscriptionEvents.Close, () => console.log('Deepgram connection closed'));
+        deepgramLive.on(LiveTranscriptionEvents.Open, () => {
+            console.log('Deepgram connected and listening');
+        });
+        deepgramLive.on(LiveTranscriptionEvents.Error, (e) => console.error('Deepgram Error:', e));
+        deepgramLive.on(LiveTranscriptionEvents.Close, () => {
+            console.log('Deepgram connection closed — reconnecting...');
+            // Auto-reconnect if ESP32 is still connected
+            if (ws.readyState === WebSocket.OPEN) {
+                setTimeout(() => startDeepgram(), 500);
+            }
+        });
+        deepgramLive.on(LiveTranscriptionEvents.Transcript, transcriptHandler);
+    };
 
-    deepgramLive.on(LiveTranscriptionEvents.Transcript, (data) => {
+    // Keepalive: send a ping to Deepgram every 8s so it doesn't close during AI thinking
+    const dgKeepAliveInterval = setInterval(() => {
+        if (deepgramLive && deepgramLive.getReadyState() === 1) {
+            deepgramLive.keepAlive();
+        }
+    }, 8000);
+
+    const transcriptHandler = (data) => {
         const transcript = data.channel.alternatives[0].transcript;
         if (transcript.trim().length > 0) {
             console.log(`[STT] Recv: "${transcript}"`);
@@ -145,7 +164,10 @@ wss.on('connection', (ws, request) => {
             ws.send(JSON.stringify({ type: "thinking" }));
             handleFinalSpeech(textToProcess);
         }
-    });
+    };
+
+    // Start Deepgram
+    startDeepgram();
 
     // CRITICAL: Handle messages from ESP32 — binary = mic audio, text = JSON control
     ws.on('message', (message) => {
@@ -170,6 +192,7 @@ wss.on('connection', (ws, request) => {
 
     ws.on('close', () => {
         console.log('ESP32 Disconnected');
+        clearInterval(dgKeepAliveInterval);
         if (deepgramLive) deepgramLive.finish();
         if (silenceTimer) clearTimeout(silenceTimer);
     });
