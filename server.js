@@ -122,7 +122,8 @@ wss.on('connection', (ws) => {
 
                     try {
                         const audioId = Math.random().toString(36).substring(2, 15);
-                        const url = "https://api.deepgram.com/v1/speak?model=aura-asteria-en&encoding=mp3&container=none";
+                        // MP3 doesn't use container=none; simplified URL
+                        const url = "https://api.deepgram.com/v1/speak?model=aura-asteria-en&encoding=mp3";
                         
                         const response = await fetch(url, {
                             method: "POST",
