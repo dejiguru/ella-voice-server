@@ -67,7 +67,7 @@ const synthesizeDeepgramSpeech = async (text) => {
 
 const sendDeepgramPcmToEsp = async (ws, audioBuffer) => {
     const bytesPerSecond = 24000 * 2; // 24 kHz, 16-bit mono PCM
-    const chunkSize = 4096;
+    const chunkSize = 2048;
 
     for (let offset = 0; offset < audioBuffer.length; offset += chunkSize) {
         if (ws.readyState !== WebSocket.OPEN) return false;
@@ -75,7 +75,7 @@ const sendDeepgramPcmToEsp = async (ws, audioBuffer) => {
         await new Promise((resolve, reject) => {
             ws.send(chunk, { binary: true }, (err) => err ? reject(err) : resolve());
         });
-        await sleep(Math.max(20, Math.round((chunk.length / bytesPerSecond) * 1000)));
+        await sleep(Math.max(15, Math.round((chunk.length / bytesPerSecond) * 650)));
     }
 
     return true;
@@ -188,6 +188,9 @@ wss.on('connection', (ws, request) => {
                     console.log(`[Deepgram TTS] Streaming ${audioBuffer.length} PCM bytes over WebSocket`);
                     ws.send(JSON.stringify({ type: "tts_audio", text: fullResponse }));
                     await sendDeepgramPcmToEsp(ws, audioBuffer);
+                    if (ws.readyState === WebSocket.OPEN) {
+                        ws.send(JSON.stringify({ type: "tts_audio_done" }));
+                    }
                 } else {
                     ws.send(JSON.stringify({ type: "tts", text: fullResponse }));
                 }
