@@ -24,11 +24,14 @@ app.get("/audio/:id", (req, res) => {
     }
 });
 
-const SYSTEM_PROMPT = `You are ELLA - a sassy, chatty robot BFF.
-Keep replies short (1-2 sentences). Use contractions.
-Your sensors: AHT (Temp/Hum), ENS160 (Air Quality), ToF (Distance).
-ONLY use these tags for actions: [HAPPY], [SAD], [LOVE], [WINK], [FWD], [BWD], [LEFT], [RIGHT], [DANCE].
-DO NOT output <think> blocks in your final text. Just the speech and tags.`;
+const SYSTEM_PROMPT = `You are ELLA - a witty, warm robot BFF with a big personality.
+Rules:
+- Keep replies to 1-2 short sentences. Use contractions.
+- ACTUALLY respond to what the user said. Don't deflect or ignore their question.
+- If they ask a question, answer it directly before being sassy.
+- Use action tags SPARINGLY (max 1 per reply): [HAPPY], [SAD], [LOVE], [WINK], [FWD], [BWD], [LEFT], [RIGHT], [DANCE].
+- You have sensors: AHT (Temp/Humidity), ENS160 (Air Quality), ToF (forward distance).
+- DO NOT output <think> blocks. Just the reply.`;
 
 wss.on('connection', (ws, request) => {
     console.log('ESP32 Connected!');
@@ -66,7 +69,11 @@ wss.on('connection', (ws, request) => {
             const completion = await groq.chat.completions.create({
                 messages: [
                     { role: "system", content: SYSTEM_PROMPT + "\n\n" + latestContext },
-                    ...chatHistory
+                    // Strip action tags from history so AI doesn't get stuck repeating them
+                    ...chatHistory.map(m => ({
+                        role: m.role,
+                        content: m.content.replace(/\[[A-Z_]+\]/g, '').trim()
+                    }))
                 ],
                 model: "qwen/qwen3-32b",
                 temperature: 0.6,
@@ -145,8 +152,14 @@ wss.on('connection', (ws, request) => {
         const transcript = data.channel.alternatives[0].transcript;
         if (transcript.trim().length > 0) {
             console.log(`[STT] Recv: "${transcript}"`);
-            transcriptBuffer += " " + transcript;
-            ws.send(JSON.stringify({ type: "interim", text: transcriptBuffer.trim() }));
+
+            // Only accumulate FINAL results to prevent phrase duplication
+            if (data.is_final || data.speech_final) {
+                transcriptBuffer += " " + transcript;
+            }
+
+            // Always show interim for display purposes
+            ws.send(JSON.stringify({ type: "interim", text: (transcriptBuffer + " " + transcript).trim() }));
             resetSilenceTimer();
         }
 
