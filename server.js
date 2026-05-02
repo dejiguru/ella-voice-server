@@ -59,17 +59,15 @@ wss.on('connection', (ws, request) => {
                 : text;
 
             const body = {
+                agent_id: MISTRAL_AGENT_ID,
                 inputs: [{ role: 'user', content: userInput }]
             };
             
-            // Turn 1 vs Subsequent Turns logic
             if (conversationId) {
-                // For continuing conversations, agent_id is forbidden. Use model instead.
+                // Subsequent turns: ONLY agent_id and conversation_id
                 body.conversation_id = conversationId;
-                body.model = "magistral-medium-latest"; 
             } else {
-                // For starting new conversations, agent_id is required.
-                body.agent_id = MISTRAL_AGENT_ID;
+                // First turn: agent_id and agent_version
                 body.agent_version = MISTRAL_AGENT_VERSION;
             }
 
