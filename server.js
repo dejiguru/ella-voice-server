@@ -342,7 +342,7 @@ wss.on('connection', (ws, request) => {
                 ws.send(JSON.stringify({ type: "thinking" }));
                 handleFinalSpeech(textToProcess);
             }
-        }, 2500); // Increased from 1200ms to 2500ms for longer pauses
+        }, 3000); // Increased to 3s for more natural pauses
     };
 
     const handleFinalSpeech = async (text) => {
@@ -577,9 +577,9 @@ wss.on('connection', (ws, request) => {
             sample_rate: 16000,
             speech_model: "universal-streaming-english",
             format_turns: false,
-            end_of_turn_confidence_threshold: 0.7, // Higher = wait for more confident silence
-            min_end_of_turn_silence_when_confident: 800, // Wait 800ms of silence when confident
-            max_turn_silence: 2000, // Max 2s silence before forcing turn end
+            end_of_turn_confidence_threshold: 0.8, // Higher = wait for more confident silence
+            min_end_of_turn_silence_when_confident: 1000, // Wait 1s of silence when confident
+            max_turn_silence: 2500, // Max 2.5s silence before forcing turn end
             vad_threshold: 0.3,
             token: ASSEMBLYAI_API_KEY
         };
