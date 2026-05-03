@@ -262,14 +262,17 @@ wss.on('connection', (ws, request) => {
                 return;
             }
 
+            // Queue audio if Deepgram not ready yet
             pendingAudioChunks.push(chunk);
             pendingAudioBytes += chunk.length;
         }
 
-        const maxPendingBytes = 16000 * 2 * 3; // keep at most 3 seconds of 16 kHz mono PCM
+        // Keep at most 5 seconds of pending audio (increased from 3s)
+        const maxPendingBytes = 16000 * 2 * 5;
         while (pendingAudioBytes > maxPendingBytes && pendingAudioChunks.length > 0) {
             const dropped = pendingAudioChunks.shift();
             pendingAudioBytes -= dropped.length;
+            console.log(`[Audio] Dropped ${dropped.length} bytes (buffer full)`);
         }
     };
 
@@ -435,7 +438,7 @@ wss.on('connection', (ws, request) => {
 
         deepgramLive.on('open', () => {
             deepgramOpen = true;
-            console.log('Deepgram Nova-3 Connected');
+            console.log(`[Deepgram] Nova-3 Connected (pending: ${pendingAudioChunks.length} chunks, ${pendingAudioBytes} bytes)`);
             flushPendingAudio();
         });
 
