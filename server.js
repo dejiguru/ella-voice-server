@@ -256,7 +256,7 @@ wss.on('connection', (ws, request) => {
                 }
             }
         } else {
-            // Deepgram: send immediately
+            // Deepgram Nova-3: send immediately (no buffering needed)
             if (deepgramLive && deepgramOpen && deepgramLive.readyState === WebSocket.OPEN) {
                 deepgramLive.send(chunk);
                 return;
@@ -416,16 +416,15 @@ wss.on('connection', (ws, request) => {
     };
 
     const startDeepgram = () => {
-        // Endpoint: /v2/listen
-        // Params: eot_threshold=0.7&eot_timeout_ms=5000&model=flux-general-en&encoding=linear16&sample_rate=16000
-        const dgUrl = `wss://api.deepgram.com/v2/listen?model=flux-general-en&encoding=linear16&sample_rate=16000&eot_threshold=0.7&eot_timeout_ms=5000`;
+        // Deepgram Nova-3 with optimal params from official examples
+        const dgUrl = `wss://api.deepgram.com/v1/listen?model=nova-3&language=en&encoding=linear16&sample_rate=16000&channels=1&smart_format=true&interim_results=true&utterance_end_ms=1000&endpointing=1000`;
         
         if (!DEEPGRAM_API_KEY) {
             console.error("[Deepgram] API KEY MISSING");
             return;
         }
 
-        console.log("[Deepgram] Connecting to Flux v2...");
+        console.log("[Deepgram] Connecting to Nova-3...");
         deepgramLive = new WebSocket(dgUrl, {
             headers: {
                 "Authorization": `Token ${DEEPGRAM_API_KEY}`
@@ -434,7 +433,7 @@ wss.on('connection', (ws, request) => {
 
         deepgramLive.on('open', () => {
             deepgramOpen = true;
-            console.log('Deepgram Flux v2 Connected');
+            console.log('Deepgram Nova-3 Connected');
             flushPendingAudio();
         });
 
@@ -442,90 +441,59 @@ wss.on('connection', (ws, request) => {
             try {
                 const msg = JSON.parse(data.toString());
 
-                // Flux v2 message format (TurnInfo)
-                if (msg.type === "TurnInfo") {
-                    const event = msg.event;
-                    const transcript = (msg.transcript || "").trim();
+                // Handle Metadata
+                if (msg.type === "Metadata") {
+                    console.log(`[Deepgram] Metadata received`);
+                    return;
+                }
 
-                    if (event === "EndOfTurn") {
-                        console.log(`[Deepgram] EndOfTurn (Confidence: ${msg.end_of_turn_confidence}, turn_index: ${msg.turn_index})`);
-                        if (transcript.length > 0) {
+                // Handle Results (Nova-3 format)
+                if (msg.type === "Results") {
+                    const transcript = msg.channel?.alternatives?.[0]?.transcript || "";
+                    const isFinal = msg.is_final || false;
+                    const speechFinal = msg.speech_final || false;
+
+                    if (transcript.trim().length > 0) {
+                        if (isFinal) {
                             transcriptBuffer = (transcriptBuffer + " " + transcript).trim();
-                        }
-                        finalizeTranscriptTurn("flux_eot");
-                        return;
-                    }
-
-                    if (event === "StartOfTurn") {
-                        console.log(`[Deepgram] StartOfTurn (turn_index: ${msg.turn_index})`);
-                        return;
-                    }
-
-                    if (event === "Update") {
-                        if (transcript.length > 0) {
+                            console.log(`[STT] Final: "${transcript}" (speech_final=${speechFinal})`);
+                            
+                            if (speechFinal) {
+                                finalizeTranscriptTurn("dg_speech_final");
+                            }
+                        } else {
                             const displayText = (transcriptBuffer + " " + transcript).trim();
                             if (displayText !== lastSentInterim) {
-                                console.log(`[STT] Recv: "${transcript}" (event=Update)`);
+                                console.log(`[STT] Interim: "${transcript}"`);
                                 ws.send(JSON.stringify({ type: "interim", text: displayText }));
                                 lastSentInterim = displayText;
                                 resetSilenceTimer();
                             }
                         }
-                        return;
                     }
-
-                    if (event === "EagerEndOfTurn") {
-                        console.log(`[Deepgram] EagerEndOfTurn (Confidence: ${msg.end_of_turn_confidence})`);
-                        return;
-                    }
-
-                    if (event === "TurnResumed") {
-                        console.log(`[Deepgram] TurnResumed`);
-                        return;
-                    }
-
-                    console.log(`[Deepgram] Unknown TurnInfo event: ${event}`);
                     return;
                 }
 
-                // Flux v2 connection lifecycle messages
-                if (msg.type === "Connected") {
-                    console.log(`[Deepgram] Connected (request_id: ${msg.request_id})`);
+                // Handle UtteranceEnd event
+                if (msg.type === "UtteranceEnd") {
+                    console.log(`[Deepgram] UtteranceEnd detected`);
+                    if (transcriptBuffer.trim().length > 0) {
+                        finalizeTranscriptTurn("dg_utterance_end");
+                    }
                     return;
                 }
 
+                // Handle SpeechStarted event
+                if (msg.type === "SpeechStarted") {
+                    console.log(`[Deepgram] Speech started`);
+                    return;
+                }
+
+                // Handle errors
                 if (msg.type === "Error") {
-                    console.error(`[Deepgram] Server error: ${msg.code} — ${msg.description}`);
+                    console.error(`[Deepgram] Error: ${msg.description || JSON.stringify(msg)}`);
                     return;
                 }
-
-                // Fallback: v1 format (shouldn't happen with Flux, but handle just in case)
-                if (msg.channel && msg.channel.alternatives) {
-                    const transcript = (msg.channel.alternatives[0].transcript || "").trim();
-                    const isFinal = msg.is_final || msg.speech_final;
-
-                    if (transcript.length > 0) {
-                        if (isFinal && transcript !== lastAppendedFinalTranscript) {
-                            transcriptBuffer += " " + transcript;
-                            lastAppendedFinalTranscript = transcript;
-                        }
-
-                        const displayText = isFinal
-                            ? transcriptBuffer.trim()
-                            : (transcriptBuffer + " " + transcript).trim();
-
-                        if (displayText !== lastSentInterim) {
-                            console.log(`[STT] Recv: "${transcript}" (final=${isFinal})`);
-                            ws.send(JSON.stringify({ type: "interim", text: displayText }));
-                            lastSentInterim = displayText;
-                            resetSilenceTimer();
-                        }
-                    }
-                    return;
-                }
-
-                // Log unrecognized messages for debugging
-                console.log(`[Deepgram] Unrecognized message: ${JSON.stringify(msg).substring(0, 300)}`);
             } catch (e) {
                 console.error("[Deepgram] Parse error:", e.message);
             }
@@ -661,7 +629,7 @@ wss.on('connection', (ws, request) => {
     if (STT_PROVIDER === "assemblyai") {
         startAssemblyAI();
     } else {
-        startDeepgram();
+        startDeepgram(); // Default to Deepgram Nova-3
     }
 
     ws.on('message', (message, isBinary) => {
