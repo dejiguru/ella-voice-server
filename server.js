@@ -355,6 +355,50 @@ wss.on('connection', (ws, request) => {
         console.log(`[AI] Starting handleFinalSpeech for: "${text}"`);
 
         try {
+            // Check for direct local commands (bypass AI)
+            const lowerText = text.toLowerCase().trim();
+            const directCommands = {
+                'move forward': 'FWD',
+                'go forward': 'FWD',
+                'forward': 'FWD',
+                'move back': 'BWD',
+                'go back': 'BWD',
+                'back': 'BWD',
+                'backward': 'BWD',
+                'turn left': 'TURN_L_90',
+                'go left': 'LEFT',
+                'left': 'LEFT',
+                'turn right': 'TURN_R_90',
+                'go right': 'RIGHT',
+                'right': 'RIGHT',
+                'spin left': 'SPIN_L',
+                'spin right': 'SPIN_R',
+                'spin around': 'SPIN_L',
+                'spin': 'SPIN_L',
+                'stop': 'STOP',
+                'halt': 'STOP',
+                'look up': 'LOOK_UP',
+                'look down': 'LOOK_DOWN',
+                'center': 'CENTER',
+                'dance': 'DANCE'
+            };
+
+            // Check if this is a direct command
+            for (const [phrase, command] of Object.entries(directCommands)) {
+                if (lowerText === phrase || lowerText.includes(phrase)) {
+                    console.log(`[Local Command] Detected: "${phrase}" -> ${command}`);
+                    const response = `[HAPPY] Okay! [MOVE: ${command}]`;
+                    ws.send(JSON.stringify({ type: "tts", text: response }));
+                    setTimeout(() => {
+                        if (ws.readyState === WebSocket.OPEN) {
+                            ws.send(JSON.stringify({ type: "turn_complete" }));
+                        }
+                    }, 100);
+                    isThinking = false;
+                    return;
+                }
+            }
+
             const userInput = latestContext
                 ? `${text}\n\n[SYSTEM CONTEXT]\n${latestContext}`
                 : text;
