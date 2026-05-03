@@ -339,6 +339,7 @@ wss.on('connection', (ws, request) => {
                 lastAppendedFinalTranscript = "";
                 lastSentInterim = "";
                 console.log("[Silence Watchdog] Forcing turn end...");
+                ws.send(JSON.stringify({ type: "final_transcript", text: textToProcess })); // Send final transcript first
                 ws.send(JSON.stringify({ type: "thinking" }));
                 handleFinalSpeech(textToProcess);
             }
@@ -411,6 +412,7 @@ wss.on('connection', (ws, request) => {
         lastAppendedFinalTranscript = "";
         lastSentInterim = "";
         console.log(`[STT] Finalizing turn (${reason}): "${textToProcess}"`);
+        ws.send(JSON.stringify({ type: "final_transcript", text: textToProcess })); // Send final transcript first
         ws.send(JSON.stringify({ type: "thinking" }));
         handleFinalSpeech(textToProcess);
     };
