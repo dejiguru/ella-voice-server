@@ -233,16 +233,38 @@ wss.on('connection', (ws, request) => {
         pendingAudioBytes = 0;
     };
 
+    // AssemblyAI audio buffering: accumulate to 100ms chunks (1600 samples = 3200 bytes)
+    let aaiAudioBuffer = Buffer.alloc(0);
+    const AAI_MIN_CHUNK_SIZE = 3200; // 100ms at 16kHz mono
+
     const forwardAudioToDeepgram = (chunk) => {
         logAudioStats(chunk);
 
-        if (deepgramLive && deepgramOpen && deepgramLive.readyState === WebSocket.OPEN) {
-            deepgramLive.send(chunk);
-            return;
-        }
+        // For AssemblyAI: buffer to minimum chunk size
+        if (STT_PROVIDER === "assemblyai") {
+            aaiAudioBuffer = Buffer.concat([aaiAudioBuffer, chunk]);
+            
+            while (aaiAudioBuffer.length >= AAI_MIN_CHUNK_SIZE) {
+                const toSend = aaiAudioBuffer.subarray(0, AAI_MIN_CHUNK_SIZE);
+                aaiAudioBuffer = aaiAudioBuffer.subarray(AAI_MIN_CHUNK_SIZE);
+                
+                if (deepgramLive && deepgramOpen && deepgramLive.readyState === WebSocket.OPEN) {
+                    deepgramLive.send(toSend);
+                } else {
+                    pendingAudioChunks.push(toSend);
+                    pendingAudioBytes += toSend.length;
+                }
+            }
+        } else {
+            // Deepgram: send immediately
+            if (deepgramLive && deepgramOpen && deepgramLive.readyState === WebSocket.OPEN) {
+                deepgramLive.send(chunk);
+                return;
+            }
 
-        pendingAudioChunks.push(chunk);
-        pendingAudioBytes += chunk.length;
+            pendingAudioChunks.push(chunk);
+            pendingAudioBytes += chunk.length;
+        }
 
         const maxPendingBytes = 16000 * 2 * 3; // keep at most 3 seconds of 16 kHz mono PCM
         while (pendingAudioBytes > maxPendingBytes && pendingAudioChunks.length > 0) {
@@ -542,6 +564,15 @@ wss.on('connection', (ws, request) => {
     }, 15000);
 
     const startAssemblyAI = () => {
+        // Close any existing connection first to prevent "too many concurrent sessions"
+        if (deepgramLive && deepgramLive.readyState !== WebSocket.CLOSED) {
+            console.log("[AssemblyAI] Closing existing connection...");
+            deepgramLive.removeAllListeners();
+            deepgramLive.close();
+            deepgramLive = null;
+            deepgramOpen = false;
+        }
+
         const params = {
             sample_rate: 16000,
             speech_model: "universal-streaming-english",
@@ -550,13 +581,13 @@ wss.on('connection', (ws, request) => {
             min_end_of_turn_silence_when_confident: 400,
             max_turn_silence: 1280,
             vad_threshold: 0.4,
-            token: ASSEMBLYAI_API_KEY // Try adding token to URL as well
+            token: ASSEMBLYAI_API_KEY
         };
         const query = Object.entries(params).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join("&");
         const aaiUrl = `wss://streaming.assemblyai.com/v3/ws?${query}`;
 
-        console.log("[AssemblyAI] Connecting with token auth...");
-        deepgramLive = new WebSocket(aaiUrl); // Token is in query now
+        console.log("[AssemblyAI] Connecting...");
+        deepgramLive = new WebSocket(aaiUrl);
 
         deepgramLive.on('open', () => {
             deepgramOpen = true;
@@ -588,24 +619,34 @@ wss.on('connection', (ws, request) => {
                 } else if (msg.type === "Begin") {
                     console.log(`[AssemblyAI] Session Started: ${msg.id}`);
                 } else if (msg.type === "Error") {
-                    console.error("[AssemblyAI] Error Received:", JSON.stringify(msg, null, 2));
+                    console.error("[AssemblyAI] Error:", JSON.stringify(msg, null, 2));
                 }
             } catch (e) {
                 console.error("[AssemblyAI] Parse error:", e.message);
             }
         });
 
+        deepgramLive.on('error', (err) => {
+            console.error('[AssemblyAI] WebSocket error:', err.message || err);
+        });
+
         deepgramLive.on('close', (code, reason) => {
             deepgramOpen = false;
-            console.log(`[AssemblyAI] Closed (${code}): ${reason || "No reason given"} — reconnecting...`);
-            if (ws.readyState === WebSocket.OPEN) {
+            console.log(`[AssemblyAI] Closed (${code}): ${reason || "No reason given"}`);
+            
+            // Only reconnect if ESP32 is still connected and not a fatal error
+            if (ws.readyState === WebSocket.OPEN && code !== 1008) {
+                console.log("[AssemblyAI] Reconnecting in 2s...");
                 setTimeout(() => startAssemblyAI(), 2000);
+            } else if (code === 1008) {
+                console.error("[AssemblyAI] FATAL: Too many sessions. Waiting 10s before retry...");
+                setTimeout(() => startAssemblyAI(), 10000);
             }
         });
     };
 
     // --- Provider Selection ---
-    if (STT_PROVIDER === "assemblyai" || true) { // Forced for testing
+    if (STT_PROVIDER === "assemblyai") {
         startAssemblyAI();
     } else {
         startDeepgram();
@@ -632,7 +673,11 @@ wss.on('connection', (ws, request) => {
     ws.on('close', () => {
         console.log('ESP32 Disconnected');
         if (dgKeepAliveInterval) clearInterval(dgKeepAliveInterval);
-        if (deepgramLive) deepgramLive.close();
+        if (deepgramLive) {
+            deepgramLive.removeAllListeners();
+            deepgramLive.close();
+            deepgramLive = null;
+        }
         if (silenceTimer) clearTimeout(silenceTimer);
     });
 });
