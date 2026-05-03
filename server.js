@@ -529,12 +529,12 @@ wss.on('connection', (ws, request) => {
         });
     };
 
-    // Deepgram keep-alive: send WebSocket pings every 10s to prevent timeout
+    // Deepgram keep-alive: send KeepAlive message every 8s to prevent timeout
     let dgKeepAliveInterval = setInterval(() => {
         if (deepgramLive && deepgramLive.readyState === WebSocket.OPEN) {
-            deepgramLive.ping();
+            deepgramLive.send(JSON.stringify({ type: 'KeepAlive' }));
         }
-    }, 10000);
+    }, 8000);
 
     const startAssemblyAI = () => {
         // Close any existing connection first to prevent "too many concurrent sessions"
