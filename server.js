@@ -419,7 +419,7 @@ wss.on('connection', (ws, request) => {
 
     const startDeepgram = () => {
         // Deepgram Nova-3 with optimized params for better turn detection
-        const dgUrl = `wss://api.deepgram.com/v1/listen?model=nova-3&language=en&encoding=linear16&sample_rate=16000&channels=1&smart_format=true&interim_results=true&utterance_end_ms=2500&endpointing=2500`;
+        const dgUrl = `wss://api.deepgram.com/v1/listen?model=nova-3&language=en&encoding=linear16&sample_rate=16000&channels=1&smart_format=true&interim_results=true&utterance_end_ms=1500&endpointing=1500`;
         
         if (!DEEPGRAM_API_KEY) {
             console.error("[Deepgram] API KEY MISSING");
