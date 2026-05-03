@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: ella-voice-server
+    env: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: DEEPGRAM_API_KEY
+        sync: false
+      - key: MISTRAL_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: AI_PROVIDER
+        value: mistral
+      - key: STT_PROVIDER
+        value: deepgram
+      - key: ASSEMBLYAI_API_KEY
+        sync: false
+      - key: GROQ_MODEL
+        value: meta-llama/llama-4-scout-17b-16e-instruct
+      - key: DEEPGRAM_TTS_MODEL
+        value: aura-2-thalia-en
+      - key: USE_DEEPGRAM_TTS
+        value: "true"
+      - key: PORT
+        value: "10000"
