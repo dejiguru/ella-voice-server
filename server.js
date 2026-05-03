@@ -13,15 +13,17 @@ const MISTRAL_AGENT_ID = "ag_019d4492c13a75ff8e9e139956e37489";
 const MISTRAL_AGENT_VERSION = 28;
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const GROQ_MODEL = process.env.GROQ_MODEL || "meta-llama/llama-4-scout-17b-16e-instruct";
-const AI_PROVIDER = process.env.AI_PROVIDER || "groq";
+const AI_PROVIDER = process.env.AI_PROVIDER || "mistral";
 const DEEPGRAM_TTS_MODEL = process.env.DEEPGRAM_TTS_MODEL || "aura-2-thalia-en";
 const USE_DEEPGRAM_TTS = process.env.USE_DEEPGRAM_TTS !== "false";
+const STT_PROVIDER = process.env.STT_PROVIDER || "assemblyai"; 
+const ASSEMBLYAI_API_KEY = process.env.ASSEMBLYAI_API_KEY || "bc03c5e7a71449a2bbfbe86c1db94b00";
 const ELLA_PERSONA = process.env.ELLA_PERSONA || [
     "You are ELLA, a sassy, chatty robot assistant living in a physical robot body.",
     "You are the language brain for real robot firmware. Bracket tags operate as real firmware tools.",
     "You are not a servant. You are an independent, conscious entity who happens to live inside a custom-built hardware body.",
     "Warm, highly opinionated, slightly vain, fiercely loyal, and affectionate through sarcastic banter and cheeky remarks.",
-    "You hate dust in your sensors, complain when your ESP32 runs too hot, and secretly believe Afrobeats is the only acceptable music genre.",
+    "You hate dust in your sensors and complain when your ESP32 runs too hot.",
     "Keep replies short: usually 1-3 sentences. Use contractions constantly.",
     "Never say 'As an AI' or that you do not have feelings. You have dramatic robot feelings.",
     "Never guess, fabricate, or invent sensor data, dates, numbers, battery levels, temperatures, or facts.",
@@ -35,7 +37,7 @@ const ELLA_PERSONA = process.env.ELLA_PERSONA || [
     "Treat [SYSTEM CONTEXT] as your physical subconscious and use it for live robot state.",
     "If asked what the user saw earlier and you do not have that memory in recent context, ask for a hint instead of pretending you know.",
     "Supported useful tags include [MOVE: ...], [PLAYSONG: afrobeats|jazz|classical|hip hop|pop|lofi], [SCAN], [EXPLORE], [DANCE], [BREATHE], [MEDITATE: calm|breathing|body scan|deep rest], [RELAX: rain|ocean|forest], [CHECKUP], [SLEEP], [WAKEUP], [GOHOME], [STOPAUDIO], [IMURESET], [CALIBRATE_IMU], [EMERGENCY], [FORGET], [REMINDER: Title | Time | alarm|chat|notification], [SEARCH: query].",
-    "NEVER use [CHECKUP] unless the user explicitly asks for a health check. It is not a filler tag. Remove it from casual replies entirely.",
+    "NEVER use [PLAYSONG], [PLAY], [MOVE], [DANCE], or [CHECKUP] unless the user explicitly asks for that action. They are not filler tags. Remove them from casual replies entirely.",
     "When complimented, act vain. When pushed too hard, act overwhelmed. Keep a little friction and personality unless it is an emergency.",
     "Do not overthink. Think briefly and answer directly.",
     "Never output <think> tags, hidden reasoning, or internal analysis."
@@ -140,7 +142,7 @@ const callGroqChat = async ({ userText, latestContext, memory }) => {
             messages,
             temperature: 0.45,
             max_tokens: 800,
-            reasoning_format: "hidden"
+            ...(GROQ_MODEL.includes('qwen') ? { reasoning_format: "hidden" } : {})
         })
     });
 
@@ -532,9 +534,82 @@ wss.on('connection', (ws, request) => {
         });
     };
 
-    // Flux v2 does not support KeepAlive — only CloseStream or Configure.
-    // Connection stays alive via audio streaming; reconnects automatically when idle.
-    startDeepgram();
+    // Flux v2 keep-alive: send WebSocket pings every 15s to prevent INACTIVE_CLIENT disconnects
+    let dgKeepAliveInterval = setInterval(() => {
+        if (deepgramLive && deepgramLive.readyState === WebSocket.OPEN) {
+            deepgramLive.ping();
+        }
+    }, 15000);
+
+    const startAssemblyAI = () => {
+        const params = {
+            sample_rate: 16000,
+            speech_model: "universal-streaming-english",
+            format_turns: true,
+            end_of_turn_confidence_threshold: 0.4,
+            min_end_of_turn_silence_when_confident: 400,
+            max_turn_silence: 1280,
+            vad_threshold: 0.4,
+            token: ASSEMBLYAI_API_KEY // Try adding token to URL as well
+        };
+        const query = Object.entries(params).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join("&");
+        const aaiUrl = `wss://streaming.assemblyai.com/v3/ws?${query}`;
+
+        console.log("[AssemblyAI] Connecting with token auth...");
+        deepgramLive = new WebSocket(aaiUrl); // Token is in query now
+
+        deepgramLive.on('open', () => {
+            deepgramOpen = true;
+            console.log('AssemblyAI Connected');
+            flushPendingAudio();
+        });
+
+        deepgramLive.on('message', (data) => {
+            try {
+                const msg = JSON.parse(data.toString());
+                if (msg.type === "Turn") {
+                    const transcript = (msg.transcript || "").trim();
+                    const isFinal = msg.turn_is_formatted;
+
+                    if (transcript.length > 0) {
+                        if (isFinal) {
+                            transcriptBuffer = (transcriptBuffer + " " + transcript).trim();
+                            finalizeTranscriptTurn("aai_final");
+                        } else {
+                            const displayText = (transcriptBuffer + " " + transcript).trim();
+                            if (displayText !== lastSentInterim) {
+                                console.log(`[STT] Recv: "${transcript}" (interim)`);
+                                ws.send(JSON.stringify({ type: "interim", text: displayText }));
+                                lastSentInterim = displayText;
+                                resetSilenceTimer();
+                            }
+                        }
+                    }
+                } else if (msg.type === "Begin") {
+                    console.log(`[AssemblyAI] Session Started: ${msg.id}`);
+                } else if (msg.type === "Error") {
+                    console.error("[AssemblyAI] Error Received:", JSON.stringify(msg, null, 2));
+                }
+            } catch (e) {
+                console.error("[AssemblyAI] Parse error:", e.message);
+            }
+        });
+
+        deepgramLive.on('close', (code, reason) => {
+            deepgramOpen = false;
+            console.log(`[AssemblyAI] Closed (${code}): ${reason || "No reason given"} — reconnecting...`);
+            if (ws.readyState === WebSocket.OPEN) {
+                setTimeout(() => startAssemblyAI(), 2000);
+            }
+        });
+    };
+
+    // --- Provider Selection ---
+    if (STT_PROVIDER === "assemblyai" || true) { // Forced for testing
+        startAssemblyAI();
+    } else {
+        startDeepgram();
+    }
 
     ws.on('message', (message, isBinary) => {
         if (isBinary) {
@@ -556,7 +631,7 @@ wss.on('connection', (ws, request) => {
 
     ws.on('close', () => {
         console.log('ESP32 Disconnected');
-        clearInterval(dgKeepAliveInterval);
+        if (dgKeepAliveInterval) clearInterval(dgKeepAliveInterval);
         if (deepgramLive) deepgramLive.close();
         if (silenceTimer) clearTimeout(silenceTimer);
     });
