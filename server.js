@@ -16,7 +16,7 @@ const GROQ_MODEL = process.env.GROQ_MODEL || "meta-llama/llama-4-scout-17b-16e-i
 const AI_PROVIDER = process.env.AI_PROVIDER || "mistral";
 const DEEPGRAM_TTS_MODEL = process.env.DEEPGRAM_TTS_MODEL || "aura-2-thalia-en";
 const USE_DEEPGRAM_TTS = process.env.USE_DEEPGRAM_TTS !== "false";
-const STT_PROVIDER = process.env.STT_PROVIDER || "assemblyai"; 
+const STT_PROVIDER = process.env.STT_PROVIDER || "deepgram"; 
 const ASSEMBLYAI_API_KEY = process.env.ASSEMBLYAI_API_KEY || "bc03c5e7a71449a2bbfbe86c1db94b00";
 const ELLA_PERSONA = process.env.ELLA_PERSONA || [
     "You are ELLA, a sassy, chatty robot assistant living in a physical robot body.",
@@ -665,4 +665,8 @@ wss.on('connection', (ws, request) => {
 });
 
 const PORT = process.env.PORT || 10000;
-server.listen(PORT, () => console.log(`Server listening on port ${PORT}`));
+server.listen(PORT, () => {
+    console.log(`Server listening on port ${PORT}`);
+    console.log(`[Config] STT Provider: ${STT_PROVIDER}`);
+    console.log(`[Config] AI Provider: ${AI_PROVIDER}`);
+});
