@@ -596,47 +596,39 @@ wss.on('connection', (ws, request) => {
             try {
                 const msg = JSON.parse(data.toString());
                 
-                // Log ALL messages for debugging
-                console.log(`[AssemblyAI] Message: ${JSON.stringify(msg).substring(0, 200)}`);
+                // Handle session start
+                if (msg.type === "Begin") {
+                    console.log(`[AssemblyAI] Session Started: ${msg.id}`);
+                    return;
+                }
                 
-                if (msg.type === "Turn") {
+                // Handle errors
+                if (msg.type === "Error") {
+                    console.error("[AssemblyAI] Error:", JSON.stringify(msg, null, 2));
+                    return;
+                }
+                
+                // Handle v3 streaming format (turn_order field present)
+                if (msg.turn_order !== undefined) {
                     const transcript = (msg.transcript || "").trim();
-                    const isFinal = msg.turn_is_formatted;
-
+                    const isEndOfTurn = msg.end_of_turn === true;
+                    
                     if (transcript.length > 0) {
-                        if (isFinal) {
+                        if (isEndOfTurn) {
+                            console.log(`[STT] EndOfTurn: "${transcript}"`);
                             transcriptBuffer = (transcriptBuffer + " " + transcript).trim();
-                            finalizeTranscriptTurn("aai_final");
+                            finalizeTranscriptTurn("aai_eot");
                         } else {
                             const displayText = (transcriptBuffer + " " + transcript).trim();
                             if (displayText !== lastSentInterim) {
-                                console.log(`[STT] Recv: "${transcript}" (interim)`);
+                                console.log(`[STT] Interim: "${transcript}"`);
                                 ws.send(JSON.stringify({ type: "interim", text: displayText }));
                                 lastSentInterim = displayText;
                                 resetSilenceTimer();
                             }
                         }
                     }
-                } else if (msg.type === "Begin") {
-                    console.log(`[AssemblyAI] Session Started: ${msg.id}`);
-                } else if (msg.type === "Error") {
-                    console.error("[AssemblyAI] Error:", JSON.stringify(msg, null, 2));
-                } else if (msg.type === "PartialTranscript") {
-                    // Handle partial transcripts (non-turn format)
-                    const transcript = (msg.text || "").trim();
-                    if (transcript.length > 0) {
-                        console.log(`[STT] Partial: "${transcript}"`);
-                        ws.send(JSON.stringify({ type: "interim", text: transcript }));
-                        resetSilenceTimer();
-                    }
-                } else if (msg.type === "FinalTranscript") {
-                    // Handle final transcripts (non-turn format)
-                    const transcript = (msg.text || "").trim();
-                    if (transcript.length > 0) {
-                        console.log(`[STT] Final: "${transcript}"`);
-                        transcriptBuffer = (transcriptBuffer + " " + transcript).trim();
-                        finalizeTranscriptTurn("aai_final");
-                    }
+                    return;
                 }
             } catch (e) {
                 console.error("[AssemblyAI] Parse error:", e.message);
