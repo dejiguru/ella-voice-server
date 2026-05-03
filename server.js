@@ -576,11 +576,8 @@ wss.on('connection', (ws, request) => {
         const params = {
             sample_rate: 16000,
             speech_model: "universal-streaming-english",
-            format_turns: true,
-            end_of_turn_confidence_threshold: 0.4,
-            min_end_of_turn_silence_when_confident: 400,
-            max_turn_silence: 1280,
-            vad_threshold: 0.4,
+            format_turns: false, // Try without turn formatting first
+            vad_threshold: 0.3, // Lower threshold for better detection
             token: ASSEMBLYAI_API_KEY
         };
         const query = Object.entries(params).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join("&");
@@ -598,6 +595,10 @@ wss.on('connection', (ws, request) => {
         deepgramLive.on('message', (data) => {
             try {
                 const msg = JSON.parse(data.toString());
+                
+                // Log ALL messages for debugging
+                console.log(`[AssemblyAI] Message: ${JSON.stringify(msg).substring(0, 200)}`);
+                
                 if (msg.type === "Turn") {
                     const transcript = (msg.transcript || "").trim();
                     const isFinal = msg.turn_is_formatted;
@@ -620,6 +621,22 @@ wss.on('connection', (ws, request) => {
                     console.log(`[AssemblyAI] Session Started: ${msg.id}`);
                 } else if (msg.type === "Error") {
                     console.error("[AssemblyAI] Error:", JSON.stringify(msg, null, 2));
+                } else if (msg.type === "PartialTranscript") {
+                    // Handle partial transcripts (non-turn format)
+                    const transcript = (msg.text || "").trim();
+                    if (transcript.length > 0) {
+                        console.log(`[STT] Partial: "${transcript}"`);
+                        ws.send(JSON.stringify({ type: "interim", text: transcript }));
+                        resetSilenceTimer();
+                    }
+                } else if (msg.type === "FinalTranscript") {
+                    // Handle final transcripts (non-turn format)
+                    const transcript = (msg.text || "").trim();
+                    if (transcript.length > 0) {
+                        console.log(`[STT] Final: "${transcript}"`);
+                        transcriptBuffer = (transcriptBuffer + " " + transcript).trim();
+                        finalizeTranscriptTurn("aai_final");
+                    }
                 }
             } catch (e) {
                 console.error("[AssemblyAI] Parse error:", e.message);
