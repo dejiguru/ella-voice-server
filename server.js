@@ -529,12 +529,12 @@ wss.on('connection', (ws, request) => {
         });
     };
 
-    // Flux v2 keep-alive: send WebSocket pings every 15s to prevent INACTIVE_CLIENT disconnects
+    // Deepgram keep-alive: send WebSocket pings every 10s to prevent timeout
     let dgKeepAliveInterval = setInterval(() => {
         if (deepgramLive && deepgramLive.readyState === WebSocket.OPEN) {
             deepgramLive.ping();
         }
-    }, 15000);
+    }, 10000);
 
     const startAssemblyAI = () => {
         // Close any existing connection first to prevent "too many concurrent sessions"
