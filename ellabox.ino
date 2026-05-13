@@ -533,7 +533,7 @@ unsigned long    lastNodeWsKeepAliveMs = 0; // for WebSocket ping keep-alive
 
 // ── Node TTS Audio Ring Buffer (written Core 0, drained Core 1) ─────────────
 #define NODE_AUDIO_BUF_SIZE (256 * 1024)  // Larger PCM buffer for smooth Node TTS
-#define NODE_AUDIO_PREBUFFER_BYTES 12000
+#define NODE_AUDIO_PREBUFFER_BYTES 24000  // Increased to 0.5s for smoother playback
 static uint8_t*  nodeAudioRingBuf = nullptr;
 static volatile size_t nodeAudioWritePos = 0;
 static volatile size_t nodeAudioReadPos  = 0;
