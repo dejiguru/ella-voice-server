@@ -98,7 +98,7 @@ const MISTRAL_API_KEY = process.env.MISTRAL_API_KEY;
 const MISTRAL_AGENT_ID = "ag_019d4492c13a75ff8e9e139956e37489";
 const MISTRAL_AGENT_VERSION = 28;
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
-const GROQ_MODEL = process.env.GROQ_MODEL || "qwen/qwen3-32b";
+const GROQ_MODEL = process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
 const AI_PROVIDER = process.env.AI_PROVIDER || "groq";
 const DEEPGRAM_TTS_MODEL = process.env.DEEPGRAM_TTS_MODEL || "aura-2-thalia-en";
 const USE_DEEPGRAM_TTS = process.env.USE_DEEPGRAM_TTS !== "false";
@@ -275,6 +275,7 @@ wss.on('connection', (ws, request) => {
     let audioStatsRmsCount = 0;
     let lastAudioStatsLog = Date.now();
     const conversationMemory = [];
+    let currentRobotMode = "NORMAL";
 
     const rememberTurn = (user, assistant) => {
         conversationMemory.push({ user, assistant });
@@ -803,15 +804,17 @@ wss.on('connection', (ws, request) => {
             const data = JSON.parse(message.toString());
             if (data.type === "context") {
                 latestContext = data.text;
-                console.log("[Context Update] Sensors/Profile synced");
+                if (data.text.includes("Mode: AI")) currentRobotMode = "AI";
+                else if (data.text.includes("Mode: NORMAL")) currentRobotMode = "NORMAL";
+                console.log(`[Context Update] Mode: ${currentRobotMode}`);
             } else if (data.type === "telegram_response") {
                 // ESP32 sent sensor data in response to Telegram command
-                if (telegramBot && TELEGRAM_CHAT_ID) {
+                if (currentRobotMode === "NORMAL" && telegramBot && TELEGRAM_CHAT_ID) {
                     sendTelegramMessage(data.message);
                 }
             } else if (data.type === "telegram_alert") {
                 // ESP32 wants to send an alert via Telegram
-                if (telegramBot && TELEGRAM_CHAT_ID) {
+                if (currentRobotMode === "NORMAL" && telegramBot && TELEGRAM_CHAT_ID) {
                     sendTelegramMessage(data.message);
                 }
             }
