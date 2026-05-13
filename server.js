@@ -161,6 +161,55 @@ const normalizeTtsText = (text) => text
     .replace(/\s+/g, " ")
     .trim();
 
+const RESPONSE_EMOTION_TAGS = new Set([
+    "[HAPPY]", "[SAD]", "[WORRIED]", "[THINKING]", "[LOVE]", "[WINK]",
+    "[EXCITED]", "[FRUSTRATED]", "[ANGRY]", "[SUSPICIOUS]", "[NORMAL]"
+]);
+
+const normalizeForDedupe = (text) => normalizeTtsText(text).toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+
+const dedupeRepeatedSentences = (text) => {
+    const sentences = text.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [text];
+    const kept = [];
+    const seen = new Set();
+    for (const sentence of sentences) {
+        const clean = sentence.trim();
+        const key = normalizeForDedupe(clean);
+        if (!key || seen.has(key)) continue;
+        seen.add(key);
+        kept.push(clean);
+    }
+    const deduped = kept.join(" ").trim();
+    if (!deduped) return text.trim();
+
+    const words = normalizeForDedupe(deduped).split(" ").filter(Boolean);
+    if (words.length % 2 === 0) {
+        const half = words.length / 2;
+        if (words.slice(0, half).join(" ") === words.slice(half).join(" ")) {
+            const halfText = kept.slice(0, Math.max(1, Math.ceil(kept.length / 2))).join(" ").trim();
+            return halfText || deduped;
+        }
+    }
+    return deduped;
+};
+
+const cleanAssistantResponse = (text) => {
+    const raw = String(text || "").replace(/\s+/g, " ").trim();
+    if (!raw) return raw;
+
+    const tags = raw.match(/\[[^\]]+\]/g) || [];
+    const firstEmotion = tags.find((tag) => RESPONSE_EMOTION_TAGS.has(tag.toUpperCase())) || "";
+    const actionTags = [];
+    for (const tag of tags) {
+        const upperTag = tag.toUpperCase();
+        if (RESPONSE_EMOTION_TAGS.has(upperTag)) continue;
+        if (!actionTags.includes(tag)) actionTags.push(tag);
+    }
+
+    const body = dedupeRepeatedSentences(stripActionTags(raw));
+    return `${firstEmotion} ${body} ${actionTags.join(" ")}`.replace(/\s+/g, " ").trim();
+};
+
 const shortenForGoogleTts = (text, maxChars = 150) => {
     const clean = normalizeTtsText(stripActionTags(text));
     if (clean.length <= maxChars) return clean;
@@ -353,6 +402,8 @@ wss.on('connection', (ws, request) => {
     let conversationId = null; 
     let lastAppendedFinalTranscript = "";
     let lastSentInterim = "";
+    let bestHeardTranscript = "";
+    let bestHeardTranscriptAt = 0;
     let lastProcessedTranscript = "";
     let lastProcessedTranscriptAt = 0;
     let finalSegmentCount = 0;
@@ -371,6 +422,19 @@ wss.on('connection', (ws, request) => {
     let lastAudioStatsLog = Date.now();
     const conversationMemory = [];
     let currentRobotMode = "NORMAL";
+
+    const closeSttSocket = (socket, code = 1000, reason = "cleanup") => {
+        if (!socket) return;
+        try {
+            if (socket.readyState === WebSocket.OPEN) {
+                socket.close(code, reason);
+            } else if (socket.readyState === WebSocket.CONNECTING || socket.readyState === WebSocket.CLOSING) {
+                socket.terminate();
+            }
+        } catch (err) {
+            console.warn("[Deepgram] Close error:", err.message || err);
+        }
+    };
 
     const rememberTurn = (user, assistant) => {
         conversationMemory.push({ user, assistant });
@@ -574,7 +638,7 @@ wss.on('connection', (ws, request) => {
     const resetSilenceTimer = () => {
         if (silenceTimer) clearTimeout(silenceTimer);
         silenceTimer = setTimeout(() => {
-            if (transcriptBuffer.trim().length > 0 && !isThinking) {
+            if (chooseBetterTranscript(transcriptBuffer, bestHeardTranscript).trim().length > 0 && !isThinking) {
                 console.log("[Silence Watchdog] Scheduling turn end...");
                 scheduleTranscriptFinalization("silence_watchdog", 120);
             }
@@ -582,6 +646,50 @@ wss.on('connection', (ws, request) => {
     };
 
     const normalizeTranscript = (text) => text.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+
+    const transcriptWords = (text) => normalizeTranscript(text).split(" ").filter(Boolean);
+
+    const hasPrefixCorrection = (shortText, longText) => {
+        const shortWords = transcriptWords(shortText);
+        const longWords = transcriptWords(longText);
+        if (shortWords.length !== longWords.length) return false;
+        return shortWords.every((word, index) => {
+            const other = longWords[index] || "";
+            return word === other || (word.length >= 3 && other.length > word.length && other.startsWith(word));
+        });
+    };
+
+    const chooseBetterTranscript = (current, candidate) => {
+        const cleanCurrent = (current || "").trim();
+        const cleanCandidate = (candidate || "").trim();
+        if (!cleanCurrent) return cleanCandidate;
+        if (!cleanCandidate) return cleanCurrent;
+
+        const normalizedCurrent = normalizeTranscript(cleanCurrent);
+        const normalizedCandidate = normalizeTranscript(cleanCandidate);
+        if (!normalizedCandidate) return cleanCurrent;
+        if (!normalizedCurrent) return cleanCandidate;
+        if (normalizedCurrent === normalizedCandidate) return cleanCurrent;
+
+        const currentWords = transcriptWords(cleanCurrent);
+        const candidateWords = transcriptWords(cleanCandidate);
+        if (normalizedCandidate.includes(normalizedCurrent) && candidateWords.length >= currentWords.length) {
+            return cleanCandidate;
+        }
+        if (normalizedCurrent.includes(normalizedCandidate) && currentWords.length >= candidateWords.length) {
+            return cleanCurrent;
+        }
+        if (hasPrefixCorrection(cleanCurrent, cleanCandidate)) return cleanCandidate;
+
+        return cleanCurrent;
+    };
+
+    const rememberHeardTranscript = (text) => {
+        const cleanText = (text || "").trim();
+        if (!cleanText) return;
+        bestHeardTranscript = chooseBetterTranscript(bestHeardTranscript, cleanText);
+        bestHeardTranscriptAt = Date.now();
+    };
 
     const mergeTranscriptParts = (current, next) => {
         const cleanCurrent = current.trim();
@@ -610,11 +718,13 @@ wss.on('connection', (ws, request) => {
     };
 
     const takeTranscriptForProcessing = () => {
-        const textToProcess = transcriptBuffer.trim();
+        const textToProcess = chooseBetterTranscript(transcriptBuffer, bestHeardTranscript).trim();
         transcriptBuffer = "";
         finalSegmentCount = 0;
         lastAppendedFinalTranscript = "";
         lastSentInterim = "";
+        bestHeardTranscript = "";
+        bestHeardTranscriptAt = 0;
         return textToProcess;
     };
 
@@ -642,7 +752,7 @@ wss.on('connection', (ws, request) => {
         finalizationReason = reason;
         finalizationTimer = setTimeout(() => {
             finalizationTimer = null;
-            if (transcriptBuffer.trim().length === 0 || isThinking) return;
+            if (chooseBetterTranscript(transcriptBuffer, bestHeardTranscript).trim().length === 0 || isThinking) return;
             if (newerSpeechIsStillOpen()) {
                 console.log(`[STT] Deferring turn end (${finalizationReason}); newer speech is active`);
                 scheduleTranscriptFinalization(`${finalizationReason}_deferred`, 350);
@@ -666,8 +776,9 @@ wss.on('connection', (ws, request) => {
     };
 
     const appendDeepgramFinalTranscript = (transcript, source) => {
-        const cleanTranscript = transcript.trim();
+        const cleanTranscript = chooseBetterTranscript(transcript.trim(), bestHeardTranscript);
         if (cleanTranscript.length === 0) return;
+        rememberHeardTranscript(cleanTranscript);
 
         const current = transcriptBuffer.trim();
         if (current.length === 0) {
@@ -777,6 +888,7 @@ wss.on('connection', (ws, request) => {
                 console.error("[AI] Empty reply");
                 fullResponse = "Sorry, my brain glitched. Ask me again!";
             }
+            fullResponse = cleanAssistantResponse(fullResponse);
 
             rememberTurn(text, fullResponse);
             console.log(`[AI] Reply: ${fullResponse}`);
@@ -809,6 +921,7 @@ wss.on('connection', (ws, request) => {
                         console.error("[AI] Search synthesis failed:", synthErr.message);
                         fullResponse = `I found some info: ${searchResults.substring(0, 200)}...`;
                     }
+                    fullResponse = cleanAssistantResponse(fullResponse);
                 }
             }
 
@@ -844,7 +957,7 @@ wss.on('connection', (ws, request) => {
     };
 
     const finalizeTranscriptTurn = (reason) => {
-        if (transcriptBuffer.trim().length === 0) return;
+        if (chooseBetterTranscript(transcriptBuffer, bestHeardTranscript).trim().length === 0) return;
         if (isThinking) {
             console.log(`[STT] Deferring turn finalization while AI is busy (${reason})`);
             return;
@@ -963,6 +1076,8 @@ wss.on('connection', (ws, request) => {
                             }
                         } else {
                             const displayText = (transcriptBuffer + " " + transcript).trim();
+                            rememberHeardTranscript(displayText);
+                            resetSilenceTimer();
                             if (displayText !== lastSentInterim) {
                                 console.log(`[STT] Interim: "${transcript}"`);
                                 ws.send(JSON.stringify({ type: "interim", text: displayText }));
@@ -1062,6 +1177,8 @@ wss.on('connection', (ws, request) => {
         finalSegmentCount = 0;
         lastAppendedFinalTranscript = "";
         lastSentInterim = "";
+        bestHeardTranscript = "";
+        bestHeardTranscriptAt = 0;
         lastSpeechStartedAt = 0;
         lastFinalTranscriptAt = 0;
         if (finalizationTimer) {
@@ -1076,9 +1193,18 @@ wss.on('connection', (ws, request) => {
             startDeepgram();
             return;
         }
+        if (deepgramLive.readyState === WebSocket.CONNECTING) {
+            deepgramSocketId++;
+            deepgramOpen = false;
+            deepgramLive.removeAllListeners();
+            closeSttSocket(deepgramLive, 1000, "turn_complete_reset");
+            deepgramLive = null;
+            dgReconnectTimer = setTimeout(() => startDeepgram(), 100);
+            return;
+        }
         restartDeepgramAfterTurn = true;
         try {
-            deepgramLive.close(1000, "turn_complete_reset");
+            closeSttSocket(deepgramLive, 1000, "turn_complete_reset");
         } catch (err) {
             console.warn("[Deepgram] Reset close failed:", err.message || err);
             restartDeepgramAfterTurn = false;
@@ -1091,7 +1217,7 @@ wss.on('connection', (ws, request) => {
         if (deepgramLive && deepgramLive.readyState !== WebSocket.CLOSED) {
             console.log("[AssemblyAI] Closing existing connection...");
             deepgramLive.removeAllListeners();
-            deepgramLive.close();
+            closeSttSocket(deepgramLive);
             deepgramLive = null;
             deepgramOpen = false;
         }
@@ -1146,6 +1272,7 @@ wss.on('connection', (ws, request) => {
                             finalizeTranscriptTurn("aai_eot");
                         } else {
                             const displayText = (transcriptBuffer + " " + transcript).trim();
+                            rememberHeardTranscript(displayText);
                             if (displayText !== lastSentInterim) {
                                 console.log(`[STT] Interim: "${transcript}"`);
                                 ws.send(JSON.stringify({ type: "interim", text: displayText }));
@@ -1233,14 +1360,10 @@ wss.on('connection', (ws, request) => {
         if (dgReconnectTimer) clearTimeout(dgReconnectTimer);
         if (esp32HeartbeatInterval) clearInterval(esp32HeartbeatInterval);
         if (deepgramLive) {
+            deepgramSocketId++;
+            deepgramOpen = false;
             deepgramLive.removeAllListeners();
-            try {
-                if (deepgramLive.readyState === WebSocket.OPEN || deepgramLive.readyState === WebSocket.CONNECTING) {
-                    deepgramLive.close();
-                }
-            } catch (err) {
-                console.warn("[Deepgram] Close error:", err.message);
-            }
+            closeSttSocket(deepgramLive);
             deepgramLive = null;
         }
         if (silenceTimer) clearTimeout(silenceTimer);
