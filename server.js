@@ -1024,8 +1024,8 @@ wss.on('connection', (ws, request) => {
 
         if (isFlux) {
             // Flux (v2/listen) ONLY supports these specific parameters
-            dgParams.set("eot_threshold", "0.6");
-            dgParams.set("eager_eot_threshold", "0.4");
+            dgParams.set("eot_threshold", "0.9");
+            dgParams.set("eot_timeout_ms", "5000");
         } else {
             // Nova-3 (v1/listen) parameters
             dgParams.set("language", DEEPGRAM_STT_LANGUAGE);
