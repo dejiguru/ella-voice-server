@@ -964,6 +964,11 @@ wss.on('connection', (ws, request) => {
                 url: googleUrl
             }));
 
+            // Forward to Telegram so user has the chat history
+            if (telegramBot && TELEGRAM_CHAT_ID) {
+                sendTelegramMessage(fullResponse);
+            }
+
             // Buffer before ending turn to ensure ESP32 starts playback
             await sleep(1000);
             if (ws.readyState === WebSocket.OPEN) {
