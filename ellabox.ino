@@ -8792,8 +8792,8 @@ void drawAIScreen(bool force) {
   int cx = SCR_W / 2;
   int cy = ANIM_Y + ANIM_H / 2;
   
-  // Static area clear for animation to prevent smearing
-  tft.fillRect(cx - 50, cy - 30, 100, 60, UI_BG);
+  // Static area clear for animation to prevent smearing — more precise
+  tft.fillRect(cx - 60, cy - 35, 120, 70, UI_BG);
   
   if (curState == 1) { // Thinking
     int r = 15 + (int)(sin(millis() / 200.0) * 8.0);
@@ -8815,6 +8815,11 @@ void drawAIScreen(bool force) {
     tft.drawCircle(cx, cy, 15, UI_CARD_BG);
     tft.drawCircle(cx, cy, 16, UI_CARD_BG);
     tft.drawLine(cx-12, cy, cx+12, cy, UI_CARD_BG);
+  }
+
+  // Ensure header/footer are never erased by animation leaks
+  if (millis() % 5000 < 100) { // Safety refresh every 5 seconds
+      drawNavigationBar();
   }
 }
 
@@ -14248,6 +14253,11 @@ void loop() {
       }
   }
   lastSpeaking = isSpeaking;
+    
+  // Update AI screen (animation and status)
+  if (currentMode == MODE_AI && currentMedState == MED_IDLE) {
+    drawAIScreen();
+  }
     
   // Animate eyes in AI mode
   if (currentMode == MODE_AI && currentMedState == MED_IDLE) {

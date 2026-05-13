@@ -180,6 +180,8 @@ const synthesizeGoogleSpeech = async (text) => {
     if (!cleanText) return null;
 
     const { spawn } = require('child_process');
+    const googleUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(cleanText.substring(0, 200))}&tl=en&client=tw-ob`;
+    
     console.log(`[Google TTS] Fetching: ${googleUrl}`);
     const response = await fetch(googleUrl);
     if (!response.ok) {
@@ -591,7 +593,12 @@ wss.on('connection', (ws, request) => {
                 }
             } else {
                 // Fallback to legacy URL-based TTS if PCM synthesis failed
-                ws.send(JSON.stringify({ type: "tts", text: fullResponse }));
+                const googleUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(fullResponse.substring(0, 200))}&tl=en&client=tw-ob`;
+                ws.send(JSON.stringify({ 
+                    type: "tts", 
+                    text: fullResponse,
+                    url: googleUrl
+                }));
             }
 
             // Small buffer before ending turn
