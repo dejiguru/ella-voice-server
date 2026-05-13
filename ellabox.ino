@@ -3877,7 +3877,11 @@ void connectVoiceAgent() {
 
 // --- Voice Agent Disconnect ---
 void disconnectVoiceAgent() {
-  if (!vAgentConnected && !vAgentConnecting && (!vAgentClient || !vAgentClient->connected())) return;
+  if (vAgentMux) xSemaphoreTake(vAgentMux, portMAX_DELAY);
+  if (!vAgentConnected && !vAgentConnecting && (!vAgentClient || !vAgentClient->connected())) {
+    if (vAgentMux) xSemaphoreGive(vAgentMux);
+    return;
+  }
 
   if (vAgentClient) vAgentClient->stop();
   vAgentConnected = false;
@@ -3889,6 +3893,7 @@ void disconnectVoiceAgent() {
   // Stop direct speaker I2S if active
   // (Audio library will be re-initialized when needed)
   Serial.println("[VAgent] Disconnected");
+  if (vAgentMux) xSemaphoreGive(vAgentMux);
 }
 
 // --- Voice Agent: stream mic audio (OPUS) ---
@@ -5460,6 +5465,13 @@ bool executeMovementCommand(String cmd) {
     startTimedTurnMotion(false, SPEED_NORMAL, 90.0f);
   } else if (cmd == "TURN_R_180" || cmd == "TURN_RIGHT_180") {
     startTimedTurnMotion(false, SPEED_NORMAL, 180.0f);
+
+  } else if (cmd == "BWD" || cmd == "BWD_NORMAL") {
+    startTimedMotorMotion(-SPEED_NORMAL, -SPEED_NORMAL, 1000, true);
+  } else if (cmd == "BWD_SLOW") {
+    startTimedMotorMotion(-SPEED_SLOW, -SPEED_SLOW, 1200, true);
+  } else if (cmd == "BWD_FAST") {
+    startTimedMotorMotion(-SPEED_FAST, -SPEED_FAST, 800, true);
 
   } else if (cmd == "STOP") {
     startTimedIdleAction(300);
@@ -7060,13 +7072,8 @@ void switchToNormalMode() {
   clearDeferredAiAction();
   
   // 1. Disconnect all AI/STT paths
-  if (vAgentMux) xSemaphoreTake(vAgentMux, pdMS_TO_TICKS(500));
   if (USE_VOICE_AGENT) disconnectVoiceAgent();
-  if (vAgentMux) xSemaphoreGive(vAgentMux);
-
-  if (nodeMux) xSemaphoreTake(nodeMux, pdMS_TO_TICKS(500));
   disconnectNodeServer(); // KILL THE DEEPGRAM PROXY
-  if (nodeMux) xSemaphoreGive(nodeMux);
 
   disableMicAIInput();
   if (micI2SActive) clearMicBuffer(); // Flush any remaining audio data
