@@ -324,6 +324,8 @@ wss.on('connection', (ws, request) => {
     let lastSentInterim = "";
     let lastProcessedTranscript = "";
     let lastProcessedTranscriptAt = 0;
+    let bestTranscriptCandidate = "";
+    let bestTranscriptCandidateAt = 0;
     let deepgramOpen = false;
     let deepgramSocketId = 0;
     let dgReconnectTimer = null;
@@ -529,7 +531,7 @@ wss.on('connection', (ws, request) => {
     const resetSilenceTimer = () => {
         if (silenceTimer) clearTimeout(silenceTimer);
         silenceTimer = setTimeout(() => {
-            if (transcriptBuffer.trim().length > 0 && !isThinking) {
+            if ((transcriptBuffer.trim().length > 0 || bestTranscriptCandidate.trim().length > 0) && !isThinking) {
                 console.log("[Silence Watchdog] Scheduling turn end...");
                 scheduleTranscriptFinalization("silence_watchdog", 120);
             }
@@ -537,6 +539,68 @@ wss.on('connection', (ws, request) => {
     };
 
     const normalizeTranscript = (text) => text.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+
+    const transcriptScore = (text) => {
+        const clean = normalizeTranscript(text);
+        if (!clean) return 0;
+        const words = clean.split(" ").filter(Boolean);
+        return (words.length * 10) + clean.length;
+    };
+
+    const mergeTranscriptParts = (current, next) => {
+        const cleanCurrent = current.trim();
+        const cleanNext = next.trim();
+        if (!cleanCurrent) return cleanNext;
+        if (!cleanNext) return cleanCurrent;
+
+        const normalizedCurrent = normalizeTranscript(cleanCurrent);
+        const normalizedNext = normalizeTranscript(cleanNext);
+        if (normalizedCurrent === normalizedNext) return cleanCurrent;
+        if (normalizedCurrent.includes(normalizedNext)) return cleanCurrent;
+        if (normalizedNext.includes(normalizedCurrent)) return cleanNext;
+
+        const currentWords = cleanCurrent.split(/\s+/);
+        const nextWords = cleanNext.split(/\s+/);
+        const maxOverlap = Math.min(currentWords.length, nextWords.length, 6);
+        for (let overlap = maxOverlap; overlap > 0; overlap--) {
+            const currentTail = normalizeTranscript(currentWords.slice(-overlap).join(" "));
+            const nextHead = normalizeTranscript(nextWords.slice(0, overlap).join(" "));
+            if (currentTail && currentTail === nextHead) {
+                return `${currentWords.concat(nextWords.slice(overlap)).join(" ")}`.trim();
+            }
+        }
+
+        return `${cleanCurrent} ${cleanNext}`.trim();
+    };
+
+    const rememberTranscriptCandidate = (candidate, source) => {
+        const cleanCandidate = candidate.trim();
+        if (!cleanCandidate) return;
+
+        const bestScore = transcriptScore(bestTranscriptCandidate);
+        const cleanScore = transcriptScore(cleanCandidate);
+        if (cleanScore >= bestScore) {
+            bestTranscriptCandidate = cleanCandidate;
+        }
+
+        bestTranscriptCandidateAt = Date.now();
+        console.log(`[STT] Candidate (${source}): "${bestTranscriptCandidate}"`);
+    };
+
+    const takeTranscriptForProcessing = () => {
+        const buffered = transcriptBuffer.trim();
+        const candidate = bestTranscriptCandidate.trim();
+        const useCandidate = candidate && Date.now() - bestTranscriptCandidateAt < 8000 &&
+            transcriptScore(candidate) > transcriptScore(buffered);
+        const textToProcess = (useCandidate ? candidate : buffered).trim();
+
+        transcriptBuffer = "";
+        bestTranscriptCandidate = "";
+        bestTranscriptCandidateAt = 0;
+        lastAppendedFinalTranscript = "";
+        lastSentInterim = "";
+        return textToProcess;
+    };
 
     const isStaleTranscriptRepeat = (text) => {
         const cleanText = normalizeTranscript(text);
@@ -557,12 +621,10 @@ wss.on('connection', (ws, request) => {
         finalizationReason = reason;
         finalizationTimer = setTimeout(() => {
             finalizationTimer = null;
-            if (transcriptBuffer.trim().length === 0 || isThinking) return;
+            if ((transcriptBuffer.trim().length === 0 && bestTranscriptCandidate.trim().length === 0) || isThinking) return;
 
-            const textToProcess = transcriptBuffer.trim();
-            transcriptBuffer = "";
-            lastAppendedFinalTranscript = "";
-            lastSentInterim = "";
+            const textToProcess = takeTranscriptForProcessing();
+            if (!textToProcess) return;
             if (isStaleTranscriptRepeat(textToProcess)) {
                 console.log(`[STT] Dropped stale repeat (${finalizationReason}): "${textToProcess}"`);
                 return;
@@ -594,6 +656,7 @@ wss.on('connection', (ws, request) => {
         }
 
         console.log(`[STT] Buffered final (${source}): "${transcriptBuffer}"`);
+        rememberTranscriptCandidate(transcriptBuffer, source);
         scheduleTranscriptFinalization(source);
     };
 
@@ -747,15 +810,15 @@ wss.on('connection', (ws, request) => {
         if (transcriptBuffer.trim().length === 0) return;
         if (isThinking) {
             transcriptBuffer = "";
+            bestTranscriptCandidate = "";
+            bestTranscriptCandidateAt = 0;
             lastAppendedFinalTranscript = "";
             return;
         }
 
         if (silenceTimer) clearTimeout(silenceTimer);
-        const textToProcess = transcriptBuffer.trim();
-        transcriptBuffer = "";
-        lastAppendedFinalTranscript = "";
-        lastSentInterim = "";
+        const textToProcess = takeTranscriptForProcessing();
+        if (!textToProcess) return;
         if (isStaleTranscriptRepeat(textToProcess)) {
             console.log(`[STT] Dropped stale repeat (${reason}): "${textToProcess}"`);
             return;
@@ -842,7 +905,12 @@ wss.on('connection', (ws, request) => {
                                 console.log(`[STT] Final: "${transcript}" (speech_final=${speechFinal})`);
                                 scheduleTranscriptFinalization("dg_speech_final", 250);
                             } else {
-                                transcriptBuffer = transcript.trim();
+                                if (!transcriptBuffer.trim()) {
+                                    transcriptBuffer = transcript.trim();
+                                } else if (transcriptScore(transcript) >= transcriptScore(transcriptBuffer)) {
+                                    transcriptBuffer = mergeTranscriptParts(transcriptBuffer, transcript);
+                                }
+                                rememberTranscriptCandidate(transcriptBuffer, "results_non_terminal_final");
                                 console.log(`[STT] Buffered non-terminal final: "${transcriptBuffer}"`);
                                 resetSilenceTimer();
                             }
@@ -852,6 +920,7 @@ wss.on('connection', (ws, request) => {
                                 console.log(`[STT] Interim: "${transcript}"`);
                                 ws.send(JSON.stringify({ type: "interim", text: displayText }));
                                 lastSentInterim = displayText;
+                                rememberTranscriptCandidate(displayText, "interim_display");
                                 resetSilenceTimer();
                             }
                         }
@@ -924,7 +993,7 @@ wss.on('connection', (ws, request) => {
                 console.error('[Deepgram] Ping failed:', err.message || err);
             }
             deepgramLive.send(JSON.stringify({ type: 'KeepAlive' }));
-        }, 20000);
+        }, 5000);
     };
 
     let dgKeepAliveInterval = null;
