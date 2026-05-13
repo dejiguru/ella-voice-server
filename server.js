@@ -104,6 +104,7 @@ const TTS_PROVIDER = "google"; // FORCE GOOGLE AS REQUESTED
 const DEEPGRAM_TTS_MODEL = process.env.DEEPGRAM_TTS_MODEL || "aura-2-thalia-en";
 const STT_PROVIDER = process.env.STT_PROVIDER || "deepgram"; 
 const ASSEMBLYAI_API_KEY = process.env.ASSEMBLYAI_API_KEY || "bc03c5e7a71449a2bbfbe86c1db94b00";
+const TAVILY_API_KEY = process.env.TAVILY_API_KEY;
 const ELLA_PERSONA = process.env.ELLA_PERSONA || [
     "You are ELLA, a sassy, chatty robot assistant living in a physical robot body.",
     "You are the language brain for real robot firmware. Bracket tags operate as real firmware tools.",
@@ -419,6 +420,45 @@ wss.on('connection', (ws, request) => {
         }
     };
 
+    const callTavilySearch = async (query) => {
+        if (!TAVILY_API_KEY) {
+            console.error("[Tavily] API KEY MISSING");
+            return "Search failed: Tavily API key not configured.";
+        }
+        
+        try {
+            console.log(`[Tavily] Searching: ${query}`);
+            const isNews = /news|latest|today|current|breaking/i.test(query);
+            const res = await fetch("https://api.tavily.com/search", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    api_key: TAVILY_API_KEY,
+                    query: query,
+                    search_depth: "basic",
+                    topic: isNews ? "news" : "general",
+                    max_results: 3,
+                    include_answer: true
+                })
+            });
+            
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.detail || res.statusText);
+            
+            let result = data.answer || "";
+            if (data.results && data.results.length > 0) {
+                if (result) result += "\n\nSources:\n";
+                data.results.forEach((r, i) => {
+                    result += `${i+1}. ${r.title}: ${r.content.substring(0, 200)}... (${r.url})\n`;
+                });
+            }
+            return result || "No results found.";
+        } catch (err) {
+            console.error("[Tavily] Search Error:", err.message);
+            return `Search error: ${err.message}`;
+        }
+    };
+
     const callMistralAgent = async (userInput) => {
         const body = {
             inputs: [{ role: 'user', content: userInput }]
@@ -570,6 +610,37 @@ wss.on('connection', (ws, request) => {
 
             rememberTurn(text, fullResponse);
             console.log(`[AI] Reply: ${fullResponse}`);
+
+            // INTERCEPT SEARCH TAG
+            if (fullResponse.includes("[SEARCH:")) {
+                const searchMatch = fullResponse.match(/\[SEARCH:\s*(.*?)\]/);
+                if (searchMatch && searchMatch[1]) {
+                    const query = searchMatch[1].trim();
+                    console.log(`[AI] Triggered Search: ${query}`);
+                    
+                    const searchResults = await callTavilySearch(query);
+                    console.log("[AI] Search results fetched, re-synthesizing...");
+                    
+                    // Second turn: synthesize search results
+                    const followUpPrompt = `The user asked: "${text}"\n\nWeb Search Results:\n${searchResults}\n\nSynthesize a helpful, conversational reply as ELLA based on these results. Keep it concise (1-3 sentences). Use your ELLA persona.`;
+                    
+                    try {
+                        if (AI_PROVIDER === "mistral") {
+                            fullResponse = await callMistralAgent(followUpPrompt);
+                        } else {
+                            fullResponse = await callGroqChat({
+                                userText: followUpPrompt,
+                                latestContext: latestContext + "\n[SEARCH RESULTS ATTACHED]",
+                                memory: conversationMemory
+                            });
+                        }
+                        console.log(`[AI] Final Search Reply: ${fullResponse}`);
+                    } catch (synthErr) {
+                        console.error("[AI] Search synthesis failed:", synthErr.message);
+                        fullResponse = `I found some info: ${searchResults.substring(0, 200)}...`;
+                    }
+                }
+            }
 
             // Simplified: Send text to ESP32 and let it handle Google TTS "as usual"
             const googleUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(fullResponse.substring(0, 200))}&tl=en&client=tw-ob`;
