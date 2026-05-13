@@ -116,7 +116,7 @@ const GROQ_MODEL = process.env.GROQ_MODEL || "openai/gpt-oss-20b";
 const AI_PROVIDER = (process.env.AI_PROVIDER || "groq").trim().toLowerCase();
 const TTS_PROVIDER = "google"; // FORCE GOOGLE AS REQUESTED
 const DEEPGRAM_TTS_MODEL = process.env.DEEPGRAM_TTS_MODEL || "aura-2-thalia-en";
-const DEEPGRAM_STT_MODEL = process.env.DEEPGRAM_STT_MODEL || "flux";
+const DEEPGRAM_STT_MODEL = process.env.DEEPGRAM_STT_MODEL || "flux-general-en";
 const DEEPGRAM_STT_LANGUAGE = process.env.DEEPGRAM_STT_LANGUAGE || "en-US";
 const STT_PROVIDER = (process.env.STT_PROVIDER || "deepgram").trim().toLowerCase(); 
 const DEEPGRAM_ENDPOINTING_MS = Number(process.env.DEEPGRAM_ENDPOINTING_MS || 300);
@@ -450,15 +450,15 @@ wss.on('connection', (ws, request) => {
     let currentRobotMode = "NORMAL";
 
     const closeSttSocket = (socket, code = 1000, reason = "cleanup") => {
-        if (!socket) return;
+        if (!socket || socket.readyState === WebSocket.CLOSED) return;
         try {
             if (socket.readyState === WebSocket.OPEN) {
                 socket.close(code, reason);
-            } else if (socket.readyState === WebSocket.CONNECTING || socket.readyState === WebSocket.CLOSING) {
+            } else {
                 socket.terminate();
             }
         } catch (err) {
-            console.warn("[Deepgram] Close error:", err.message || err);
+            // Silently handle close errors to prevent server crash
         }
     };
 
