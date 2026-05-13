@@ -3332,12 +3332,6 @@ void streamMicToNodeServer() {
     return;
   }
 
-  if (nodeMux) xSemaphoreTake(nodeMux, portMAX_DELAY);
-  if (!nodeWsConnected) { // Check again after taking mutex
-    if (nodeMux) xSemaphoreGive(nodeMux);
-    return;
-  }
-
   if (wasMicStreamBlocked && micI2SActive) {
     clearMicBuffer(); // one transition drain before reopening the mic stream
     wasMicStreamBlocked = false;
