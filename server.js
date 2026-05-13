@@ -99,10 +99,10 @@ const MISTRAL_AGENT_ID = "ag_019d4492c13a75ff8e9e139956e37489";
 const MISTRAL_AGENT_VERSION = 28;
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const GROQ_MODEL = process.env.GROQ_MODEL || "qwen/qwen3-32b";
-const AI_PROVIDER = process.env.AI_PROVIDER || "groq";
+const AI_PROVIDER = (process.env.AI_PROVIDER || "groq").trim().toLowerCase();
 const TTS_PROVIDER = "google"; // FORCE GOOGLE AS REQUESTED
 const DEEPGRAM_TTS_MODEL = process.env.DEEPGRAM_TTS_MODEL || "aura-2-thalia-en";
-const STT_PROVIDER = process.env.STT_PROVIDER || "deepgram"; 
+const STT_PROVIDER = (process.env.STT_PROVIDER || "deepgram").trim().toLowerCase(); 
 const ASSEMBLYAI_API_KEY = process.env.ASSEMBLYAI_API_KEY || "bc03c5e7a71449a2bbfbe86c1db94b00";
 const TAVILY_API_KEY = process.env.TAVILY_API_KEY;
 const ELLA_PERSONA = process.env.ELLA_PERSONA || [
@@ -411,12 +411,14 @@ wss.on('connection', (ws, request) => {
             pendingAudioBytes += chunk.length;
         }
 
-        // Keep at most 5 seconds of pending audio (increased from 3s)
-        const maxPendingBytes = 16000 * 2 * 5;
+        // Keep at most 10 seconds of pending audio (increased from 5s to be safe)
+        const maxPendingBytes = 16000 * 2 * 10;
         while (pendingAudioBytes > maxPendingBytes && pendingAudioChunks.length > 0) {
             const dropped = pendingAudioChunks.shift();
             pendingAudioBytes -= dropped.length;
-            console.log(`[Audio] Dropped ${dropped.length} bytes (buffer full)`);
+            if (Date.now() % 1000 < 50) { // Throttle drop logs to avoid log spam
+                console.log(`[Audio] Dropped ${dropped.length} bytes (buffer full, dgOpen=${deepgramOpen})`);
+            }
         }
     };
 
@@ -950,7 +952,13 @@ wss.on('connection', (ws, request) => {
         if (esp32HeartbeatInterval) clearInterval(esp32HeartbeatInterval);
         if (deepgramLive) {
             deepgramLive.removeAllListeners();
-            deepgramLive.close();
+            try {
+                if (deepgramLive.readyState === WebSocket.OPEN || deepgramLive.readyState === WebSocket.CONNECTING) {
+                    deepgramLive.close();
+                }
+            } catch (err) {
+                console.warn("[Deepgram] Close error:", err.message);
+            }
             deepgramLive = null;
         }
         if (silenceTimer) clearTimeout(silenceTimer);
