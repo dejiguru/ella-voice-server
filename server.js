@@ -728,14 +728,16 @@ wss.on('connection', (ws, request) => {
                     const eotConfidence = msg.end_of_turn_confidence || 0;
 
                     if (transcript.trim().length > 0) {
-                        transcriptBuffer = (transcriptBuffer + " " + transcript).trim();
+                        // Flux TurnInfo contains the full transcript for the current turn.
+                        // Do NOT append; replace the buffer to prevent duplication.
+                        transcriptBuffer = transcript.trim();
                         console.log(`[STT] Flux: "${transcript}" (event=${event}, turn_index=${msg.turn_index})`);
                         ws.send(JSON.stringify({ type: "interim", text: transcriptBuffer }));
                     }
 
                     if (event === "EndOfTurn") {
                         console.log(`[Deepgram] Flux EndOfTurn (Confidence: ${eotConfidence})`);
-                        if (transcriptBuffer.trim().length > 0) {
+                        if (transcriptBuffer.length > 0) {
                             finalizeTranscriptTurn("dg_flux_eot");
                         }
                     }
