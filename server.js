@@ -2,10 +2,96 @@ const WebSocket = require('ws');
 const express = require('express');
 const http = require('http');
 const fetch = (...args) => import('node-fetch').then(({default: f}) => f(...args));
+const TelegramBot = require('node-telegram-bot-api');
 
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
+
+// Telegram Bot Configuration
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
+let telegramBot = null;
+let esp32Connection = null; // Track active ESP32 connection
+
+// Initialize Telegram Bot if token is provided
+if (TELEGRAM_BOT_TOKEN) {
+    try {
+        telegramBot = new TelegramBot(TELEGRAM_BOT_TOKEN, { polling: true });
+        console.log('[Telegram] Bot initialized successfully');
+        
+        // Handle incoming Telegram commands
+        telegramBot.on('message', async (msg) => {
+            const chatId = msg.chat.id.toString();
+            const text = msg.text || '';
+            
+            console.log(`[Telegram] Message from ${chatId}: ${text}`);
+            
+            // Auto-capture chat ID if not set
+            if (!TELEGRAM_CHAT_ID || TELEGRAM_CHAT_ID === 'null') {
+                process.env.TELEGRAM_CHAT_ID = chatId;
+                console.log(`[Telegram] Auto-captured Chat ID: ${chatId}`);
+            }
+            
+            // Only respond to authorized chat
+            if (TELEGRAM_CHAT_ID && chatId !== TELEGRAM_CHAT_ID) {
+                console.log(`[Telegram] Unauthorized chat: ${chatId}`);
+                return;
+            }
+            
+            // Handle commands
+            if (text === '/status' || text === '/start') {
+                if (esp32Connection && esp32Connection.readyState === WebSocket.OPEN) {
+                    // Request status from ESP32
+                    esp32Connection.send(JSON.stringify({ type: 'telegram_command', command: 'status' }));
+                } else {
+                    telegramBot.sendMessage(chatId, '❌ ELLA is offline');
+                }
+            } else if (text === '/health') {
+                if (esp32Connection && esp32Connection.readyState === WebSocket.OPEN) {
+                    esp32Connection.send(JSON.stringify({ type: 'telegram_command', command: 'health' }));
+                } else {
+                    telegramBot.sendMessage(chatId, '❌ ELLA is offline');
+                }
+            } else if (text === '/help') {
+                const helpText = `📱 <b>ELLA Bot Commands</b>\n\n` +
+                    `/status - Current sensor readings\n` +
+                    `/health - Heart rate & SpO2 data\n` +
+                    `/help - Show this message\n\n` +
+                    `<i>💡 ELLA monitors 24/7</i>`;
+                telegramBot.sendMessage(chatId, helpText, { parse_mode: 'HTML' });
+            } else {
+                telegramBot.sendMessage(chatId, '❓ Unknown command. Type /help for available commands.');
+            }
+        });
+        
+        telegramBot.on('polling_error', (error) => {
+            console.error('[Telegram] Polling error:', error.message);
+        });
+        
+    } catch (error) {
+        console.error('[Telegram] Failed to initialize bot:', error.message);
+    }
+} else {
+    console.log('[Telegram] Bot token not configured - Telegram features disabled');
+}
+
+// Helper function to send Telegram messages
+const sendTelegramMessage = async (message, parseMode = 'HTML') => {
+    if (!telegramBot || !TELEGRAM_CHAT_ID) {
+        console.log('[Telegram] Bot not configured, message not sent');
+        return false;
+    }
+    
+    try {
+        await telegramBot.sendMessage(TELEGRAM_CHAT_ID, message, { parse_mode: parseMode });
+        console.log(`[Telegram] Message sent: ${message.substring(0, 50)}...`);
+        return true;
+    } catch (error) {
+        console.error('[Telegram] Failed to send message:', error.message);
+        return false;
+    }
+};
 
 const DEEPGRAM_API_KEY = process.env.DEEPGRAM_API_KEY;
 const MISTRAL_API_KEY = process.env.MISTRAL_API_KEY;
@@ -166,6 +252,7 @@ const callGroqChat = async ({ userText, latestContext, memory }) => {
 
 wss.on('connection', (ws, request) => {
     console.log('ESP32 Connected!');
+    esp32Connection = ws; // Track this connection for Telegram commands
     
     let deepgramLive = null;
     let transcriptBuffer = "";
@@ -693,6 +780,16 @@ wss.on('connection', (ws, request) => {
             if (data.type === "context") {
                 latestContext = data.text;
                 console.log("[Context Update] Sensors/Profile synced");
+            } else if (data.type === "telegram_response") {
+                // ESP32 sent sensor data in response to Telegram command
+                if (telegramBot && TELEGRAM_CHAT_ID) {
+                    sendTelegramMessage(data.message);
+                }
+            } else if (data.type === "telegram_alert") {
+                // ESP32 wants to send an alert via Telegram
+                if (telegramBot && TELEGRAM_CHAT_ID) {
+                    sendTelegramMessage(data.message);
+                }
             }
         } catch (e) {
             console.warn("[Server] Failed to parse text message:", e.message);
@@ -701,6 +798,9 @@ wss.on('connection', (ws, request) => {
 
     ws.on('close', () => {
         console.log('ESP32 Disconnected');
+        if (esp32Connection === ws) {
+            esp32Connection = null;
+        }
         if (dgKeepAliveInterval) clearInterval(dgKeepAliveInterval);
         if (deepgramLive) {
             deepgramLive.removeAllListeners();

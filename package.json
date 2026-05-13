@@ -8,10 +8,11 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "EllaBox Voice Server - WebSocket proxy for STT/LLM/TTS",
+  "description": "EllaBox Voice Server - WebSocket proxy for STT/LLM/TTS + Telegram Bot",
   "dependencies": {
     "express": "^5.2.1",
     "node-fetch": "^3.3.2",
-    "ws": "^8.20.0"
+    "ws": "^8.20.0",
+    "node-telegram-bot-api": "^0.66.0"
   }
 }
