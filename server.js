@@ -817,18 +817,18 @@ wss.on('connection', (ws, request) => {
                 setTimeout(() => startDeepgram(), 2000);
             }
         });
+        // Deepgram keep-alive: Flux does not support 'KeepAlive' messages.
+        if (dgKeepAliveInterval) clearInterval(dgKeepAliveInterval);
+        if (!dgUrl.includes("flux")) {
+            dgKeepAliveInterval = setInterval(() => {
+                if (deepgramLive && deepgramLive.readyState === WebSocket.OPEN) {
+                    deepgramLive.send(JSON.stringify({ type: 'KeepAlive' }));
+                }
+            }, 8000);
+        }
     };
 
-    // Deepgram keep-alive: Flux does not support 'KeepAlive' messages.
-    // Standard models (Nova) may need it, but Flux rejects unknown variants.
     let dgKeepAliveInterval = null;
-    if (STT_PROVIDER === "deepgram" && !dgUrl.includes("flux")) {
-        dgKeepAliveInterval = setInterval(() => {
-            if (deepgramLive && deepgramLive.readyState === WebSocket.OPEN) {
-                deepgramLive.send(JSON.stringify({ type: 'KeepAlive' }));
-            }
-        }, 8000);
-    }
 
     const startAssemblyAI = () => {
         // Close any existing connection first to prevent "too many concurrent sessions"
