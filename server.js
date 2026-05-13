@@ -691,7 +691,7 @@ wss.on('connection', (ws, request) => {
         // Deepgram v2 with EOT (End-Of-Turn) detection to prevent double-triggering
         // eot_timeout_ms=2500: wait 2.5s of silence before finalizing turn
         // eot_threshold=0.7: confidence threshold for end-of-turn
-        const dgUrl = `wss://api.deepgram.com/v1/listen?model=nova-3&language=en&encoding=linear16&sample_rate=16000&channels=1&smart_format=true&interim_results=true&eot_threshold=0.7&eot_timeout_ms=2500`;
+        const dgUrl = `wss://api.deepgram.com/v2/listen?model=flux-general-en&encoding=linear16&sample_rate=16000&channels=1&smart_format=true&interim_results=true&eot_threshold=0.7&eot_timeout_ms=2500`;
         
         if (!DEEPGRAM_API_KEY) {
             console.error("[Deepgram] API KEY MISSING");
