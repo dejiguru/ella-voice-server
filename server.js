@@ -571,36 +571,13 @@ wss.on('connection', (ws, request) => {
             rememberTurn(text, fullResponse);
             console.log(`[AI] Reply: ${fullResponse}`);
 
-            let audioBuffer = null;
-            if (TTS_PROVIDER === "google") {
-                console.log("[TTS] Synthesizing via Google...");
-                audioBuffer = await synthesizeGoogleSpeech(fullResponse).catch(err => {
-                    console.error("[Google TTS Error]", err.message);
-                    return null;
-                });
-            } else if (TTS_PROVIDER === "deepgram") {
-                console.log("[TTS] Synthesizing via Deepgram...");
-                audioBuffer = await synthesizeDeepgramSpeech(fullResponse).catch(err => {
-                    console.error("[Deepgram TTS Error]", err.message);
-                    return null;
-                });
-            }
-
-            if (audioBuffer) {
-                ws.send(JSON.stringify({ type: "tts_audio", text: fullResponse }));
-                const ok = await sendDeepgramPcmToEsp(ws, audioBuffer);
-                if (ok) {
-                    ws.send(JSON.stringify({ type: "tts_audio_done" }));
-                }
-            } else {
-                // Fallback to legacy URL-based TTS if PCM synthesis failed
-                const googleUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(fullResponse.substring(0, 200))}&tl=en&client=tw-ob`;
-                ws.send(JSON.stringify({ 
-                    type: "tts", 
-                    text: fullResponse,
-                    url: googleUrl
-                }));
-            }
+            // Simplified: Send text to ESP32 and let it handle Google TTS "as usual"
+            const googleUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(fullResponse.substring(0, 200))}&tl=en&client=tw-ob`;
+            ws.send(JSON.stringify({ 
+                type: "tts", 
+                text: fullResponse,
+                url: googleUrl
+            }));
 
             // Small buffer before ending turn
             await sleep(200);
