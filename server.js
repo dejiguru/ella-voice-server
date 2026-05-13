@@ -343,6 +343,7 @@ wss.on('connection', (ws, request) => {
     let deepgramLive = null;
     let transcriptBuffer = "";
     let isThinking = false;
+    let turnLocked = false;
     let silenceTimer = null;
     let finalizationTimer = null;
     let finalizationReason = "";
@@ -422,6 +423,10 @@ wss.on('connection', (ws, request) => {
     const AAI_MIN_CHUNK_SIZE = 3200; // 100ms at 16kHz mono
 
     const forwardAudioToDeepgram = (chunk) => {
+        if (turnLocked || isThinking) {
+            return;
+        }
+
         logAudioStats(chunk);
 
         // For AssemblyAI: buffer to minimum chunk size
@@ -642,6 +647,7 @@ wss.on('connection', (ws, request) => {
                 console.log(`[STT] Dropped stale repeat (${finalizationReason}): "${textToProcess}"`);
                 return;
             }
+            turnLocked = true;
             lastProcessedTranscript = textToProcess;
             lastProcessedTranscriptAt = Date.now();
             console.log(`[STT] Finalizing turn (${finalizationReason}): "${textToProcess}"`);
@@ -677,6 +683,7 @@ wss.on('connection', (ws, request) => {
 
     const handleFinalSpeech = async (text) => {
         if (!text || isThinking) return;
+        turnLocked = true;
         isThinking = true;
         console.log(`[AI] Starting handleFinalSpeech for: "${text}"`);
 
@@ -823,9 +830,11 @@ wss.on('connection', (ws, request) => {
             }
         } finally {
             isThinking = false;
-            if (transcriptBuffer.trim().length > 0) {
-                scheduleTranscriptFinalization("post_ai_buffer", 250);
-            }
+            transcriptBuffer = "";
+            finalSegmentCount = 0;
+            lastAppendedFinalTranscript = "";
+            lastSentInterim = "";
+            turnLocked = false;
         }
     };
 
@@ -843,6 +852,7 @@ wss.on('connection', (ws, request) => {
             console.log(`[STT] Dropped stale repeat (${reason}): "${textToProcess}"`);
             return;
         }
+        turnLocked = true;
         lastProcessedTranscript = textToProcess;
         lastProcessedTranscriptAt = Date.now();
         console.log(`[STT] Finalizing turn (${reason}): "${textToProcess}"`);
@@ -897,6 +907,10 @@ wss.on('connection', (ws, request) => {
             if (socketId !== deepgramSocketId) return;
             try {
                 const msg = JSON.parse(data.toString());
+
+                if (turnLocked && msg.type !== "Metadata" && msg.type !== "Error") {
+                    return;
+                }
 
                 // Handle Metadata
                 if (msg.type === "Metadata") {
