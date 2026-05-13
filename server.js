@@ -1026,7 +1026,6 @@ wss.on('connection', (ws, request) => {
             // Flux (v2/listen) ONLY supports these specific parameters
             dgParams.set("eot_threshold", "0.6");
             dgParams.set("eager_eot_threshold", "0.4");
-            dgParams.set("smart_format", "true");
         } else {
             // Nova-3 (v1/listen) parameters
             dgParams.set("language", DEEPGRAM_STT_LANGUAGE);
@@ -1214,16 +1213,20 @@ wss.on('connection', (ws, request) => {
             }
         });
         if (dgKeepAliveInterval) clearInterval(dgKeepAliveInterval);
-        if (!isFlux) {
-            dgKeepAliveInterval = setInterval(() => {
-                if (!deepgramLive || deepgramLive.readyState !== WebSocket.OPEN) return;
-                try {
+        dgKeepAliveInterval = setInterval(() => {
+            if (!deepgramLive || deepgramLive.readyState !== WebSocket.OPEN) return;
+            try {
+                if (isFlux) {
+                    // Flux (v2) requires standard WebSocket ping frames
+                    deepgramLive.ping();
+                } else {
+                    // Nova-3 (v1) uses the legacy KeepAlive JSON message
                     deepgramLive.send(JSON.stringify({ type: 'KeepAlive' }));
-                } catch (err) {
-                    console.error('[Deepgram] KeepAlive failed:', err.message || err);
                 }
-            }, DEEPGRAM_KEEPALIVE_MS);
-        }
+            } catch (err) {
+                console.error('[Deepgram] KeepAlive failed:', err.message || err);
+            }
+        }, DEEPGRAM_KEEPALIVE_MS);
     };
 
     let dgKeepAliveInterval = null;
