@@ -313,6 +313,7 @@ wss.on('connection', (ws, request) => {
     let isThinking = false;
     let silenceTimer = null;
     let latestContext = "";
+    let esp32HeartbeatInterval = null;
     let conversationId = null; 
     let lastAppendedFinalTranscript = "";
     let lastSentInterim = "";
@@ -853,6 +854,13 @@ wss.on('connection', (ws, request) => {
         startDeepgram(); // Default to Deepgram Nova-3
     }
 
+    // Server-to-Client Heartbeat: keep proxies alive and detect dead connections
+    esp32HeartbeatInterval = setInterval(() => {
+        if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: "heartbeat", time: Date.now() }));
+        }
+    }, 15000);
+
     ws.on('message', (message, isBinary) => {
         if (isBinary) {
             const chunk = Buffer.isBuffer(message) ? message : Buffer.from(message);
@@ -889,6 +897,7 @@ wss.on('connection', (ws, request) => {
             esp32Connection = null;
         }
         if (dgKeepAliveInterval) clearInterval(dgKeepAliveInterval);
+        if (esp32HeartbeatInterval) clearInterval(esp32HeartbeatInterval);
         if (deepgramLive) {
             deepgramLive.removeAllListeners();
             deepgramLive.close();
