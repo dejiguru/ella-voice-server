@@ -100,8 +100,8 @@ const MISTRAL_AGENT_VERSION = 28;
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const GROQ_MODEL = process.env.GROQ_MODEL || "qwen/qwen3-32b";
 const AI_PROVIDER = process.env.AI_PROVIDER || "groq";
+const TTS_PROVIDER = process.env.TTS_PROVIDER || "google"; // "google" or "deepgram"
 const DEEPGRAM_TTS_MODEL = process.env.DEEPGRAM_TTS_MODEL || "aura-2-thalia-en";
-const USE_DEEPGRAM_TTS = process.env.USE_DEEPGRAM_TTS !== "false";
 const STT_PROVIDER = process.env.STT_PROVIDER || "deepgram"; 
 const ASSEMBLYAI_API_KEY = process.env.ASSEMBLYAI_API_KEY || "bc03c5e7a71449a2bbfbe86c1db94b00";
 const ELLA_PERSONA = process.env.ELLA_PERSONA || [
@@ -155,7 +155,7 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const synthesizeDeepgramSpeech = async (text) => {
     const cleanText = stripActionTags(text);
-    if (!USE_DEEPGRAM_TTS || !cleanText || !DEEPGRAM_API_KEY) return null;
+    if (!cleanText || !DEEPGRAM_API_KEY) return null;
 
     const url = `https://api.deepgram.com/v1/speak?model=${encodeURIComponent(DEEPGRAM_TTS_MODEL)}&encoding=linear16&sample_rate=24000&container=none`;
     const response = await fetch(url, {
@@ -173,6 +173,38 @@ const synthesizeDeepgramSpeech = async (text) => {
     }
 
     return Buffer.from(await response.arrayBuffer());
+};
+
+const synthesizeGoogleSpeech = async (text) => {
+    const cleanText = stripActionTags(text);
+    if (!cleanText) return null;
+
+    const { spawn } = require('child_process');
+    const googleUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(cleanText.substring(0, 200))}&tl=en&client=tw-ob`;
+    
+    const response = await fetch(googleUrl);
+    if (!response.ok) throw new Error(`Google TTS failed: ${response.statusText}`);
+
+    return new Promise((resolve, reject) => {
+        const ffmpeg = spawn('ffmpeg', [
+            '-i', 'pipe:0',
+            '-f', 's16le',
+            '-ar', '24000',
+            '-ac', '1',
+            'pipe:1'
+        ]);
+
+        let pcmBuffer = Buffer.alloc(0);
+        ffmpeg.stdout.on('data', (chunk) => { pcmBuffer = Buffer.concat([pcmBuffer, chunk]); });
+        ffmpeg.stderr.on('data', (data) => { /* console.log(`[ffmpeg] ${data}`); */ });
+        ffmpeg.on('close', (code) => {
+            if (code === 0) resolve(pcmBuffer);
+            else reject(new Error(`ffmpeg exited with code ${code}`));
+        });
+
+        // Use response.body (Node stream)
+        response.body.pipe(ffmpeg.stdin);
+    });
 };
 
 const sendDeepgramPcmToEsp = async (ws, audioBuffer) => {
@@ -520,24 +552,29 @@ wss.on('connection', (ws, request) => {
             rememberTurn(text, fullResponse);
             console.log(`[AI] Reply: ${fullResponse}`);
 
-            if (USE_DEEPGRAM_TTS) {
-                // Use high-quality server-side TTS
+            let audioBuffer = null;
+            if (TTS_PROVIDER === "google") {
+                console.log("[TTS] Synthesizing via Google...");
+                audioBuffer = await synthesizeGoogleSpeech(fullResponse).catch(err => {
+                    console.error("[Google TTS Error]", err.message);
+                    return null;
+                });
+            } else if (TTS_PROVIDER === "deepgram") {
+                console.log("[TTS] Synthesizing via Deepgram...");
+                audioBuffer = await synthesizeDeepgramSpeech(fullResponse).catch(err => {
+                    console.error("[Deepgram TTS Error]", err.message);
+                    return null;
+                });
+            }
+
+            if (audioBuffer) {
                 ws.send(JSON.stringify({ type: "tts_audio", text: fullResponse }));
-                try {
-                    const audioBuffer = await synthesizeDeepgramSpeech(fullResponse);
-                    if (audioBuffer) {
-                        await sendDeepgramPcmToEsp(ws, audioBuffer);
-                        ws.send(JSON.stringify({ type: "tts_audio_done" }));
-                    } else {
-                        // Fallback to Google TTS if synthesis failed
-                        ws.send(JSON.stringify({ type: "tts", text: fullResponse }));
-                    }
-                } catch (ttsErr) {
-                    console.error("[TTS] Error:", ttsErr.message);
-                    ws.send(JSON.stringify({ type: "tts", text: fullResponse }));
+                const ok = await sendDeepgramPcmToEsp(ws, audioBuffer);
+                if (ok) {
+                    ws.send(JSON.stringify({ type: "tts_audio_done" }));
                 }
             } else {
-                // Fallback to local Google TTS
+                // Fallback to legacy URL-based TTS if PCM synthesis failed
                 ws.send(JSON.stringify({ type: "tts", text: fullResponse }));
             }
 
