@@ -518,13 +518,33 @@ wss.on('connection', (ws, request) => {
 
             rememberTurn(text, fullResponse);
             console.log(`[AI] Reply: ${fullResponse}`);
-            ws.send(JSON.stringify({ type: "tts", text: fullResponse }));
 
-            setTimeout(() => {
-                if (ws.readyState === WebSocket.OPEN) {
-                    ws.send(JSON.stringify({ type: "turn_complete" }));
+            if (USE_DEEPGRAM_TTS) {
+                // Use high-quality server-side TTS
+                ws.send(JSON.stringify({ type: "tts_audio", text: fullResponse }));
+                try {
+                    const audioBuffer = await synthesizeDeepgramSpeech(fullResponse);
+                    if (audioBuffer) {
+                        await sendDeepgramPcmToEsp(ws, audioBuffer);
+                        ws.send(JSON.stringify({ type: "tts_audio_done" }));
+                    } else {
+                        // Fallback to Google TTS if synthesis failed
+                        ws.send(JSON.stringify({ type: "tts", text: fullResponse }));
+                    }
+                } catch (ttsErr) {
+                    console.error("[TTS] Error:", ttsErr.message);
+                    ws.send(JSON.stringify({ type: "tts", text: fullResponse }));
                 }
-            }, 100);
+            } else {
+                // Fallback to local Google TTS
+                ws.send(JSON.stringify({ type: "tts", text: fullResponse }));
+            }
+
+            // Small buffer before ending turn
+            await sleep(200);
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: "turn_complete" }));
+            }
 
         } catch (err) {
             console.error("[AI] Error:", err.message);

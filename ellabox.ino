@@ -526,6 +526,7 @@ unsigned long    nextAaiReconnectMs = 0;
 WiFiClient*      nodeWsClient = nullptr;
 bool             nodeWsConnected = false;
 bool             nodeWsConnecting = false;
+SemaphoreHandle_t nodeMux = NULL; // Concurrency safety for Node Server
 unsigned long    nextNodeWsReconnectMs = 0;
 unsigned long    nodeAudioPendingSince = 0; // for stuck-state timeout
 unsigned long    lastNodeWsKeepAliveMs = 0; // for WebSocket ping keep-alive
@@ -597,6 +598,7 @@ WiFiClientSecure* vAgentClient = nullptr;
 bool vAgentConnected = false;
 bool vAgentConnecting = false;
 bool vAgentConfigured = false;
+SemaphoreHandle_t vAgentMux = NULL; // Concurrency safety for Voice Agent
 unsigned long vAgentLastKeepAliveMs = 0;
 const unsigned long VAGENT_KEEPALIVE_MS = 5000;
 const unsigned long VAGENT_RECONNECT_MS = 2000;
@@ -3196,15 +3198,17 @@ static bool nodeWsSendText(const char* text) {
 }
 
 void disconnectNodeServer() {
+  if (nodeMux) xSemaphoreTake(nodeMux, portMAX_DELAY);
   if (nodeClientPtr && nodeClientPtr->connected()) {
     nodeWsSendFrame(0x8, nullptr, 0); // close
     nodeClientPtr->stop();
   }
   nodeWsConnected = false;
   nodeWsConnecting = false;
-  lastNodeWsKeepAliveMs = 0; // Reset keep-alive timer
+  lastNodeWsKeepAliveMs = 0; 
   nextNodeWsReconnectMs = millis() + 2000;
   Serial.println("[NODE] Disconnected cleanly");
+  if (nodeMux) xSemaphoreGive(nodeMux);
 }
 
 static void serviceNodeWebSocketKeepAlive() {
@@ -3320,11 +3324,17 @@ void streamMicToNodeServer() {
     if (nodeWsConnected && micI2SActive && speakerActive) {
       unsigned long now = millis();
       if (!wasMicStreamBlocked || now - lastBlockedDrainMs >= 750) {
-        clearMicBuffer(); // drain occasionally while blocked so speaker audio does not queue up
+        clearMicBuffer(); 
         lastBlockedDrainMs = now;
       }
     }
     wasMicStreamBlocked = true;
+    return;
+  }
+
+  if (nodeMux) xSemaphoreTake(nodeMux, portMAX_DELAY);
+  if (!nodeWsConnected) { // Check again after taking mutex
+    if (nodeMux) xSemaphoreGive(nodeMux);
     return;
   }
 
@@ -6041,20 +6051,24 @@ void sttTask(void* parameter) {
     Serial.println("[STT Task] Started on Core 0");
     while (true) {
         if (USE_NODE_SERVER && aiInputUsesMic && currentMode == MODE_AI && networkAvailable()) {
-          if (!nodeWsConnected) connectNodeServer();
-          pumpNodeServerSocket();
-          streamMicToNodeServer();
-          serviceNodeWebSocketKeepAlive(); // Keep connection alive with periodic pings
-        } else if (USE_VOICE_AGENT && aiInputUsesMic && currentMode == MODE_AI && networkAvailable()) {
-          // Voice Agent mode: single WS handles STT+LLM+TTS
-          if (vAgentConnected && vAgentConfigured && !isSpeaking) {
-            streamMicToVoiceAgent();
+          if (nodeMux && xSemaphoreTake(nodeMux, pdMS_TO_TICKS(100)) == pdTRUE) {
+            if (!nodeWsConnected) connectNodeServer();
+            pumpNodeServerSocket();
+            streamMicToNodeServer();
+            serviceNodeWebSocketKeepAlive(); 
+            xSemaphoreGive(nodeMux);
           }
-          pumpVoiceAgentSocket();
-          sendVoiceAgentKeepAlive();
-          // Auto-reconnect
-          if (!vAgentConnected && !vAgentConnecting && millis() >= vAgentNextReconnectMs) {
-            connectVoiceAgent();
+        } else if (USE_VOICE_AGENT && aiInputUsesMic && currentMode == MODE_AI && networkAvailable()) {
+          if (vAgentMux && xSemaphoreTake(vAgentMux, pdMS_TO_TICKS(100)) == pdTRUE) {
+            if (vAgentConnected && vAgentConfigured && !isSpeaking) {
+              streamMicToVoiceAgent();
+            }
+            pumpVoiceAgentSocket();
+            sendVoiceAgentKeepAlive();
+            if (!vAgentConnected && !vAgentConnecting && millis() >= vAgentNextReconnectMs) {
+              connectVoiceAgent();
+            }
+            xSemaphoreGive(vAgentMux);
           }
         } else if (sttSocketPumpEnabled && aaiConnected && currentMode == MODE_AI && aiInputUsesMic && networkAvailable()) {
             // Old pipeline: separate DG STT WebSocket
@@ -6257,6 +6271,10 @@ void setup() {
   // FIX: Lower SPI speed to 20MHz to prevent artifacts/noise on wires
   tft.begin(20000000); 
   tft.setRotation(0);
+  
+  // Create Mutexes for socket safety
+  nodeMux = xSemaphoreCreateMutex();
+  vAgentMux = xSemaphoreCreateMutex();
   
   // SHOW LOADING SCREEN IMMEDIATELY
   drawLoadingScreen("System Init...", 5);
@@ -7039,15 +7057,21 @@ void switchToNormalMode() {
   clearDeferredAiAction();
   
   // 1. Disconnect all AI/STT paths
+  if (vAgentMux) xSemaphoreTake(vAgentMux, pdMS_TO_TICKS(500));
   if (USE_VOICE_AGENT) disconnectVoiceAgent();
+  if (vAgentMux) xSemaphoreGive(vAgentMux);
+
+  if (nodeMux) xSemaphoreTake(nodeMux, pdMS_TO_TICKS(500));
   disconnectNodeServer(); // KILL THE DEEPGRAM PROXY
+  if (nodeMux) xSemaphoreGive(nodeMux);
+
   disableMicAIInput();
   if (micI2SActive) clearMicBuffer(); // Flush any remaining audio data
   
   // 2. Hard Reset MQTT client to clear AI session buffers
   if (mqtt.connected()) mqtt.disconnect();
   mqttClientNet->stop();
-  delay(500); // Wait for stack to settle
+  delay(200); // Wait for stack to settle
   Serial.println("[Mode] MQTT Client Reset & AI Memory Cleared");
   
   // Restart MAX30102 without defaulting to 400sps
