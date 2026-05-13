@@ -327,6 +327,8 @@ wss.on('connection', (ws, request) => {
     let lastProcessedTranscript = "";
     let lastProcessedTranscriptAt = 0;
     let finalSegmentCount = 0;
+    let lastSpeechStartedAt = 0;
+    let lastFinalTranscriptAt = 0;
     let deepgramOpen = false;
     let deepgramSocketId = 0;
     let dgReconnectTimer = null;
@@ -590,12 +592,22 @@ wss.on('connection', (ws, request) => {
         return textTokens.length <= 4 && matchingTokens / textTokens.length >= 0.75;
     };
 
+    const newerSpeechIsStillOpen = () => {
+        if (lastSpeechStartedAt <= lastFinalTranscriptAt) return false;
+        return Date.now() - lastSpeechStartedAt < 2500;
+    };
+
     const scheduleTranscriptFinalization = (reason, delayMs = 350) => {
         if (finalizationTimer) clearTimeout(finalizationTimer);
         finalizationReason = reason;
         finalizationTimer = setTimeout(() => {
             finalizationTimer = null;
             if (transcriptBuffer.trim().length === 0 || isThinking) return;
+            if (newerSpeechIsStillOpen()) {
+                console.log(`[STT] Deferring turn end (${finalizationReason}); newer speech is active`);
+                scheduleTranscriptFinalization(`${finalizationReason}_deferred`, 700);
+                return;
+            }
 
             const textToProcess = takeTranscriptForProcessing();
             if (!textToProcess) return;
@@ -631,6 +643,7 @@ wss.on('connection', (ws, request) => {
 
         finalSegmentCount++;
         lastAppendedFinalTranscript = cleanTranscript;
+        lastFinalTranscriptAt = Date.now();
         console.log(`[STT] Buffered final (${source}, segments=${finalSegmentCount}): "${transcriptBuffer}"`);
         return transcriptBuffer;
     };
@@ -912,12 +925,17 @@ wss.on('connection', (ws, request) => {
                 // Handle UtteranceEnd / EndOfTurn events
                 if (msg.type === "UtteranceEnd" || msg.type === "EndOfTurn") {
                     console.log(`[Deepgram] ${msg.type} detected`);
+                    if (newerSpeechIsStillOpen()) {
+                        console.log(`[STT] Ignoring stale ${msg.type}; newer speech started before this end event`);
+                        return;
+                    }
                     scheduleTranscriptFinalization("dg_eot", 350);
                     return;
                 }
 
                 // Handle SpeechStarted event
                 if (msg.type === "SpeechStarted") {
+                    lastSpeechStartedAt = Date.now();
                     console.log(`[Deepgram] Speech started`);
                     if (!isThinking && transcriptBuffer.trim().length > 0 && finalizationTimer) {
                         clearTimeout(finalizationTimer);
