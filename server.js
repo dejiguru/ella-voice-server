@@ -691,7 +691,7 @@ wss.on('connection', (ws, request) => {
         // Deepgram v2 with EOT (End-Of-Turn) detection to prevent double-triggering
         // eot_timeout_ms=2500: wait 2.5s of silence before finalizing turn
         // eot_threshold=0.7: confidence threshold for end-of-turn
-        const dgUrl = `wss://api.deepgram.com/v2/listen?model=flux-general-en&encoding=linear16&sample_rate=16000&channels=1&smart_format=true&interim_results=true&eot_threshold=0.7&eot_timeout_ms=2500`;
+        const dgUrl = `wss://api.deepgram.com/v2/listen?model=flux-general-en&encoding=linear16&sample_rate=16000&channels=1&smart_format=true&interim_results=true&eot_threshold=0.7&eot_timeout_ms=5000`;
         
         if (!DEEPGRAM_API_KEY) {
             console.error("[Deepgram] API KEY MISSING");
@@ -707,7 +707,7 @@ wss.on('connection', (ws, request) => {
 
         deepgramLive.on('open', () => {
             deepgramOpen = true;
-            console.log(`[Deepgram] Nova-3 Connected (pending: ${pendingAudioChunks.length} chunks, ${pendingAudioBytes} bytes)`);
+            console.log(`[Deepgram] Flux Connected (pending: ${pendingAudioChunks.length} chunks, ${pendingAudioBytes} bytes)`);
             flushPendingAudio();
         });
 
@@ -718,6 +718,27 @@ wss.on('connection', (ws, request) => {
                 // Handle Metadata
                 if (msg.type === "Metadata") {
                     console.log(`[Deepgram] Metadata received`);
+                    return;
+                }
+
+                // Handle Flux TurnInfo (New v2 format)
+                if (msg.type === "TurnInfo") {
+                    const transcript = msg.transcript || "";
+                    const event = msg.event || "";
+                    const eotConfidence = msg.end_of_turn_confidence || 0;
+
+                    if (transcript.trim().length > 0) {
+                        transcriptBuffer = (transcriptBuffer + " " + transcript).trim();
+                        console.log(`[STT] Flux: "${transcript}" (event=${event}, turn_index=${msg.turn_index})`);
+                        ws.send(JSON.stringify({ type: "interim", text: transcriptBuffer }));
+                    }
+
+                    if (event === "EndOfTurn") {
+                        console.log(`[Deepgram] Flux EndOfTurn (Confidence: ${eotConfidence})`);
+                        if (transcriptBuffer.trim().length > 0) {
+                            finalizeTranscriptTurn("dg_flux_eot");
+                        }
+                    }
                     return;
                 }
 
