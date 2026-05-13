@@ -102,6 +102,7 @@ const GROQ_MODEL = process.env.GROQ_MODEL || "openai/gpt-oss-20b";
 const AI_PROVIDER = (process.env.AI_PROVIDER || "groq").trim().toLowerCase();
 const TTS_PROVIDER = "google"; // FORCE GOOGLE AS REQUESTED
 const DEEPGRAM_TTS_MODEL = process.env.DEEPGRAM_TTS_MODEL || "aura-2-thalia-en";
+const DEEPGRAM_STT_MODEL = process.env.DEEPGRAM_STT_MODEL || "nova-3";
 const STT_PROVIDER = (process.env.STT_PROVIDER || "deepgram").trim().toLowerCase(); 
 const ASSEMBLYAI_API_KEY = process.env.ASSEMBLYAI_API_KEY || "bc03c5e7a71449a2bbfbe86c1db94b00";
 const TAVILY_API_KEY = process.env.TAVILY_API_KEY;
@@ -689,17 +690,17 @@ wss.on('connection', (ws, request) => {
     };
 
     const startDeepgram = () => {
-        // Deepgram v2 with EOT (End-Of-Turn) detection to prevent double-triggering
-        // eot_timeout_ms=2500: wait 2.5s of silence before finalizing turn
+        // Deepgram Nova-3 with EOT (End-Of-Turn) detection to prevent double-triggering
+        // eot_timeout_ms=5000: wait 5s of silence before finalizing turn
         // eot_threshold=0.7: confidence threshold for end-of-turn
-        const dgUrl = `wss://api.deepgram.com/v2/listen?model=flux-general-en&encoding=linear16&sample_rate=16000&eot_threshold=0.7&eot_timeout_ms=5000`;
+        const dgUrl = `wss://api.deepgram.com/v2/listen?model=${encodeURIComponent(DEEPGRAM_STT_MODEL)}&encoding=linear16&sample_rate=16000&eot_threshold=0.7&eot_timeout_ms=5000`;
         
         if (!DEEPGRAM_API_KEY) {
             console.error("[Deepgram] API KEY MISSING");
             return;
         }
 
-        console.log("[Deepgram] Connecting to Flux...");
+        console.log(`[Deepgram] Connecting to ${DEEPGRAM_STT_MODEL}...`);
         deepgramLive = new WebSocket(dgUrl, {
             headers: {
                 "Authorization": `Token ${DEEPGRAM_API_KEY}`
@@ -708,7 +709,7 @@ wss.on('connection', (ws, request) => {
 
         deepgramLive.on('open', () => {
             deepgramOpen = true;
-            console.log(`[Deepgram] Flux Connected (pending: ${pendingAudioChunks.length} chunks, ${pendingAudioBytes} bytes)`);
+            console.log(`[Deepgram] ${DEEPGRAM_STT_MODEL} Connected (pending: ${pendingAudioChunks.length} chunks, ${pendingAudioBytes} bytes)`);
             flushPendingAudio();
         });
 
@@ -722,22 +723,22 @@ wss.on('connection', (ws, request) => {
                     return;
                 }
 
-                // Handle Flux TurnInfo (New v2 format)
+                // Handle Nova-3 TurnInfo (v2 format)
                 if (msg.type === "TurnInfo") {
                     const transcript = msg.transcript || "";
                     const event = msg.event || "";
                     const eotConfidence = msg.end_of_turn_confidence || 0;
 
                     if (transcript.trim().length > 0) {
-                        // Flux TurnInfo contains the full transcript for the current turn.
+                        // Nova-3 TurnInfo contains the full transcript for the current turn.
                         // Do NOT append; replace the buffer to prevent duplication.
                         transcriptBuffer = transcript.trim();
-                        console.log(`[STT] Flux: "${transcript}" (event=${event}, turn_index=${msg.turn_index})`);
+                        console.log(`[STT] ${DEEPGRAM_STT_MODEL}: "${transcript}" (event=${event}, turn_index=${msg.turn_index})`);
                         ws.send(JSON.stringify({ type: "interim", text: transcriptBuffer }));
                     }
 
                     if (event === "EndOfTurn") {
-                        console.log(`[Deepgram] Flux EndOfTurn (Confidence: ${eotConfidence})`);
+                        console.log(`[Deepgram] ${DEEPGRAM_STT_MODEL} EndOfTurn (Confidence: ${eotConfidence})`);
                         if (transcriptBuffer.length > 0) {
                             finalizeTranscriptTurn("dg_flux_eot");
                         }
