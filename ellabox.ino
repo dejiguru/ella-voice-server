@@ -4308,21 +4308,13 @@ void handleVoiceAgentText(const char* payload, size_t length) {
     return;
   }
 
-  // AgentTurnEnd: agent finished speaking
+  // AgentTurnEnd: agent finished speaking text, but audio may still be playing
   if (strcmp(msgType, "AgentTurnEnd") == 0) {
-    Serial.println("[VAgent] Agent turn ended");
-    // Stop speaker I2S
-    if (vAgentPlayingAudio) {
-      micTestSpeaker_i2s.end();
-      vAgentPlayingAudio = false;
-      isSpeaking = false;
-      isProcessingAI = false;
-      clearStringKeepCapacity(aiRequestStatus);
-      if (firebaseReady) setSpeakingStatusFirebase(false);
-      // Re-init Audio library for future use
-      audio.setPinout(SPK_BCLK, SPK_LRC, SPK_DOUT);
-      audio.forceMono(true);
-    }
+    Serial.println("[VAgent] Agent turn ended — audio draining...");
+    portENTER_CRITICAL(&nodeAudioMux);
+    nodeAudioStreamDone = true;
+    portEXIT_CRITICAL(&nodeAudioMux);
+    
     // Re-enable mic streaming
     if (currentMode == MODE_AI && aiInputUsesMic) {
       currentRobotActivity = ROBOT_ACTIVITY_LISTENING;
@@ -4415,7 +4407,7 @@ void pumpVoiceAgentSocket() {
     aaiRxBuffer[got] = '\0';
     handleVoiceAgentText((const char*)aaiRxBuffer, got);
   }
-  // For binary frames (audio output), play directly
+  // For binary frames (audio output), enqueue into ring buffer
   else if (op == 0x2) {
     // Allocate temp buffer for audio
     uint8_t* audioBuf = (uint8_t*)heap_caps_malloc(pl, MALLOC_CAP_SPIRAM);
@@ -4435,7 +4427,12 @@ void pumpVoiceAgentSocket() {
       }
     }
     if (got > 0) {
-      playVoiceAgentAudio(audioBuf, got);
+      // Set stream as not done since we just got data
+      portENTER_CRITICAL(&nodeAudioMux);
+      nodeAudioStreamDone = false;
+      portEXIT_CRITICAL(&nodeAudioMux);
+      
+      nodeAudioEnqueue(audioBuf, got);
     }
     free(audioBuf);
   }
