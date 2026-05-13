@@ -1081,16 +1081,23 @@ wss.on('connection', (ws, request) => {
 
                 // Handle Nova-3 streaming results (v1 format)
                 if (msg.type === "TurnInfo") {
-                    const transcript = msg.transcript || "";
+                    const transcript = (msg.transcript || "").trim();
                     const event = msg.event || "";
                     const eotConfidence = msg.end_of_turn_confidence || 0;
 
-                    if (transcript.trim().length > 0) {
-                        // Nova-3 may emit multiple final chunks for one spoken turn.
-                        // Buffer and debounce before handing the text to the AI.
-                        appendDeepgramFinalTranscript(transcript, `turninfo_${event || "update"}`);
-                        console.log(`[STT] ${DEEPGRAM_STT_MODEL}: "${transcript}" (event=${event}, turn_index=${msg.turn_index})`);
-                        ws.send(JSON.stringify({ type: "interim", text: transcriptBuffer }));
+                    if (transcript.length > 0) {
+                        if (isFlux) {
+                            // For Flux, trust the turn-based transcript as the definitive version for this turn.
+                            // Merging fragments is not needed as Flux provides cumulative turn info.
+                            transcriptBuffer = transcript;
+                            bestHeardTranscript = transcript;
+                            console.log(`[STT] ${DEEPGRAM_STT_MODEL}: "${transcript}" (event=${event}, turn_index=${msg.turn_index})`);
+                            ws.send(JSON.stringify({ type: "interim", text: transcriptBuffer }));
+                        } else {
+                            appendDeepgramFinalTranscript(transcript, `turninfo_${event || "update"}`);
+                            console.log(`[STT] ${DEEPGRAM_STT_MODEL}: "${transcript}" (event=${event}, turn_index=${msg.turn_index})`);
+                            ws.send(JSON.stringify({ type: "interim", text: transcriptBuffer }));
+                        }
                     }
 
                     if (event === "EndOfTurn") {
