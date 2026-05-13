@@ -104,8 +104,8 @@ const TTS_PROVIDER = "google"; // FORCE GOOGLE AS REQUESTED
 const DEEPGRAM_TTS_MODEL = process.env.DEEPGRAM_TTS_MODEL || "aura-2-thalia-en";
 const DEEPGRAM_STT_MODEL = process.env.DEEPGRAM_STT_MODEL || "nova-3";
 const STT_PROVIDER = (process.env.STT_PROVIDER || "deepgram").trim().toLowerCase(); 
-const DEEPGRAM_ENDPOINTING_MS = Number(process.env.DEEPGRAM_ENDPOINTING_MS || 500);
-const DEEPGRAM_UTTERANCE_END_MS = Number(process.env.DEEPGRAM_UTTERANCE_END_MS || 1200);
+const DEEPGRAM_ENDPOINTING_MS = Number(process.env.DEEPGRAM_ENDPOINTING_MS || 300);
+const DEEPGRAM_UTTERANCE_END_MS = Number(process.env.DEEPGRAM_UTTERANCE_END_MS || 700);
 const ASSEMBLYAI_API_KEY = process.env.ASSEMBLYAI_API_KEY || "bc03c5e7a71449a2bbfbe86c1db94b00";
 const TAVILY_API_KEY = process.env.TAVILY_API_KEY;
 const ELLA_PERSONA = process.env.ELLA_PERSONA || [
@@ -575,9 +575,9 @@ wss.on('connection', (ws, request) => {
         silenceTimer = setTimeout(() => {
             if (transcriptBuffer.trim().length > 0 && !isThinking) {
                 console.log("[Silence Watchdog] Scheduling turn end...");
-                scheduleTranscriptFinalization("silence_watchdog", 250);
+                scheduleTranscriptFinalization("silence_watchdog", 120);
             }
-        }, 1800);
+        }, 900);
     };
 
     const normalizeTranscript = (text) => text.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
@@ -633,7 +633,7 @@ wss.on('connection', (ws, request) => {
 
     const newerSpeechIsStillOpen = () => {
         if (lastSpeechStartedAt <= lastFinalTranscriptAt) return false;
-        return Date.now() - lastSpeechStartedAt < 2500;
+        return Date.now() - lastSpeechStartedAt < 1400;
     };
 
     const scheduleTranscriptFinalization = (reason, delayMs = 350) => {
@@ -644,7 +644,7 @@ wss.on('connection', (ws, request) => {
             if (transcriptBuffer.trim().length === 0 || isThinking) return;
             if (newerSpeechIsStillOpen()) {
                 console.log(`[STT] Deferring turn end (${finalizationReason}); newer speech is active`);
-                scheduleTranscriptFinalization(`${finalizationReason}_deferred`, 700);
+                scheduleTranscriptFinalization(`${finalizationReason}_deferred`, 350);
                 return;
             }
 
@@ -938,7 +938,7 @@ wss.on('connection', (ws, request) => {
 
                     if (event === "EndOfTurn") {
                         console.log(`[Deepgram] ${DEEPGRAM_STT_MODEL} EndOfTurn (Confidence: ${eotConfidence})`);
-                        scheduleTranscriptFinalization("dg_turninfo_eot", 350);
+                        scheduleTranscriptFinalization("dg_turninfo_eot", 120);
                     }
                     return;
                 }
@@ -954,7 +954,7 @@ wss.on('connection', (ws, request) => {
                             if (speechFinal) {
                                 appendDeepgramFinalTranscript(transcript, "results_speech_final");
                                 console.log(`[STT] Final: "${transcript}" (speech_final=${speechFinal})`);
-                                scheduleTranscriptFinalization("dg_speech_final", 350);
+                                scheduleTranscriptFinalization("dg_speech_final", 80);
                             } else {
                                 appendDeepgramFinalTranscript(transcript, "results_final_segment");
                                 console.log(`[STT] Buffered non-terminal final: "${transcriptBuffer}"`);
@@ -979,7 +979,7 @@ wss.on('connection', (ws, request) => {
                         console.log(`[STT] Ignoring stale ${msg.type}; newer speech started before this end event`);
                         return;
                     }
-                    scheduleTranscriptFinalization("dg_eot", 350);
+                    scheduleTranscriptFinalization("dg_eot", 120);
                     return;
                 }
 
