@@ -725,10 +725,9 @@ wss.on('connection', (ws, request) => {
     };
 
     const startDeepgram = () => {
-        // Deepgram Nova-3 with EOT (End-Of-Turn) detection to prevent double-triggering
-        // eot_timeout_ms=5000: wait 5s of silence before finalizing turn
-        // eot_threshold=0.7: confidence threshold for end-of-turn
-        const dgUrl = `wss://api.deepgram.com/v2/listen?model=${encodeURIComponent(DEEPGRAM_STT_MODEL)}&encoding=linear16&sample_rate=16000&eot_threshold=0.7&eot_timeout_ms=5000`;
+        // Deepgram Nova-3 uses the v1 listen stream; use endpointing + interim results
+        // and keep a small server-side debounce to merge any split finals.
+        const dgUrl = `wss://api.deepgram.com/v1/listen?model=${encodeURIComponent(DEEPGRAM_STT_MODEL)}&encoding=linear16&sample_rate=16000&interim_results=true&endpointing=5000&vad_events=true&smart_format=true&punctuate=true&numerals=true`;
         
         if (!DEEPGRAM_API_KEY) {
             console.error("[Deepgram] API KEY MISSING");
@@ -758,7 +757,7 @@ wss.on('connection', (ws, request) => {
                     return;
                 }
 
-                // Handle Nova-3 TurnInfo (v2 format)
+                // Handle Nova-3 streaming results (v1 format)
                 if (msg.type === "TurnInfo") {
                     const transcript = msg.transcript || "";
                     const event = msg.event || "";
@@ -779,7 +778,7 @@ wss.on('connection', (ws, request) => {
                     return;
                 }
 
-                // Handle Results (Nova-3 format)
+                // Handle Results (Nova-3 v1 format)
                 if (msg.type === "Results") {
                     const transcript = msg.channel?.alternatives?.[0]?.transcript || "";
                     const isFinal = msg.is_final || false;
