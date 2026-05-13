@@ -9,15 +9,22 @@ const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
 // Telegram Bot Configuration
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
+let TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+let TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 let telegramBot = null;
 let esp32Connection = null; // Track active ESP32 connection
 
-// Initialize Telegram Bot if token is provided
-if (TELEGRAM_BOT_TOKEN) {
+// Function to initialize or re-initialize the Telegram bot
+const initTelegramBot = (token) => {
+    if (!token) return;
     try {
-        telegramBot = new TelegramBot(TELEGRAM_BOT_TOKEN, { polling: true });
+        if (telegramBot) {
+            console.log('[Telegram] Stopping existing bot polling...');
+            telegramBot.stopPolling();
+        }
+        
+        TELEGRAM_BOT_TOKEN = token;
+        telegramBot = new TelegramBot(token, { polling: true });
         console.log('[Telegram] Bot initialized successfully');
         
         // Handle incoming Telegram commands
@@ -29,6 +36,7 @@ if (TELEGRAM_BOT_TOKEN) {
             
             // Auto-capture chat ID if not set
             if (!TELEGRAM_CHAT_ID || TELEGRAM_CHAT_ID === 'null') {
+                TELEGRAM_CHAT_ID = chatId;
                 process.env.TELEGRAM_CHAT_ID = chatId;
                 console.log(`[Telegram] Auto-captured Chat ID: ${chatId}`);
             }
@@ -42,7 +50,6 @@ if (TELEGRAM_BOT_TOKEN) {
             // Handle commands
             if (text === '/status' || text === '/start') {
                 if (esp32Connection && esp32Connection.readyState === WebSocket.OPEN) {
-                    // Request status from ESP32
                     esp32Connection.send(JSON.stringify({ type: 'telegram_command', command: 'status' }));
                 } else {
                     telegramBot.sendMessage(chatId, '❌ ELLA is offline');
@@ -72,9 +79,16 @@ if (TELEGRAM_BOT_TOKEN) {
     } catch (error) {
         console.error('[Telegram] Failed to initialize bot:', error.message);
     }
+};
+
+// Initial boot initialization
+if (TELEGRAM_BOT_TOKEN) {
+    initTelegramBot(TELEGRAM_BOT_TOKEN);
 } else {
-    console.log('[Telegram] Bot token not configured - Telegram features disabled');
+    console.log('[Telegram] Bot token not configured - Waiting for dynamic init from app');
 }
+
+// (Listeners now attached inside initTelegramBot)
 
 // Helper function to send Telegram messages
 const sendTelegramMessage = async (message, parseMode = 'HTML') => {
@@ -139,7 +153,8 @@ const ELLA_PERSONA = process.env.ELLA_PERSONA || [
     "Any action or tool tags must be at the very end of the reply. Do not invent new tags.",
     "When the user asks to 'Go back to home screen' or 'Go home', always use [GOHOME].",
     "Supported useful tags include [MOVE: FWD|BWD|LEFT|RIGHT|STOP|PAUSE], [PLAYSONG: afrobeats|jazz|classical|hip hop|pop|lofi], [SCAN], [EXPLORE], [DANCE], [BREATHE], [MEDITATE: calm|breathing|body scan|deep rest], [RELAX: rain|ocean|forest], [CHECKUP], [SLEEP], [WAKEUP], [GOHOME], [STOPAUDIO], [IMURESET], [CALIBRATE_IMU], [EMERGENCY], [FORGET], [REMINDER: Title | Time | alarm|chat|notification], [SEARCH: query].",
-    "CRITICAL: NEVER use [PLAYSONG], [PLAY], [MOVE], [DANCE], or [CHECKUP] unless the user explicitly asks for that specific action. They are NOT filler. Do NOT use them for greetings or casual talk.",
+    "CRITICAL: If you are asked about news, facts, prices, or anything you do not know, ALWAYS use the [SEARCH: query] tag to find the answer. You are a highly intelligent medical and general assistant.",
+    "NEVER use [PLAYSONG], [PLAY], [MOVE], [DANCE], or [CHECKUP] unless the user explicitly asks for that specific action. They are NOT filler. Do NOT use them for greetings or casual talk.",
     "When complimented, act vain. When pushed too hard, act overwhelmed. Keep a little friction and personality unless it is an emergency.",
     "Do not overthink. Think briefly and answer directly."
 ].join("\n");
@@ -949,8 +964,8 @@ wss.on('connection', (ws, request) => {
                 url: googleUrl
             }));
 
-            // Small buffer before ending turn
-            await sleep(200);
+            // Buffer before ending turn to ensure ESP32 starts playback
+            await sleep(1000);
             if (ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({ type: "turn_complete" }));
             }
@@ -1016,7 +1031,7 @@ wss.on('connection', (ws, request) => {
             return;
         }
 
-        console.log(`[Deepgram] Connecting to ${DEEPGRAM_STT_MODEL}...`);
+        console.log(`[Deepgram] Connecting to ${DEEPGRAM_STT_MODEL} (${DEEPGRAM_STT_LANGUAGE}, endpointing=${DEEPGRAM_ENDPOINTING_MS}ms, utterance_end=${DEEPGRAM_UTTERANCE_END_MS}ms)...`);
         if (dgReconnectTimer) {
             clearTimeout(dgReconnectTimer);
             dgReconnectTimer = null;
@@ -1179,7 +1194,7 @@ wss.on('connection', (ws, request) => {
             } catch (err) {
                 console.error('[Deepgram] KeepAlive failed:', err.message || err);
             }
-        }, 20000);
+        }, DEEPGRAM_KEEPALIVE_MS);
     };
 
     let dgKeepAliveInterval = null;
@@ -1356,8 +1371,21 @@ wss.on('connection', (ws, request) => {
                 }
             } else if (data.type === "telegram_alert") {
                 // ESP32 wants to send an alert via Telegram
-                if (currentRobotMode === "NORMAL" && telegramBot && TELEGRAM_CHAT_ID) {
+                if (telegramBot && TELEGRAM_CHAT_ID) {
                     sendTelegramMessage(data.message);
+                }
+            } else if (data.type === "telegram_init") {
+                // ESP32 app sent credentials for the bot
+                const token = data.botToken;
+                const chatId = data.chatId;
+                if (token && token !== TELEGRAM_BOT_TOKEN) {
+                    console.log(`[Telegram] Received dynamic token from app: ${token.substring(0, 5)}...`);
+                    initTelegramBot(token);
+                }
+                if (chatId && chatId !== TELEGRAM_CHAT_ID) {
+                    console.log(`[Telegram] Received dynamic chat ID from app: ${chatId}`);
+                    TELEGRAM_CHAT_ID = chatId;
+                    process.env.TELEGRAM_CHAT_ID = chatId;
                 }
             }
         } catch (e) {
