@@ -103,13 +103,20 @@ const AI_PROVIDER = (process.env.AI_PROVIDER || "groq").trim().toLowerCase();
 const TTS_PROVIDER = "google"; // FORCE GOOGLE AS REQUESTED
 const DEEPGRAM_TTS_MODEL = process.env.DEEPGRAM_TTS_MODEL || "aura-2-thalia-en";
 const DEEPGRAM_STT_MODEL = process.env.DEEPGRAM_STT_MODEL || "nova-3";
+const DEEPGRAM_STT_LANGUAGE = process.env.DEEPGRAM_STT_LANGUAGE || "en-US";
 const STT_PROVIDER = (process.env.STT_PROVIDER || "deepgram").trim().toLowerCase(); 
-const DEEPGRAM_ENDPOINTING_MS = Number(process.env.DEEPGRAM_ENDPOINTING_MS || 500);
-const DEEPGRAM_UTTERANCE_END_MS = Number(process.env.DEEPGRAM_UTTERANCE_END_MS || 1200);
+const DEEPGRAM_ENDPOINTING_MS = Number(process.env.DEEPGRAM_ENDPOINTING_MS || 300);
+const DEEPGRAM_UTTERANCE_END_MS = Number(process.env.DEEPGRAM_UTTERANCE_END_MS || 1000);
+const DEEPGRAM_KEEPALIVE_MS = Number(process.env.DEEPGRAM_KEEPALIVE_MS || 4000);
 const STT_SILENCE_WATCHDOG_MS = Number(process.env.STT_SILENCE_WATCHDOG_MS || 1400);
-const STT_FINALIZE_DEBOUNCE_MS = Number(process.env.STT_FINALIZE_DEBOUNCE_MS || 250);
+const STT_FINALIZE_DEBOUNCE_MS = Number(process.env.STT_FINALIZE_DEBOUNCE_MS || 350);
 const STT_DEFERRED_FINALIZE_MS = Number(process.env.STT_DEFERRED_FINALIZE_MS || 500);
 const STT_NEW_SPEECH_HOLD_MS = Number(process.env.STT_NEW_SPEECH_HOLD_MS || 1900);
+const DEEPGRAM_KEYTERMS = (process.env.DEEPGRAM_KEYTERMS || "ELLA,EllaBox,Dynamic Technologies")
+    .split(",")
+    .map((term) => term.trim())
+    .filter(Boolean)
+    .slice(0, 100);
 const ASSEMBLYAI_API_KEY = process.env.ASSEMBLYAI_API_KEY || "bc03c5e7a71449a2bbfbe86c1db94b00";
 const TAVILY_API_KEY = process.env.TAVILY_API_KEY;
 const ELLA_PERSONA = process.env.ELLA_PERSONA || [
@@ -988,6 +995,7 @@ wss.on('connection', (ws, request) => {
         // and keep a small server-side debounce to merge any split finals.
         const dgParams = new URLSearchParams({
             model: DEEPGRAM_STT_MODEL,
+            language: DEEPGRAM_STT_LANGUAGE,
             encoding: "linear16",
             sample_rate: "16000",
             channels: "1",
@@ -996,9 +1004,11 @@ wss.on('connection', (ws, request) => {
             utterance_end_ms: String(DEEPGRAM_UTTERANCE_END_MS),
             vad_events: "true",
             smart_format: "true",
-            punctuate: "true",
             numerals: "true"
         });
+        for (const keyterm of DEEPGRAM_KEYTERMS) {
+            dgParams.append("keyterm", keyterm);
+        }
         const dgUrl = `wss://api.deepgram.com/v1/listen?${dgParams.toString()}`;
         
         if (!DEEPGRAM_API_KEY) {
