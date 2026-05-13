@@ -322,7 +322,11 @@ wss.on('connection', (ws, request) => {
     let conversationId = null; 
     let lastAppendedFinalTranscript = "";
     let lastSentInterim = "";
+    let lastProcessedTranscript = "";
+    let lastProcessedTranscriptAt = 0;
     let deepgramOpen = false;
+    let deepgramSocketId = 0;
+    let dgReconnectTimer = null;
     let pendingAudioBytes = 0;
     let pendingAudioChunks = [];
     let audioStatsBytes = 0;
@@ -532,6 +536,22 @@ wss.on('connection', (ws, request) => {
         }, 5000); // 5s watchdog for natural pauses
     };
 
+    const normalizeTranscript = (text) => text.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+
+    const isStaleTranscriptRepeat = (text) => {
+        const cleanText = normalizeTranscript(text);
+        const cleanLast = normalizeTranscript(lastProcessedTranscript);
+        if (!cleanText || !cleanLast) return false;
+        if (Date.now() - lastProcessedTranscriptAt > 12000) return false;
+        if (cleanText === cleanLast || cleanLast.includes(cleanText) || cleanText.includes(cleanLast)) return true;
+
+        const textTokens = cleanText.split(" ").filter(Boolean);
+        const lastTokens = new Set(cleanLast.split(" ").filter(Boolean));
+        if (textTokens.length === 0) return false;
+        const matchingTokens = textTokens.filter((token) => lastTokens.has(token)).length;
+        return textTokens.length <= 4 && matchingTokens / textTokens.length >= 0.75;
+    };
+
     const scheduleTranscriptFinalization = (reason, delayMs = 350) => {
         if (finalizationTimer) clearTimeout(finalizationTimer);
         finalizationReason = reason;
@@ -543,6 +563,12 @@ wss.on('connection', (ws, request) => {
             transcriptBuffer = "";
             lastAppendedFinalTranscript = "";
             lastSentInterim = "";
+            if (isStaleTranscriptRepeat(textToProcess)) {
+                console.log(`[STT] Dropped stale repeat (${finalizationReason}): "${textToProcess}"`);
+                return;
+            }
+            lastProcessedTranscript = textToProcess;
+            lastProcessedTranscriptAt = Date.now();
             console.log(`[STT] Finalizing turn (${finalizationReason}): "${textToProcess}"`);
             ws.send(JSON.stringify({ type: "final_transcript", text: textToProcess }));
             ws.send(JSON.stringify({ type: "thinking" }));
@@ -579,6 +605,18 @@ wss.on('connection', (ws, request) => {
         try {
             // Check for direct local commands (bypass AI)
             const lowerText = text.toLowerCase().trim();
+            if (/\b(home screen|main screen|go home|back home)\b/.test(lowerText)) {
+                console.log(`[Local Command] Detected home navigation -> GOHOME`);
+                ws.send(JSON.stringify({ type: "tts", text: "[GOHOME]" }));
+                setTimeout(() => {
+                    if (ws.readyState === WebSocket.OPEN) {
+                        ws.send(JSON.stringify({ type: "turn_complete" }));
+                    }
+                }, 100);
+                isThinking = false;
+                return;
+            }
+
             const directCommands = {
                 'move forward': 'FWD',
                 'go forward': 'FWD',
@@ -718,6 +756,12 @@ wss.on('connection', (ws, request) => {
         transcriptBuffer = "";
         lastAppendedFinalTranscript = "";
         lastSentInterim = "";
+        if (isStaleTranscriptRepeat(textToProcess)) {
+            console.log(`[STT] Dropped stale repeat (${reason}): "${textToProcess}"`);
+            return;
+        }
+        lastProcessedTranscript = textToProcess;
+        lastProcessedTranscriptAt = Date.now();
         console.log(`[STT] Finalizing turn (${reason}): "${textToProcess}"`);
         ws.send(JSON.stringify({ type: "final_transcript", text: textToProcess })); // Send final transcript first
         ws.send(JSON.stringify({ type: "thinking" }));
@@ -735,6 +779,11 @@ wss.on('connection', (ws, request) => {
         }
 
         console.log(`[Deepgram] Connecting to ${DEEPGRAM_STT_MODEL}...`);
+        if (dgReconnectTimer) {
+            clearTimeout(dgReconnectTimer);
+            dgReconnectTimer = null;
+        }
+        const socketId = ++deepgramSocketId;
         deepgramLive = new WebSocket(dgUrl, {
             headers: {
                 "Authorization": `Token ${DEEPGRAM_API_KEY}`
@@ -742,12 +791,14 @@ wss.on('connection', (ws, request) => {
         });
 
         deepgramLive.on('open', () => {
+            if (socketId !== deepgramSocketId) return;
             deepgramOpen = true;
             console.log(`[Deepgram] ${DEEPGRAM_STT_MODEL} Connected (pending: ${pendingAudioChunks.length} chunks, ${pendingAudioBytes} bytes)`);
             flushPendingAudio();
         });
 
         deepgramLive.on('message', (data) => {
+            if (socketId !== deepgramSocketId) return;
             try {
                 const msg = JSON.parse(data.toString());
 
@@ -786,8 +837,15 @@ wss.on('connection', (ws, request) => {
 
                     if (transcript.trim().length > 0) {
                         if (isFinal) {
-                            appendDeepgramFinalTranscript(transcript, `results_${speechFinal ? "speech_final" : "final"}`);
-                            console.log(`[STT] Final: "${transcript}" (speech_final=${speechFinal})`);
+                            if (speechFinal) {
+                                appendDeepgramFinalTranscript(transcript, "results_speech_final");
+                                console.log(`[STT] Final: "${transcript}" (speech_final=${speechFinal})`);
+                                scheduleTranscriptFinalization("dg_speech_final", 250);
+                            } else {
+                                transcriptBuffer = transcript.trim();
+                                console.log(`[STT] Buffered non-terminal final: "${transcriptBuffer}"`);
+                                resetSilenceTimer();
+                            }
                         } else {
                             const displayText = (transcriptBuffer + " " + transcript).trim();
                             if (displayText !== lastSentInterim) {
@@ -811,6 +869,11 @@ wss.on('connection', (ws, request) => {
                 // Handle SpeechStarted event
                 if (msg.type === "SpeechStarted") {
                     console.log(`[Deepgram] Speech started`);
+                    if (!isThinking && transcriptBuffer.trim().length > 0 && finalizationTimer) {
+                        clearTimeout(finalizationTimer);
+                        finalizationTimer = null;
+                        console.log("[STT] New speech started; holding buffered transcript open");
+                    }
                     return;
                 }
 
@@ -841,21 +904,27 @@ wss.on('connection', (ws, request) => {
         });
         
         deepgramLive.on('close', (code, reason) => {
+            if (socketId !== deepgramSocketId) return;
             deepgramOpen = false;
             console.log(`[Deepgram] Connection closed (Code: ${code}, Reason: ${reason}) — reconnecting...`);
+            if (dgKeepAliveInterval) {
+                clearInterval(dgKeepAliveInterval);
+                dgKeepAliveInterval = null;
+            }
             if (ws.readyState === WebSocket.OPEN) {
-                setTimeout(() => startDeepgram(), 2000);
+                dgReconnectTimer = setTimeout(() => startDeepgram(), 2000);
             }
         });
-        // Deepgram keep-alive: Flux does not support 'KeepAlive' messages.
         if (dgKeepAliveInterval) clearInterval(dgKeepAliveInterval);
-        if (!dgUrl.includes("flux")) {
-            dgKeepAliveInterval = setInterval(() => {
-                if (deepgramLive && deepgramLive.readyState === WebSocket.OPEN) {
-                    deepgramLive.send(JSON.stringify({ type: 'KeepAlive' }));
-                }
-            }, 8000);
-        }
+        dgKeepAliveInterval = setInterval(() => {
+            if (!deepgramLive || deepgramLive.readyState !== WebSocket.OPEN) return;
+            try {
+                deepgramLive.ping();
+            } catch (err) {
+                console.error('[Deepgram] Ping failed:', err.message || err);
+            }
+            deepgramLive.send(JSON.stringify({ type: 'KeepAlive' }));
+        }, 20000);
     };
 
     let dgKeepAliveInterval = null;
@@ -1004,6 +1073,7 @@ wss.on('connection', (ws, request) => {
             esp32Connection = null;
         }
         if (dgKeepAliveInterval) clearInterval(dgKeepAliveInterval);
+        if (dgReconnectTimer) clearTimeout(dgReconnectTimer);
         if (esp32HeartbeatInterval) clearInterval(esp32HeartbeatInterval);
         if (deepgramLive) {
             deepgramLive.removeAllListeners();
