@@ -970,7 +970,7 @@ wss.on('connection', (ws, request) => {
             }
 
             // Buffer before ending turn to ensure ESP32 starts playback
-            await sleep(1000);
+            await sleep(2000);
             if (ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({ type: "turn_complete" }));
             }
@@ -1026,6 +1026,7 @@ wss.on('connection', (ws, request) => {
             // Flux (v2/listen) ONLY supports these specific parameters
             dgParams.set("eot_threshold", "0.6");
             dgParams.set("eager_eot_threshold", "0.4");
+            dgParams.set("smart_format", "true");
         } else {
             // Nova-3 (v1/listen) parameters
             dgParams.set("language", DEEPGRAM_STT_LANGUAGE);
