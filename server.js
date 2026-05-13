@@ -315,6 +315,8 @@ wss.on('connection', (ws, request) => {
     let transcriptBuffer = "";
     let isThinking = false;
     let silenceTimer = null;
+    let finalizationTimer = null;
+    let finalizationReason = "";
     let latestContext = "";
     let esp32HeartbeatInterval = null;
     let conversationId = null; 
@@ -524,16 +526,49 @@ wss.on('connection', (ws, request) => {
         if (silenceTimer) clearTimeout(silenceTimer);
         silenceTimer = setTimeout(() => {
             if (transcriptBuffer.trim().length > 0 && !isThinking) {
-                const textToProcess = transcriptBuffer.trim();
-                transcriptBuffer = "";
-                lastAppendedFinalTranscript = "";
-                lastSentInterim = "";
-                console.log("[Silence Watchdog] Forcing turn end...");
-                ws.send(JSON.stringify({ type: "final_transcript", text: textToProcess })); // Send final transcript first
-                ws.send(JSON.stringify({ type: "thinking" }));
-                handleFinalSpeech(textToProcess);
+                console.log("[Silence Watchdog] Scheduling turn end...");
+                scheduleTranscriptFinalization("silence_watchdog");
             }
         }, 5000); // 5s watchdog for natural pauses
+    };
+
+    const scheduleTranscriptFinalization = (reason, delayMs = 350) => {
+        if (finalizationTimer) clearTimeout(finalizationTimer);
+        finalizationReason = reason;
+        finalizationTimer = setTimeout(() => {
+            finalizationTimer = null;
+            if (transcriptBuffer.trim().length === 0 || isThinking) return;
+
+            const textToProcess = transcriptBuffer.trim();
+            transcriptBuffer = "";
+            lastAppendedFinalTranscript = "";
+            lastSentInterim = "";
+            console.log(`[STT] Finalizing turn (${finalizationReason}): "${textToProcess}"`);
+            ws.send(JSON.stringify({ type: "final_transcript", text: textToProcess }));
+            ws.send(JSON.stringify({ type: "thinking" }));
+            handleFinalSpeech(textToProcess);
+        }, delayMs);
+    };
+
+    const appendDeepgramFinalTranscript = (transcript, source) => {
+        const cleanTranscript = transcript.trim();
+        if (cleanTranscript.length === 0) return;
+
+        const current = transcriptBuffer.trim();
+        if (current.length === 0) {
+            transcriptBuffer = cleanTranscript;
+        } else if (cleanTranscript === current) {
+            return;
+        } else if (cleanTranscript.startsWith(current)) {
+            transcriptBuffer = cleanTranscript;
+        } else if (current.endsWith(cleanTranscript)) {
+            return;
+        } else {
+            transcriptBuffer = `${current} ${cleanTranscript}`.trim();
+        }
+
+        console.log(`[STT] Buffered final (${source}): "${transcriptBuffer}"`);
+        scheduleTranscriptFinalization(source);
     };
 
     const handleFinalSpeech = async (text) => {
@@ -730,18 +765,16 @@ wss.on('connection', (ws, request) => {
                     const eotConfidence = msg.end_of_turn_confidence || 0;
 
                     if (transcript.trim().length > 0) {
-                        // Nova-3 TurnInfo contains the full transcript for the current turn.
-                        // Do NOT append; replace the buffer to prevent duplication.
-                        transcriptBuffer = transcript.trim();
+                        // Nova-3 may emit multiple final chunks for one spoken turn.
+                        // Buffer and debounce before handing the text to the AI.
+                        appendDeepgramFinalTranscript(transcript, `turninfo_${event || "update"}`);
                         console.log(`[STT] ${DEEPGRAM_STT_MODEL}: "${transcript}" (event=${event}, turn_index=${msg.turn_index})`);
                         ws.send(JSON.stringify({ type: "interim", text: transcriptBuffer }));
                     }
 
                     if (event === "EndOfTurn") {
                         console.log(`[Deepgram] ${DEEPGRAM_STT_MODEL} EndOfTurn (Confidence: ${eotConfidence})`);
-                        if (transcriptBuffer.length > 0) {
-                            finalizeTranscriptTurn("dg_flux_eot");
-                        }
+                        scheduleTranscriptFinalization("dg_turninfo_eot", 250);
                     }
                     return;
                 }
@@ -754,12 +787,8 @@ wss.on('connection', (ws, request) => {
 
                     if (transcript.trim().length > 0) {
                         if (isFinal) {
-                            transcriptBuffer = (transcriptBuffer + " " + transcript).trim();
+                            appendDeepgramFinalTranscript(transcript, `results_${speechFinal ? "speech_final" : "final"}`);
                             console.log(`[STT] Final: "${transcript}" (speech_final=${speechFinal})`);
-                            
-                            if (speechFinal) {
-                                finalizeTranscriptTurn("dg_speech_final");
-                            }
                         } else {
                             const displayText = (transcriptBuffer + " " + transcript).trim();
                             if (displayText !== lastSentInterim) {
@@ -776,9 +805,7 @@ wss.on('connection', (ws, request) => {
                 // Handle UtteranceEnd / EndOfTurn events
                 if (msg.type === "UtteranceEnd" || msg.type === "EndOfTurn") {
                     console.log(`[Deepgram] ${msg.type} detected`);
-                    if (transcriptBuffer.trim().length > 0) {
-                        finalizeTranscriptTurn("dg_eot");
-                    }
+                    scheduleTranscriptFinalization("dg_eot", 250);
                     return;
                 }
 
