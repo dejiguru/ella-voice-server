@@ -100,7 +100,7 @@ const MISTRAL_AGENT_VERSION = 28;
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const GROQ_MODEL = process.env.GROQ_MODEL || "qwen/qwen3-32b";
 const AI_PROVIDER = process.env.AI_PROVIDER || "groq";
-const TTS_PROVIDER = process.env.TTS_PROVIDER || "google"; // "google" or "deepgram"
+const TTS_PROVIDER = "google"; // FORCE GOOGLE AS REQUESTED
 const DEEPGRAM_TTS_MODEL = process.env.DEEPGRAM_TTS_MODEL || "aura-2-thalia-en";
 const STT_PROVIDER = process.env.STT_PROVIDER || "deepgram"; 
 const ASSEMBLYAI_API_KEY = process.env.ASSEMBLYAI_API_KEY || "bc03c5e7a71449a2bbfbe86c1db94b00";
@@ -180,10 +180,12 @@ const synthesizeGoogleSpeech = async (text) => {
     if (!cleanText) return null;
 
     const { spawn } = require('child_process');
-    const googleUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(cleanText.substring(0, 200))}&tl=en&client=tw-ob`;
-    
+    console.log(`[Google TTS] Fetching: ${googleUrl}`);
     const response = await fetch(googleUrl);
-    if (!response.ok) throw new Error(`Google TTS failed: ${response.statusText}`);
+    if (!response.ok) {
+        console.error(`[Google TTS] HTTP Error: ${response.status} ${response.statusText}`);
+        throw new Error(`Google TTS failed: ${response.statusText}`);
+    }
 
     return new Promise((resolve, reject) => {
         const ffmpeg = spawn('ffmpeg', [
@@ -196,10 +198,24 @@ const synthesizeGoogleSpeech = async (text) => {
 
         let pcmBuffer = Buffer.alloc(0);
         ffmpeg.stdout.on('data', (chunk) => { pcmBuffer = Buffer.concat([pcmBuffer, chunk]); });
-        ffmpeg.stderr.on('data', (data) => { /* console.log(`[ffmpeg] ${data}`); */ });
+        ffmpeg.stderr.on('data', (data) => { 
+             // Log ffmpeg errors if they occur
+             const msg = data.toString();
+             if (msg.includes("Error") || msg.includes("Failed")) {
+                 console.error(`[ffmpeg Error] ${msg.trim()}`);
+             }
+        });
+        ffmpeg.on('error', (err) => {
+            console.error("[ffmpeg Spawn Error]", err);
+            reject(err);
+        });
         ffmpeg.on('close', (code) => {
-            if (code === 0) resolve(pcmBuffer);
-            else reject(new Error(`ffmpeg exited with code ${code}`));
+            if (code === 0) {
+                console.log(`[Google TTS] Synthesis complete: ${pcmBuffer.length} bytes`);
+                resolve(pcmBuffer);
+            } else {
+                reject(new Error(`ffmpeg exited with code ${code}`));
+            }
         });
 
         // Use response.body (Node stream)

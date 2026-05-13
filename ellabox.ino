@@ -3611,7 +3611,7 @@ void pumpNodeServerSocket() {
                 portEXIT_CRITICAL(&nodeAudioMux);
              }
           } else if (cleanText.length() > 0) {
-             Serial.println("[NODE] Waiting for Deepgram PCM audio stream...");
+             Serial.println("[NODE] Waiting for Binary PCM audio stream...");
              portENTER_CRITICAL(&nodeAudioMux);
              nodeAudioPending = true;
              nodeAudioStreamDone = false;
