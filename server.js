@@ -615,8 +615,10 @@ wss.on('connection', (ws, request) => {
     };
 
     const startDeepgram = () => {
-        // Deepgram Nova-3 with optimized params for better turn detection
-        const dgUrl = `wss://api.deepgram.com/v1/listen?model=nova-3&language=en&encoding=linear16&sample_rate=16000&channels=1&smart_format=true&interim_results=true&utterance_end_ms=1500&endpointing=1500`;
+        // Deepgram v2 with EOT (End-Of-Turn) detection to prevent double-triggering
+        // eot_timeout_ms=2500: wait 2.5s of silence before finalizing turn
+        // eot_threshold=0.7: confidence threshold for end-of-turn
+        const dgUrl = `wss://api.deepgram.com/v2/listen?model=nova-3&language=en&encoding=linear16&sample_rate=16000&channels=1&smart_format=true&interim_results=true&eot_threshold=0.7&eot_timeout_ms=2500`;
         
         if (!DEEPGRAM_API_KEY) {
             console.error("[Deepgram] API KEY MISSING");
@@ -673,11 +675,11 @@ wss.on('connection', (ws, request) => {
                     return;
                 }
 
-                // Handle UtteranceEnd event
-                if (msg.type === "UtteranceEnd") {
-                    console.log(`[Deepgram] UtteranceEnd detected`);
+                // Handle UtteranceEnd / EndOfTurn events
+                if (msg.type === "UtteranceEnd" || msg.type === "EndOfTurn") {
+                    console.log(`[Deepgram] ${msg.type} detected`);
                     if (transcriptBuffer.trim().length > 0) {
-                        finalizeTranscriptTurn("dg_utterance_end");
+                        finalizeTranscriptTurn("dg_eot");
                     }
                     return;
                 }
