@@ -360,6 +360,7 @@ wss.on('connection', (ws, request) => {
     let deepgramOpen = false;
     let deepgramSocketId = 0;
     let dgReconnectTimer = null;
+    let restartDeepgramAfterTurn = false;
     let pendingAudioBytes = 0;
     let pendingAudioChunks = [];
     let audioStatsBytes = 0;
@@ -416,6 +417,12 @@ wss.on('connection', (ws, request) => {
         }
         pendingAudioChunks = [];
         pendingAudioBytes = 0;
+    };
+
+    const clearPendingAudio = () => {
+        pendingAudioChunks = [];
+        pendingAudioBytes = 0;
+        aaiAudioBuffer = Buffer.alloc(0);
     };
 
     // AssemblyAI audio buffering: accumulate to 100ms chunks (1600 samples = 3200 bytes)
@@ -830,10 +837,7 @@ wss.on('connection', (ws, request) => {
             }
         } finally {
             isThinking = false;
-            transcriptBuffer = "";
-            finalSegmentCount = 0;
-            lastAppendedFinalTranscript = "";
-            lastSentInterim = "";
+            restartDeepgramForNextTurn();
             turnLocked = false;
         }
     };
@@ -1020,12 +1024,20 @@ wss.on('connection', (ws, request) => {
         deepgramLive.on('close', (code, reason) => {
             if (socketId !== deepgramSocketId) return;
             deepgramOpen = false;
-            console.log(`[Deepgram] Connection closed (Code: ${code}, Reason: ${reason}) — reconnecting...`);
+            console.log(`[Deepgram] Connection closed (Code: ${code}, Reason: ${reason})`);
             if (dgKeepAliveInterval) {
                 clearInterval(dgKeepAliveInterval);
                 dgKeepAliveInterval = null;
             }
+            if (restartDeepgramAfterTurn) {
+                restartDeepgramAfterTurn = false;
+                if (ws.readyState === WebSocket.OPEN) {
+                    dgReconnectTimer = setTimeout(() => startDeepgram(), 100);
+                }
+                return;
+            }
             if (ws.readyState === WebSocket.OPEN) {
+                console.log("[Deepgram] Reconnecting in 2s...");
                 dgReconnectTimer = setTimeout(() => startDeepgram(), 2000);
             }
         });
@@ -1041,6 +1053,37 @@ wss.on('connection', (ws, request) => {
     };
 
     let dgKeepAliveInterval = null;
+
+    const restartDeepgramForNextTurn = () => {
+        if (STT_PROVIDER === "assemblyai") return;
+        clearPendingAudio();
+        transcriptBuffer = "";
+        finalSegmentCount = 0;
+        lastAppendedFinalTranscript = "";
+        lastSentInterim = "";
+        lastSpeechStartedAt = 0;
+        lastFinalTranscriptAt = 0;
+        if (finalizationTimer) {
+            clearTimeout(finalizationTimer);
+            finalizationTimer = null;
+        }
+        if (silenceTimer) {
+            clearTimeout(silenceTimer);
+            silenceTimer = null;
+        }
+        if (!deepgramLive || deepgramLive.readyState === WebSocket.CLOSED) {
+            startDeepgram();
+            return;
+        }
+        restartDeepgramAfterTurn = true;
+        try {
+            deepgramLive.close(1000, "turn_complete_reset");
+        } catch (err) {
+            console.warn("[Deepgram] Reset close failed:", err.message || err);
+            restartDeepgramAfterTurn = false;
+            startDeepgram();
+        }
+    };
 
     const startAssemblyAI = () => {
         // Close any existing connection first to prevent "too many concurrent sessions"
