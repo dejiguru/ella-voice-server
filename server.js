@@ -152,6 +152,33 @@ app.get(["/audio/:id", "/audio/:id.mp3"], (req, res) => {
 });
 
 const stripActionTags = (text) => text.replace(/\[[^\]]*\]/g, " ").replace(/\s+/g, " ").trim();
+const normalizeTtsText = (text) => text
+    .replace(/[“”]/g, '"')
+    .replace(/[‘’]/g, "'")
+    .replace(/[–—‑]/g, "-")
+    .replace(/…/g, "...")
+    .replace(/[^\x20-\x7E]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const shortenForGoogleTts = (text, maxChars = 150) => {
+    const clean = normalizeTtsText(stripActionTags(text));
+    if (clean.length <= maxChars) return clean;
+
+    const sentenceEnd = clean.search(/[.!?](\s|$)/);
+    if (sentenceEnd > 20 && sentenceEnd + 1 <= maxChars) {
+        return clean.slice(0, sentenceEnd + 1).trim();
+    }
+
+    const cut = clean.lastIndexOf(" ", maxChars);
+    return clean.slice(0, cut > 60 ? cut : maxChars).trim();
+};
+
+const buildEspTtsText = (fullResponse) => {
+    const tags = fullResponse.match(/\[[^\]]+\]/g) || [];
+    const speakable = shortenForGoogleTts(fullResponse);
+    return `${tags.join(" ")} ${speakable}`.replace(/\s+/g, " ").trim();
+};
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const synthesizeDeepgramSpeech = async (text) => {
@@ -770,11 +797,16 @@ wss.on('connection', (ws, request) => {
                 }
             }
 
-            // Simplified: Send text to ESP32 and let it handle Google TTS "as usual"
-            const googleUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(fullResponse.substring(0, 200))}&tl=en&client=tw-ob`;
+            // ESP32 uses Google Translate TTS locally; keep that text short or it silently fails.
+            const espTtsText = buildEspTtsText(fullResponse);
+            if (espTtsText !== fullResponse) {
+                console.log(`[TTS] ESP speak text shortened: "${espTtsText}"`);
+            }
+            const googleUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(stripActionTags(espTtsText).substring(0, 200))}&tl=en&client=tw-ob`;
             ws.send(JSON.stringify({ 
                 type: "tts", 
-                text: fullResponse,
+                text: espTtsText,
+                display_text: fullResponse,
                 url: googleUrl
             }));
 
