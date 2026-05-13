@@ -1201,14 +1201,16 @@ wss.on('connection', (ws, request) => {
             }
         });
         if (dgKeepAliveInterval) clearInterval(dgKeepAliveInterval);
-        dgKeepAliveInterval = setInterval(() => {
-            if (!deepgramLive || deepgramLive.readyState !== WebSocket.OPEN) return;
-            try {
-                deepgramLive.send(JSON.stringify({ type: 'KeepAlive' }));
-            } catch (err) {
-                console.error('[Deepgram] KeepAlive failed:', err.message || err);
-            }
-        }, DEEPGRAM_KEEPALIVE_MS);
+        if (!isFlux) {
+            dgKeepAliveInterval = setInterval(() => {
+                if (!deepgramLive || deepgramLive.readyState !== WebSocket.OPEN) return;
+                try {
+                    deepgramLive.send(JSON.stringify({ type: 'KeepAlive' }));
+                } catch (err) {
+                    console.error('[Deepgram] KeepAlive failed:', err.message || err);
+                }
+            }, DEEPGRAM_KEEPALIVE_MS);
+        }
     };
 
     let dgKeepAliveInterval = null;
