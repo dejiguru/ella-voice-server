@@ -718,7 +718,7 @@ wss.on('connection', (ws, request) => {
     };
 
     const takeTranscriptForProcessing = () => {
-        const textToProcess = chooseBetterTranscript(transcriptBuffer, bestHeardTranscript).trim();
+        const textToProcess = chooseBetterTranscript(bestHeardTranscript, transcriptBuffer).trim();
         transcriptBuffer = "";
         finalSegmentCount = 0;
         lastAppendedFinalTranscript = "";
@@ -776,7 +776,7 @@ wss.on('connection', (ws, request) => {
     };
 
     const appendDeepgramFinalTranscript = (transcript, source) => {
-        const cleanTranscript = chooseBetterTranscript(transcript.trim(), bestHeardTranscript);
+        const cleanTranscript = chooseBetterTranscript(bestHeardTranscript, transcript.trim());
         if (cleanTranscript.length === 0) return;
         rememberHeardTranscript(cleanTranscript);
 
