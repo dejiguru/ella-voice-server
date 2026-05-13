@@ -98,7 +98,7 @@ const MISTRAL_API_KEY = process.env.MISTRAL_API_KEY;
 const MISTRAL_AGENT_ID = "ag_019d4492c13a75ff8e9e139956e37489";
 const MISTRAL_AGENT_VERSION = 28;
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
-const GROQ_MODEL = process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
+const GROQ_MODEL = process.env.GROQ_MODEL || "qwen/qwen3-32b";
 const AI_PROVIDER = process.env.AI_PROVIDER || "groq";
 const DEEPGRAM_TTS_MODEL = process.env.DEEPGRAM_TTS_MODEL || "aura-2-thalia-en";
 const USE_DEEPGRAM_TTS = process.env.USE_DEEPGRAM_TTS !== "false";
@@ -229,7 +229,7 @@ const callGroqChat = async ({ userText, latestContext, memory }) => {
         body: JSON.stringify({
             model: GROQ_MODEL,
             messages,
-            temperature: 0.6,
+            temperature: 0.9,
             top_p: 0.95,
             max_tokens: 800,
             ...(GROQ_MODEL.includes('qwen') ? { reasoning_format: "hidden", reasoning_effort: "default" } : {})
