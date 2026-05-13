@@ -8670,7 +8670,7 @@ void drawAIScreen(bool force) {
   const int RESPONSE_H = CONTENT_H - TRANSCRIPT_H - ANIM_H - 5;
 
   // ── Full redraw on force or state change ──────────────────────
-  if (force || curState != lastState) {
+  if (force || curState != lastStateDisplay) {
     if (force) tft.fillScreen(UI_BG);
     
     // Clear only the content area to prevent flicker
