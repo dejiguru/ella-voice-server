@@ -280,7 +280,11 @@ const callGroqChat = async ({ userText, latestContext, memory }) => {
             temperature: 0.9,
             top_p: 0.95,
             max_tokens: 800,
-            ...((GROQ_MODEL.includes('qwen') || GROQ_MODEL.includes('gpt-oss')) ? { reasoning_format: "hidden", reasoning_effort: "default" } : {})
+            ...(GROQ_MODEL.includes('gpt-oss')
+                ? { reasoning_format: "hidden", reasoning_effort: "low" }
+                : (GROQ_MODEL.includes('qwen')
+                    ? { reasoning_format: "hidden", reasoning_effort: "default" }
+                    : {}))
         })
     });
 
