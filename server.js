@@ -1013,24 +1013,28 @@ wss.on('connection', (ws, request) => {
 
         const dgParams = new URLSearchParams({
             model: DEEPGRAM_STT_MODEL,
-            language: DEEPGRAM_STT_LANGUAGE,
             encoding: "opus",
-            sample_rate: "16000",
-            channels: "1",
-            interim_results: "true",
-            endpointing: String(DEEPGRAM_ENDPOINTING_MS),
-            utterance_end_ms: String(DEEPGRAM_UTTERANCE_END_MS),
-            vad_events: "true",
-            smart_format: "true",
-            numerals: "true"
+            sample_rate: "16000"
         });
 
         if (isFlux) {
-            dgParams.set("eot_threshold", "500");
-            dgParams.set("eager_eot_threshold", "300");
+            // Flux (v2/listen) ONLY supports these specific parameters
+            dgParams.set("eot_threshold", "0.6");
+            dgParams.set("eager_eot_threshold", "0.4");
+        } else {
+            // Nova-3 (v1/listen) parameters
+            dgParams.set("language", DEEPGRAM_STT_LANGUAGE);
+            dgParams.set("channels", "1");
+            dgParams.set("interim_results", "true");
+            dgParams.set("endpointing", String(DEEPGRAM_ENDPOINTING_MS));
+            dgParams.set("utterance_end_ms", String(DEEPGRAM_UTTERANCE_END_MS));
+            dgParams.set("vad_events", "true");
+            dgParams.set("smart_format", "true");
+            dgParams.set("numerals", "true");
         }
 
         for (const keyterm of DEEPGRAM_KEYTERMS) {
+            // v2 has a character limit, but individual keyterms should be fine
             dgParams.append("keyterm", keyterm);
         }
 
