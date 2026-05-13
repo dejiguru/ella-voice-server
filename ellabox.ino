@@ -3577,6 +3577,7 @@ void pumpNodeServerSocket() {
           String reply = String(text);
           Serial.println("[NODE] Received sentence: " + reply);
           aiRequestStatus = reply;
+          currentInterimText = reply; // Show AI response on TFT
           drawAIScreen(true);
 
           // Emotion / eye expressions
