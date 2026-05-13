@@ -179,6 +179,7 @@ const char* DG_AUTH_HDR = "Authorization: Token " DEEPGRAM_API_KEY;
 
 static const char* GOOGLE_TTS_LANG = "en-ng"; // Nigerian English accent via Google TTS
 static String g_api_host = "api.openai.com";
+static const char* GROQ_MODEL = "openai/gpt-oss-20b";
 
 // Primary LLM routing:
 // - false: use direct Mistral model below (Devstral)
@@ -3756,7 +3757,7 @@ void sendVoiceAgentSettings() {
   fullPrompt.replace("\n", "\\n");
   fullPrompt.replace("\r", "");
 
-  String groqModel = "meta-llama/llama-4-scout-17b-16e-instruct";
+  String groqModel = GROQ_MODEL;
   
   String settings = "{\"type\":\"Settings\",\"audio\":{"
     "\"input\":{\"encoding\":\"opus\",\"sample_rate\":16000},"
@@ -3780,7 +3781,7 @@ void sendVoiceAgentSettings() {
     "\"speak\":{\"provider\":{\"type\":\"deepgram\",\"model\":\"aura-2-vesta-en\"}}"
     "}}";
 
-  Serial.println("[VAgent] Sending optimized Groq Llama 4 settings with full persona...");
+  Serial.println("[VAgent] Sending optimized Groq OpenAI 20B settings with full persona...");
 
   if (vAgentSendText(settings.c_str())) {
     vAgentConfigured = true;
@@ -11688,11 +11689,11 @@ String getGroqResponse(const String& systemPrompt, const String& userText) {
   http.addHeader("Content-Type", "application/json");
   http.addHeader("Authorization", "Bearer " + String(GROQ_KEY));
 
-  reqDoc["model"] = "meta-llama/llama-4-scout-17b-16e-instruct";
+  reqDoc["model"] = GROQ_MODEL;
   reqDoc["temperature"] = 0.8;
   reqDoc["max_tokens"] = 1024;
   reqDoc["top_p"] = 1.0;
-  Serial.println("[Groq] Model: meta-llama/llama-4-scout-17b-16e-instruct");
+  Serial.println("[Groq] Model: openai/gpt-oss-20b");
 
   JsonArray messages = reqDoc["messages"].to<JsonArray>();
   
