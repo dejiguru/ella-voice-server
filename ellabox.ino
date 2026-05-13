@@ -819,7 +819,8 @@ enum DeferredAiActionType {
   DEFERRED_AI_GOHOME,
   DEFERRED_AI_IMURESET,
   DEFERRED_AI_CHECKUP,
-  DEFERRED_AI_EMERGENCY
+  DEFERRED_AI_EMERGENCY,
+  DEFERRED_AI_MEDITATE
 };
 
 DeferredAiActionType deferredAiAction = DEFERRED_AI_NONE;
@@ -3643,10 +3644,18 @@ void pumpNodeServerSocket() {
             }
           }
 
-          // Deferred / system actions
-          if      (reply.indexOf("[BREATHE]")   >= 0) { switchToNormalMode(); currentMedState = MED_BREATHING; currentMeditationType = MED_TYPE_BREATHING; medStateTimer = millis(); drawNormalScreen(true); }
-          else if (reply.indexOf("[MEDITATE")   >= 0) { startMeditation("calm"); }
-          else if (reply.indexOf("[RELAX")      >= 0) { scheduleDeferredAiAction(DEFERRED_AI_RELAX, "rain"); }
+          // Deferred / system actions - Move all to deferred to prevent cutting off AI confirmation speech
+          if      (reply.indexOf("[BREATHE]")   >= 0) { scheduleDeferredAiAction(DEFERRED_AI_GOHOME); } // BREATHE is basically GOHOME with a twist
+          else if (reply.indexOf("[MEDITATE")   >= 0) { 
+              int mIdx = reply.indexOf("[MEDITATE:");
+              String mParam = (mIdx >= 0) ? reply.substring(mIdx+10, reply.indexOf("]", mIdx)) : "calm";
+              scheduleDeferredAiAction(DEFERRED_AI_MEDITATE, mParam); 
+          }
+          else if (reply.indexOf("[RELAX")      >= 0) { 
+              int rIdx = reply.indexOf("[RELAX:");
+              String rParam = (rIdx >= 0) ? reply.substring(rIdx+7, reply.indexOf("]", rIdx)) : "rain";
+              scheduleDeferredAiAction(DEFERRED_AI_RELAX, rParam); 
+          }
           else if (reply.indexOf("[GOHOME]")    >= 0) { scheduleDeferredAiAction(DEFERRED_AI_GOHOME); }
           else if (reply.indexOf("[STOPAUDIO]") >= 0) { stopActiveAudioPlayback(true); }
           else if (reply.indexOf("[IMURESET]")  >= 0) { scheduleDeferredAiAction(DEFERRED_AI_IMURESET); }
@@ -7523,8 +7532,6 @@ bool handleWebMotionChat(const String& msg, String& spokenReply) {
 
   if (!queuedAnything) return false;
 
-  // Send motion commands to LLM for a spoken response instead of staying silent.
-  // This ensures the user gets verbal confirmation of their motion request.
   spokenReply = "[HAPPY] " + summary;
   return true;
 }
@@ -7593,8 +7600,12 @@ void processQueuedAIChat() {
 void processDeferredAiAction() {
   if (deferredAiAction == DEFERRED_AI_NONE) return;
   if (millis() < deferredAiReadyAt) return;
-  if (audio.isRunning() || isSpeaking) return;
-  if (audioTransitionIsQuiet()) return;
+  
+  // Allow GOHOME and MEDITATE to bypass the isSpeaking check if they are the goal
+  bool isCritical = (deferredAiAction == DEFERRED_AI_GOHOME || deferredAiAction == DEFERRED_AI_MEDITATE);
+  
+  if (!isCritical && (audio.isRunning() || isSpeaking)) return;
+  if (!isCritical && audioTransitionIsQuiet()) return;
   if (currentMedState == MED_MEASURING) return;
 
   DeferredAiActionType action = deferredAiAction;
