@@ -116,7 +116,7 @@ const GROQ_MODEL = process.env.GROQ_MODEL || "openai/gpt-oss-20b";
 const AI_PROVIDER = (process.env.AI_PROVIDER || "groq").trim().toLowerCase();
 const TTS_PROVIDER = "google"; // FORCE GOOGLE AS REQUESTED
 const DEEPGRAM_TTS_MODEL = process.env.DEEPGRAM_TTS_MODEL || "aura-2-thalia-en";
-const DEEPGRAM_STT_MODEL = process.env.DEEPGRAM_STT_MODEL || "nova-3";
+const DEEPGRAM_STT_MODEL = process.env.DEEPGRAM_STT_MODEL || "flux";
 const DEEPGRAM_STT_LANGUAGE = process.env.DEEPGRAM_STT_LANGUAGE || "en-US";
 const STT_PROVIDER = (process.env.STT_PROVIDER || "deepgram").trim().toLowerCase(); 
 const DEEPGRAM_ENDPOINTING_MS = Number(process.env.DEEPGRAM_ENDPOINTING_MS || 300);
@@ -1008,10 +1008,13 @@ wss.on('connection', (ws, request) => {
     const startDeepgram = () => {
         // Deepgram Nova-3 uses the v1 listen stream; use endpointing + interim results
         // and keep a small server-side debounce to merge any split finals.
+        const isFlux = DEEPGRAM_STT_MODEL.startsWith("flux");
+        const dgVersion = isFlux ? "v2" : "v1";
+
         const dgParams = new URLSearchParams({
             model: DEEPGRAM_STT_MODEL,
             language: DEEPGRAM_STT_LANGUAGE,
-            encoding: "linear16",
+            encoding: "opus",
             sample_rate: "16000",
             channels: "1",
             interim_results: "true",
@@ -1021,10 +1024,17 @@ wss.on('connection', (ws, request) => {
             smart_format: "true",
             numerals: "true"
         });
+
+        if (isFlux) {
+            dgParams.set("eot_threshold", "500");
+            dgParams.set("eager_eot_threshold", "300");
+        }
+
         for (const keyterm of DEEPGRAM_KEYTERMS) {
             dgParams.append("keyterm", keyterm);
         }
-        const dgUrl = `wss://api.deepgram.com/v1/listen?${dgParams.toString()}`;
+
+        const dgUrl = `wss://api.deepgram.com/${dgVersion}/listen?${dgParams.toString()}`;
         
         if (!DEEPGRAM_API_KEY) {
             console.error("[Deepgram] API KEY MISSING");
