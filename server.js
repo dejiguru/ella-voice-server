@@ -531,9 +531,9 @@ wss.on('connection', (ws, request) => {
         silenceTimer = setTimeout(() => {
             if (transcriptBuffer.trim().length > 0 && !isThinking) {
                 console.log("[Silence Watchdog] Scheduling turn end...");
-                scheduleTranscriptFinalization("silence_watchdog");
+                scheduleTranscriptFinalization("silence_watchdog", 120);
             }
-        }, 5000); // 5s watchdog for natural pauses
+        }, 1400);
     };
 
     const normalizeTranscript = (text) => text.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
@@ -771,7 +771,7 @@ wss.on('connection', (ws, request) => {
     const startDeepgram = () => {
         // Deepgram Nova-3 uses the v1 listen stream; use endpointing + interim results
         // and keep a small server-side debounce to merge any split finals.
-        const dgUrl = `wss://api.deepgram.com/v1/listen?model=${encodeURIComponent(DEEPGRAM_STT_MODEL)}&encoding=linear16&sample_rate=16000&interim_results=true&endpointing=5000&vad_events=true&smart_format=true&punctuate=true&numerals=true`;
+        const dgUrl = `wss://api.deepgram.com/v1/listen?model=${encodeURIComponent(DEEPGRAM_STT_MODEL)}&encoding=linear16&sample_rate=16000&interim_results=true&endpointing=900&vad_events=true&smart_format=true&punctuate=true&numerals=true`;
         
         if (!DEEPGRAM_API_KEY) {
             console.error("[Deepgram] API KEY MISSING");
