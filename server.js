@@ -104,6 +104,8 @@ const TTS_PROVIDER = "google"; // FORCE GOOGLE AS REQUESTED
 const DEEPGRAM_TTS_MODEL = process.env.DEEPGRAM_TTS_MODEL || "aura-2-thalia-en";
 const DEEPGRAM_STT_MODEL = process.env.DEEPGRAM_STT_MODEL || "nova-3";
 const STT_PROVIDER = (process.env.STT_PROVIDER || "deepgram").trim().toLowerCase(); 
+const DEEPGRAM_ENDPOINTING_MS = Number(process.env.DEEPGRAM_ENDPOINTING_MS || 500);
+const DEEPGRAM_UTTERANCE_END_MS = Number(process.env.DEEPGRAM_UTTERANCE_END_MS || 1200);
 const ASSEMBLYAI_API_KEY = process.env.ASSEMBLYAI_API_KEY || "bc03c5e7a71449a2bbfbe86c1db94b00";
 const TAVILY_API_KEY = process.env.TAVILY_API_KEY;
 const ELLA_PERSONA = process.env.ELLA_PERSONA || [
@@ -324,8 +326,7 @@ wss.on('connection', (ws, request) => {
     let lastSentInterim = "";
     let lastProcessedTranscript = "";
     let lastProcessedTranscriptAt = 0;
-    let bestTranscriptCandidate = "";
-    let bestTranscriptCandidateAt = 0;
+    let finalSegmentCount = 0;
     let deepgramOpen = false;
     let deepgramSocketId = 0;
     let dgReconnectTimer = null;
@@ -531,21 +532,14 @@ wss.on('connection', (ws, request) => {
     const resetSilenceTimer = () => {
         if (silenceTimer) clearTimeout(silenceTimer);
         silenceTimer = setTimeout(() => {
-            if ((transcriptBuffer.trim().length > 0 || bestTranscriptCandidate.trim().length > 0) && !isThinking) {
+            if (transcriptBuffer.trim().length > 0 && !isThinking) {
                 console.log("[Silence Watchdog] Scheduling turn end...");
-                scheduleTranscriptFinalization("silence_watchdog", 120);
+                scheduleTranscriptFinalization("silence_watchdog", 250);
             }
-        }, 1400);
+        }, 1800);
     };
 
     const normalizeTranscript = (text) => text.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
-
-    const transcriptScore = (text) => {
-        const clean = normalizeTranscript(text);
-        if (!clean) return 0;
-        const words = clean.split(" ").filter(Boolean);
-        return (words.length * 10) + clean.length;
-    };
 
     const mergeTranscriptParts = (current, next) => {
         const cleanCurrent = current.trim();
@@ -573,30 +567,10 @@ wss.on('connection', (ws, request) => {
         return `${cleanCurrent} ${cleanNext}`.trim();
     };
 
-    const rememberTranscriptCandidate = (candidate, source) => {
-        const cleanCandidate = candidate.trim();
-        if (!cleanCandidate) return;
-
-        const bestScore = transcriptScore(bestTranscriptCandidate);
-        const cleanScore = transcriptScore(cleanCandidate);
-        if (cleanScore >= bestScore) {
-            bestTranscriptCandidate = cleanCandidate;
-        }
-
-        bestTranscriptCandidateAt = Date.now();
-        console.log(`[STT] Candidate (${source}): "${bestTranscriptCandidate}"`);
-    };
-
     const takeTranscriptForProcessing = () => {
-        const buffered = transcriptBuffer.trim();
-        const candidate = bestTranscriptCandidate.trim();
-        const useCandidate = candidate && Date.now() - bestTranscriptCandidateAt < 8000 &&
-            transcriptScore(candidate) > transcriptScore(buffered);
-        const textToProcess = (useCandidate ? candidate : buffered).trim();
-
+        const textToProcess = transcriptBuffer.trim();
         transcriptBuffer = "";
-        bestTranscriptCandidate = "";
-        bestTranscriptCandidateAt = 0;
+        finalSegmentCount = 0;
         lastAppendedFinalTranscript = "";
         lastSentInterim = "";
         return textToProcess;
@@ -621,7 +595,7 @@ wss.on('connection', (ws, request) => {
         finalizationReason = reason;
         finalizationTimer = setTimeout(() => {
             finalizationTimer = null;
-            if ((transcriptBuffer.trim().length === 0 && bestTranscriptCandidate.trim().length === 0) || isThinking) return;
+            if (transcriptBuffer.trim().length === 0 || isThinking) return;
 
             const textToProcess = takeTranscriptForProcessing();
             if (!textToProcess) return;
@@ -652,12 +626,13 @@ wss.on('connection', (ws, request) => {
         } else if (current.endsWith(cleanTranscript)) {
             return;
         } else {
-            transcriptBuffer = `${current} ${cleanTranscript}`.trim();
+            transcriptBuffer = mergeTranscriptParts(current, cleanTranscript);
         }
 
-        console.log(`[STT] Buffered final (${source}): "${transcriptBuffer}"`);
-        rememberTranscriptCandidate(transcriptBuffer, source);
-        scheduleTranscriptFinalization(source);
+        finalSegmentCount++;
+        lastAppendedFinalTranscript = cleanTranscript;
+        console.log(`[STT] Buffered final (${source}, segments=${finalSegmentCount}): "${transcriptBuffer}"`);
+        return transcriptBuffer;
     };
 
     const handleFinalSpeech = async (text) => {
@@ -803,16 +778,16 @@ wss.on('connection', (ws, request) => {
             }
         } finally {
             isThinking = false;
+            if (transcriptBuffer.trim().length > 0) {
+                scheduleTranscriptFinalization("post_ai_buffer", 250);
+            }
         }
     };
 
     const finalizeTranscriptTurn = (reason) => {
         if (transcriptBuffer.trim().length === 0) return;
         if (isThinking) {
-            transcriptBuffer = "";
-            bestTranscriptCandidate = "";
-            bestTranscriptCandidateAt = 0;
-            lastAppendedFinalTranscript = "";
+            console.log(`[STT] Deferring turn finalization while AI is busy (${reason})`);
             return;
         }
 
@@ -834,7 +809,20 @@ wss.on('connection', (ws, request) => {
     const startDeepgram = () => {
         // Deepgram Nova-3 uses the v1 listen stream; use endpointing + interim results
         // and keep a small server-side debounce to merge any split finals.
-        const dgUrl = `wss://api.deepgram.com/v1/listen?model=${encodeURIComponent(DEEPGRAM_STT_MODEL)}&encoding=linear16&sample_rate=16000&interim_results=true&endpointing=900&vad_events=true&smart_format=true&punctuate=true&numerals=true`;
+        const dgParams = new URLSearchParams({
+            model: DEEPGRAM_STT_MODEL,
+            encoding: "linear16",
+            sample_rate: "16000",
+            channels: "1",
+            interim_results: "true",
+            endpointing: String(DEEPGRAM_ENDPOINTING_MS),
+            utterance_end_ms: String(DEEPGRAM_UTTERANCE_END_MS),
+            vad_events: "true",
+            smart_format: "true",
+            punctuate: "true",
+            numerals: "true"
+        });
+        const dgUrl = `wss://api.deepgram.com/v1/listen?${dgParams.toString()}`;
         
         if (!DEEPGRAM_API_KEY) {
             console.error("[Deepgram] API KEY MISSING");
@@ -887,7 +875,7 @@ wss.on('connection', (ws, request) => {
 
                     if (event === "EndOfTurn") {
                         console.log(`[Deepgram] ${DEEPGRAM_STT_MODEL} EndOfTurn (Confidence: ${eotConfidence})`);
-                        scheduleTranscriptFinalization("dg_turninfo_eot", 250);
+                        scheduleTranscriptFinalization("dg_turninfo_eot", 350);
                     }
                     return;
                 }
@@ -903,14 +891,9 @@ wss.on('connection', (ws, request) => {
                             if (speechFinal) {
                                 appendDeepgramFinalTranscript(transcript, "results_speech_final");
                                 console.log(`[STT] Final: "${transcript}" (speech_final=${speechFinal})`);
-                                scheduleTranscriptFinalization("dg_speech_final", 250);
+                                scheduleTranscriptFinalization("dg_speech_final", 350);
                             } else {
-                                if (!transcriptBuffer.trim()) {
-                                    transcriptBuffer = transcript.trim();
-                                } else if (transcriptScore(transcript) >= transcriptScore(transcriptBuffer)) {
-                                    transcriptBuffer = mergeTranscriptParts(transcriptBuffer, transcript);
-                                }
-                                rememberTranscriptCandidate(transcriptBuffer, "results_non_terminal_final");
+                                appendDeepgramFinalTranscript(transcript, "results_final_segment");
                                 console.log(`[STT] Buffered non-terminal final: "${transcriptBuffer}"`);
                                 resetSilenceTimer();
                             }
@@ -920,8 +903,6 @@ wss.on('connection', (ws, request) => {
                                 console.log(`[STT] Interim: "${transcript}"`);
                                 ws.send(JSON.stringify({ type: "interim", text: displayText }));
                                 lastSentInterim = displayText;
-                                rememberTranscriptCandidate(displayText, "interim_display");
-                                resetSilenceTimer();
                             }
                         }
                     }
@@ -931,7 +912,7 @@ wss.on('connection', (ws, request) => {
                 // Handle UtteranceEnd / EndOfTurn events
                 if (msg.type === "UtteranceEnd" || msg.type === "EndOfTurn") {
                     console.log(`[Deepgram] ${msg.type} detected`);
-                    scheduleTranscriptFinalization("dg_eot", 250);
+                    scheduleTranscriptFinalization("dg_eot", 350);
                     return;
                 }
 
@@ -988,12 +969,11 @@ wss.on('connection', (ws, request) => {
         dgKeepAliveInterval = setInterval(() => {
             if (!deepgramLive || deepgramLive.readyState !== WebSocket.OPEN) return;
             try {
-                deepgramLive.ping();
+                deepgramLive.send(JSON.stringify({ type: 'KeepAlive' }));
             } catch (err) {
-                console.error('[Deepgram] Ping failed:', err.message || err);
+                console.error('[Deepgram] KeepAlive failed:', err.message || err);
             }
-            deepgramLive.send(JSON.stringify({ type: 'KeepAlive' }));
-        }, 5000);
+        }, 20000);
     };
 
     let dgKeepAliveInterval = null;
@@ -1156,6 +1136,7 @@ wss.on('connection', (ws, request) => {
             deepgramLive = null;
         }
         if (silenceTimer) clearTimeout(silenceTimer);
+        if (finalizationTimer) clearTimeout(finalizationTimer);
     });
 });
 
