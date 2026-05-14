@@ -309,7 +309,8 @@ const normalizeTtsText = (text) => {
         .replace(/[‘’]/g, "'")
         .replace(/[–—‑]/g, "-")
         .replace(/…/g, "...")
-        .replace(/[^\x20-\x7E]/g, " ") // Strip non-ASCII
+        .replace(/[^\x20-\x7E]/g, " ") 
+        .replace(/[^\x00-\x7F]/g, "")
         .replace(/\s+/g, " ")
         .trim();
 };
@@ -363,6 +364,10 @@ const cleanAssistantResponse = (text) => {
     return `${firstEmotion} ${body} ${actionTags.join(" ")}`.replace(/\s+/g, " ").trim();
 };
 
+const stripNonAscii = (text) => {
+    if (!text) return "";
+    return text.replace(/[^\x00-\x7F]/g, "");
+};
 
 const shortenForGoogleTts = (text, maxChars = 150) => {
     const clean = normalizeTtsText(stripActionTags(text));
@@ -1530,8 +1535,13 @@ wss.on('connection', (ws, request) => {
             const data = JSON.parse(message.toString());
             if (data.type === "context") {
                 latestContext = data.text;
-                if (data.text.includes("Mode: AI")) currentRobotMode = "AI";
-                else if (data.text.includes("Mode: NORMAL")) currentRobotMode = "NORMAL";
+                // Improve mode detection
+                if (data.text.includes("Mode: AI")) {
+                    currentRobotMode = "AI";
+                } else if (data.text.includes("Mode: NORMAL")) {
+                    currentRobotMode = "NORMAL";
+                }
+                console.log(`[Context Update] Mode Detected: ${currentRobotMode}`);
                 console.log(`[Context Update] Mode: ${currentRobotMode}`);
             } else if (data.type === "telegram_response") {
                 // Telegram relay disabled (now uses direct ESP32 path)
