@@ -52,17 +52,20 @@ app.post('/api/telegram/relay', (req, res) => {
     }
 });
 
+// Telegram Webhook route — registered ONCE at startup (not per-init)
+app.post('/api/telegram/webhook', (req, res) => {
+    if (telegramBot) {
+        telegramBot.processUpdate(req.body);
+    }
+    res.sendStatus(200);
+});
+
 // Function to initialize or re-initialize the Telegram bot
 const initTelegramBot = (token) => {
     if (!token) return;
     try {
-        if (telegramBot) {
-            console.log('[Telegram] Stopping existing bot polling...');
-            telegramBot.stopPolling();
-        }
-
         TELEGRAM_BOT_TOKEN = token;
-        // Use Webhook instead of polling to save Render hours
+        // Create bot instance (no polling — we use webhooks)
         telegramBot = new TelegramBot(token);
         
         const RENDER_URL = process.env.RENDER_EXTERNAL_URL || 'https://ella-voice-server.onrender.com';
@@ -70,17 +73,13 @@ const initTelegramBot = (token) => {
         
         telegramBot.setWebHook(WEBHOOK_URL).then(() => {
             console.log(`[Telegram] Webhook set to: ${WEBHOOK_URL}`);
+        }).catch(err => {
+            console.error('[Telegram] Failed to set webhook:', err.message);
         });
 
         console.log('[Telegram] Bot initialized in Webhook mode');
 
-        // Handle Webhook POSTs from Telegram
-        app.post('/api/telegram/webhook', (req, res) => {
-            telegramBot.processUpdate(req.body);
-            res.sendStatus(200);
-        });
-
-        // Handle incoming Telegram commands (Relay to MQTT)
+        // Handle incoming Telegram commands
         telegramBot.on('message', async (msg) => {
             const chatId = msg.chat.id.toString();
             const text = msg.text || '';
@@ -100,7 +99,7 @@ const initTelegramBot = (token) => {
                 return;
             }
 
-            // Handle commands (Relay to MQTT for instant robot response)
+            // Handle commands — relay to ESP32 via MQTT + WebSocket
             if (text === '/status' || text === '/start') {
                 const cmd = { type: 'telegram_command', command: 'status' };
                 mqttClient.publish('ella/commands/telegram', JSON.stringify(cmd));
@@ -129,21 +128,17 @@ const initTelegramBot = (token) => {
             }
         });
 
-        telegramBot.on('polling_error', (error) => {
-            console.error('[Telegram] Polling error:', error.message);
-        });
-
     } catch (error) {
         console.error('[Telegram] Failed to initialize bot:', error.message);
     }
 };
 
-// Initial boot initialization
-// if (TELEGRAM_BOT_TOKEN) {
-//     initTelegramBot(TELEGRAM_BOT_TOKEN);
-// } else {
-//     console.log('[Telegram] Bot token not configured - Waiting for dynamic init from app');
-// }
+// Boot init: if token set via env var, init immediately
+if (TELEGRAM_BOT_TOKEN) {
+    initTelegramBot(TELEGRAM_BOT_TOKEN);
+} else {
+    console.log('[Telegram] Bot token not configured — waiting for ESP32 credentials');
+}
 
 // (Listeners now attached inside initTelegramBot)
 
@@ -1594,12 +1589,21 @@ wss.on('connection', (ws, request) => {
                 const isAlert = data.type === "telegram_alert";
                 console.log(`[Telegram] Relaying ${isAlert ? "alert" : "response"} to user...`);
                 if (telegramBot && TELEGRAM_CHAT_ID) {
-                    sendTelegramMessage(data.text);
+                    sendTelegramMessage(data.text, 'Markdown');
                 } else {
                     console.warn("[Telegram] Bot not configured, relay failed");
                 }
             } else if (data.type === "telegram_init") {
-                // Telegram relay disabled (now uses direct ESP32 path)
+                console.log("[Telegram] Received credentials from ESP32");
+                if (data.botToken) {
+                    process.env.TELEGRAM_BOT_TOKEN = data.botToken;
+                    if (data.chatId) {
+                        process.env.TELEGRAM_CHAT_ID = data.chatId;
+                        TELEGRAM_CHAT_ID = data.chatId;
+                    }
+                    // Initialize the bot webhook dynamically
+                    initTelegramBot(data.botToken);
+                }
             }
         } catch (e) {
             console.warn("[Server] Failed to parse text message:", e.message);
