@@ -1,4 +1,5 @@
 #include <WiFi.h>
+#include <esp_wifi.h>
 #include <ArduinoOTA.h>
 #include <HTTPClient.h>
 #include <WiFiClientSecure.h>
@@ -75,55 +76,6 @@ void sendVoiceAgentKeepAlive();
 #define OPENAI_API_KEY ""
 #endif
 
-// ── MOUTH DISPLAY (Secondary ESP via UART) ──────────────────────
-#define MOUTH_SERIAL Serial1
-#define MOUTH_BAUD 115200
-
-bool mouthEnabled = false;
-
-void setupMouth() {
-  MOUTH_SERIAL.begin(MOUTH_BAUD);
-  delay(500);
-
-  // Wait for mouth ESP to respond
-  unsigned long start = millis();
-  while (MOUTH_SERIAL.available()) {
-    String reply = MOUTH_SERIAL.readStringUntil('\n');
-    if (reply.indexOf("READY") >= 0) {
-      mouthEnabled = true;
-      Serial.println("[MOUTH] Connected to secondary ESP");
-      break;
-    }
-    if (millis() - start > 3000) break;
-  }
-
-  if (!mouthEnabled) {
-    Serial.println("[MOUTH] Not detected - running without mouth display");
-  }
-}
-
-void sendMouthExpression(const char* expression) {
-  if (!mouthEnabled) return;
-  MOUTH_SERIAL.print("EXPR:");
-  MOUTH_SERIAL.println(expression);
-}
-
-void sendMouthText(const char* text) {
-  if (!mouthEnabled) return;
-  MOUTH_SERIAL.print("SAY:");
-  MOUTH_SERIAL.println(text);
-}
-
-void sendMouthIdle() {
-  if (!mouthEnabled) return;
-  MOUTH_SERIAL.println("IDLE:OK");
-}
-
-void sendMouthListening() {
-  if (!mouthEnabled) return;
-  MOUTH_SERIAL.println("LISTEN");
-}
-
 // WiFi (WiFi.begin() needs char* variables)
 const char* ssid     = WIFI_SSID;
 const char* password = WIFI_PASSWORD;
@@ -165,8 +117,8 @@ const char* AAI_AUTH_HDR = "Authorization: " ASSEMBLYAI_KEY;
 // ── Deepgram Realtime STT (WebSocket) ─────────────────────────────────
 const char* DG_HOST = "api.deepgram.com";
 const int   DG_PORT = 443;
-const char* DG_PATH = "/v2/listen"         // v2 endpoint required for Flux model
-    "?model=flux-general-en"       // Flux General English: Supports OPUS encoding
+const char* DG_PATH = "/v1/listen"         // Nova-3 endpoint for realtime STT
+  "?model=nova-3"                // Nova-3 English model
     "&encoding=opus"               // OPUS compression
     "&sample_rate=16000"
     "&eot_threshold=0.6"           // Lower threshold for faster turn detection
@@ -234,6 +186,7 @@ String wifiSSID, wifiPass;
 
 String cloudBotToken = "";
 String cloudChatId = "";
+long   lastTelegramUpdateId = 0; // For getUpdates polling
 String user_name = ""; // Added for Profile Sync
 String user_emergency_contact = ""; // Added for Emergency Alert
 String cloudRemindersJson = "[]";
@@ -327,6 +280,10 @@ const float MIC_DC_ALPHA = 0.01f;
 #define UI_OXY 0x243F
 #define UI_ENV 0x04C0
 #define UI_PRIMARY 0x243F
+#define UI_SECONDARY 0x4AD6
+
+#define SCR_W 240
+#define SCR_H 320
 
 // Robot structure map:
 // IDLE -> normal screen / ambient sensors / eye drift
@@ -491,6 +448,7 @@ bool ttsChunkNeedsStart = false;
 unsigned long nextAiProactiveNudgeMs = 0;
 const unsigned long AI_PROACTIVE_IDLE_MS = 180000;
 const unsigned long AI_PROACTIVE_COOLDOWN_MS = 240000;
+const unsigned long CHECK_UP_IDLE_REQUIRED_MS = 1800000;
 
 void setRobotActivity(RobotActivity activity, const String& status = "", const String& eyeExpr = "", bool redrawAi = false) {
   currentRobotActivity = activity;
@@ -576,10 +534,13 @@ const unsigned long AAI_KEEPALIVE_MS = 3000;
 const unsigned long LLM_WS_KEEPALIVE_MS = 15000;
 const unsigned long NODE_WS_KEEPALIVE_MS = 15000; // Node WebSocket ping interval
 const unsigned long LLM_WS_RECONNECT_BACKOFF_MS = 1500;
+const unsigned long NODE_TTS_ECHO_GUARD_MS = 1500; // Increased to prevent audio cutoff
+const unsigned long NODE_AUDIO_START_TIMEOUT_MS = 2500;
 // OPUS frame buffer (960 samples * 2 bytes = 1920 bytes for 60ms frame)
 #define AAI_BUFFER_SIZE    1920  
 #define AAI_AUDIO_CHUNK_MS   60   
-#define NODE_STT_PCM_CHUNK_SIZE 640
+#define NODE_STT_PCM_CHUNK_SIZE 1920 // 60ms at 16000Hz (960 samples * 2 bytes)
+#define NODE_MIC_GAIN 2.0f
 
 uint8_t* aaiBuffer = nullptr;    
 // ─────────────────────────────────────────────────────────────────────────────
@@ -635,7 +596,7 @@ unsigned long micReconnectScheduledAt = 0;
 unsigned long micReconnectLastAttemptMs = 0;
 const unsigned long MIC_RECONNECT_AFTER_TTS_MS = 120;
 const unsigned long MIC_RECONNECT_AFTER_FAILURE_MS = 250;
-const unsigned long MIC_RECONNECT_STALL_MS = 8000;
+const unsigned long MIC_RECONNECT_STALL_MS = 2500;
 bool deepgramFirstFramePending = false;
 
 void enterAudioTransitionQuiet(unsigned long extraMs = AUDIO_TRANSITION_QUIET_MS) {
@@ -828,6 +789,8 @@ DeferredAiActionType deferredAiAction = DEFERRED_AI_NONE;
 String deferredAiParam = "";
 unsigned long deferredAiReadyAt = 0;
 unsigned long lastTouchActionMs = 0;
+String currentMusicGenre = "";
+void drawMusicUI(bool force = false);
 const unsigned long TOUCH_NETWORK_QUIET_MS = 300;
 void enableMicAIInput();
 
@@ -888,7 +851,7 @@ void serviceMicAIReconnect(bool blockedByCheckup = false) {
     return;
   }
 
-  if (now - micReconnectLastAttemptMs < 5000) return; // Increased from 500ms to 5000ms
+  if (now - micReconnectLastAttemptMs < 350) return;
   micReconnectLastAttemptMs = now;
 
   Serial.printf("[DG] Mic reconnect attempt at %lu ms\n", now);
@@ -1108,6 +1071,7 @@ const unsigned long CONTEXT_COOLDOWN = 1800000; // 30 minutes
 // AFFECTIVE EMOTION ENGINE (Valence & Arousal)
 // ============================================================
 String currentEyeExpression = "NORMAL";
+String nextEyeExpression = ""; // Global for transition control
 float moodValence = 0.0; // -1.0 (Sad/Angry) to 1.0 (Happy/Loving)
 float moodArousal = 0.0; // -1.0 (Sleepy/Bored) to 1.0 (Excited/Surprised)
 
@@ -1115,6 +1079,7 @@ float moodArousal = 0.0; // -1.0 (Sleepy/Bored) to 1.0 (Excited/Surprised)
 unsigned long lastBlinkTime = 0;
 unsigned long lastEyeUpdate = 0;
 unsigned long lastEmotionEngineUpdate = 0;
+bool medicalResultsAnnounced = false; // Guard for double-announcements
 
 void updateEmotionEngine(); // Forward declaration
 void checkSleepTracking(); // Forward declaration
@@ -2049,11 +2014,41 @@ void drawLoadingScreen(String status="Starting...", int percent=0);
 // NEW HELPER: Clear I2S Mic Buffer (Reduces Noise/Pop)
 // ============================================================
 void clearMicBuffer() {
-
-  for (int i = 0; i < 48; i++) {
+  for (int i = 0; i < 192; i++) {
     mic_i2s.read(); 
     if ((i & 0x0F) == 0) yield();
   }
+}
+
+void clearNodeAudioState() {
+  portENTER_CRITICAL(&nodeAudioMux);
+  if (nodeAudioRingBuf) {
+    nodeAudioReadPos = nodeAudioWritePos;
+  }
+  nodeAudioPending = false;
+  nodeAudioStreamDone = true;
+  nodeAudioPendingSince = 0;
+  portEXIT_CRITICAL(&nodeAudioMux);
+}
+
+void resumeAiMicAfterSpeech(const char* reason) {
+  if (currentMode != MODE_AI || !aiInputUsesMic) return;
+
+  clearNodeAudioState();
+  if (micI2SActive) {
+    clearMicBuffer();
+  }
+
+  isProcessingAI = false;
+  isSpeaking = false;
+  currentRobotActivity = ROBOT_ACTIVITY_LISTENING;
+  aiRequestStatus = "Listening...";
+  if (USE_NODE_SERVER && nodeWsConnected && micI2SActive) {
+    clearMicAIReconnectSchedule();
+    Serial.printf("[DG] Mic stream resumed immediately (%s)\n", reason ? reason : "speech complete");
+    return;
+  }
+  scheduleMicAIReconnect(MIC_RECONNECT_AFTER_TTS_MS, reason);
 }
 
 // ============================================================
@@ -3044,14 +3039,14 @@ void streamMicToAAI() {
   if (!aaiBuffer) return;
   if (micTestRecording) return;  // Pause live stream during test recording
 
-  size_t bytesRead = mic_i2s.readBytes((char*)aaiBuffer, NODE_STT_PCM_CHUNK_SIZE);
-  if (bytesRead != NODE_STT_PCM_CHUNK_SIZE) return;
+  const size_t opusPcmBytes = OPUS_FRAME_SIZE * sizeof(int16_t);
+  size_t bytesRead = mic_i2s.readBytes((char*)aaiBuffer, opusPcmBytes);
+  if (bytesRead != opusPcmBytes) return;
 
   int16_t* samples = (int16_t*)aaiBuffer;
-  const int sampleCount = bytesRead / 2;
   int64_t rmsSum = 0;
   for (int i = 0; i < OPUS_FRAME_SIZE; i++) {
-    if (samples[i] == 0 || samples[i] == -1 || samples[i] == 1) samples[i] = 0;
+    samples[i] = applyMicGain(samples[i]);
     rmsSum += (int64_t)samples[i] * samples[i];
   }
   int32_t rms = (int32_t)sqrt((double)rmsSum / OPUS_FRAME_SIZE);
@@ -3199,6 +3194,14 @@ static bool nodeWsSendText(const char* text) {
   return nodeWsSendFrame(0x1, (const uint8_t*)text, strlen(text));
 }
 
+static int16_t applyMicGain(int16_t sample) {
+  if (sample == 0 || sample == -1 || sample == 1) return 0;
+  int32_t boosted = (int32_t)((float)sample * NODE_MIC_GAIN);
+  if (boosted > 32767) return 32767;
+  if (boosted < -32768) return -32768;
+  return (int16_t)boosted;
+}
+
 void disconnectNodeServer() {
   if (nodeMux) xSemaphoreTake(nodeMux, portMAX_DELAY);
   if (nodeClientPtr && nodeClientPtr->connected()) {
@@ -3320,7 +3323,7 @@ void streamMicToNodeServer() {
 
   bool speakerActive = isSpeaking || isProcessingAI || vAgentPlayingAudio || nodeAudioPending || 
                        (audio.isRunning() && audio.getVolume() > 0) ||
-                       (millis() - lastSpeakerActiveMs < 1000); // 1s echo guard
+                       (millis() - lastSpeakerActiveMs < NODE_TTS_ECHO_GUARD_MS);
 
   if (!nodeWsConnected || currentMode != MODE_AI || !aiInputUsesMic || speakerActive) {
     if (nodeWsConnected && micI2SActive && speakerActive) {
@@ -3351,30 +3354,38 @@ void streamMicToNodeServer() {
   const int sampleCount = bytesRead / 2;
   if (sampleCount <= 0) return;
 
-  // Simple noise gate
+  // 1. Apply Gain and Calculate RMS
   int64_t rmsSum = 0;
   for (int i = 0; i < sampleCount; i++) {
-    if (samples[i] == 0 || samples[i] == -1 || samples[i] == 1) {
-      samples[i] = 0;
-    }
+    samples[i] = applyMicGain(samples[i]);
     rmsSum += (int64_t)samples[i] * samples[i];
   }
 
-  // Logging
+  // 2. Logging
   static uint32_t nodeFrameCount = 0;
   static unsigned long lastMicLogMs = 0;
   nodeFrameCount++;
 
+  int32_t rms = (int32_t)sqrt((double)rmsSum / sampleCount);
   if (millis() - lastMicLogMs >= 2000) {
-    int32_t rms = (int32_t)sqrt((double)rmsSum / sampleCount);
-    Serial.printf("[MIC->DG] frames=%u RMS=%d (streaming to Deepgram via Node)\n",
-                  nodeFrameCount, rms);
+    Serial.printf("[MIC->NODE] frames=%u RMS=%d gain=%.1fx (streaming Opus to Deepgram)\n",
+                  nodeFrameCount, rms, (double)NODE_MIC_GAIN);
     lastMicLogMs = millis();
     nodeFrameCount = 0;
   }
 
-  // Send raw PCM
-  if (!nodeWsSendBinary(aaiBuffer, (size_t)bytesRead)) {
+  // 3. Encode to Opus
+  // Use a temporary buffer for the Opus packet
+  static uint8_t nodeOpusBuffer[512]; 
+  int encodedBytes = opus_encode(opusEncoder, samples, OPUS_FRAME_SIZE, nodeOpusBuffer, sizeof(nodeOpusBuffer));
+  
+  if (encodedBytes <= 0) {
+    Serial.printf("[NODE] Opus encode failed: %d\n", encodedBytes);
+    return;
+  }
+
+  // 4. Send Opus Packet
+  if (!nodeWsSendBinary(nodeOpusBuffer, (size_t)encodedBytes)) {
     Serial.println("[NODE] Send failed, reconnecting");
     disconnectNodeServer();
   }
@@ -3504,6 +3515,7 @@ void pumpNodeServerSocket() {
         // Live STT result — user is still speaking
         const char* text = doc["text"];
         if (text && strlen(text) > 0) {
+          lastInteractionTime = millis();
           Serial.printf("[STT] Hearing: %s\n", text);
           currentInterimText = String(text);
           if (currentMode == MODE_AI) drawAIScreen(false);
@@ -3512,11 +3524,13 @@ void pumpNodeServerSocket() {
         // Final transcript before AI processing
         const char* text = doc["text"];
         if (text && strlen(text) > 0) {
+          lastInteractionTime = millis();
           Serial.printf("[STT] FINAL: %s\n", text);
           currentInterimText = String(text);
           if (currentMode == MODE_AI) drawAIScreen(false);
         }
       } else if (strcmp(type, "thinking") == 0) {
+        lastInteractionTime = millis();
         Serial.println("[NODE] AI is thinking... (Mic Muted)");
         isProcessingAI = true; 
         processingStartTime = millis(); // Track when we started thinking
@@ -3576,19 +3590,32 @@ void pumpNodeServerSocket() {
         if (text && strlen(text) > 0) {
           bool playGoogleTts = (strcmp(type, "tts") == 0);
           String reply = String(text);
+          const char* displayText = doc["display_text"] | text;
+          String displayReply = String(displayText);
+          lastInteractionTime = millis();
           Serial.println("[NODE] Received sentence: " + reply);
           aiRequestStatus = reply;
-          currentInterimText = reply; // Show AI response on TFT
+            lastAiResponse = displayReply; // Show full AI response in the AI Response box
+            currentInterimText = ""; // Keep transcript area for user speech only
           drawAIScreen(true);
 
           // Emotion / eye expressions
-          String rL = reply; rL.toLowerCase();
+          String rL = displayReply; rL.toLowerCase();
           if      (rL.indexOf("[happy")      >= 0) setEyeExpression("HAPPY");
           else if (rL.indexOf("[sad")        >= 0) setEyeExpression("SAD");
           else if (rL.indexOf("[worried")    >= 0) setEyeExpression("WORRIED");
+          else if (rL.indexOf("[thinking")   >= 0) setEyeExpression("THINKING");
           else if (rL.indexOf("[love")       >= 0) setEyeExpression("LOVE");
           else if (rL.indexOf("[wink")       >= 0) setEyeExpression("WINK");
+          else if (rL.indexOf("[excited")    >= 0) setEyeExpression("EXCITED");
+          else if (rL.indexOf("[frustrated") >= 0) setEyeExpression("FRUSTRATED");
           else if (rL.indexOf("[angry")      >= 0) setEyeExpression("ANGRY");
+          else if (rL.indexOf("[suspicious") >= 0) setEyeExpression("SUSPICIOUS");
+          else if (rL.indexOf("[normal")     >= 0) setEyeExpression("NORMAL");
+          else {
+            // Default to speaking expression if no specific tag is found
+            setEyeExpression("SPEAKING");
+          }
 
           if (audio.isRunning()) audio.stopSong();
           
@@ -3606,6 +3633,7 @@ void pumpNodeServerSocket() {
              Serial.printf("[NODE] Speaking via Google TTS: %s\n", cleanText.c_str());
              if (audio.connecttospeech(cleanText.c_str(), "en")) {
                 isSpeaking = true;
+                activeTtsText = cleanText; 
                 ttsPlaybackStartedMs = millis();
                 currentRobotActivity = ROBOT_ACTIVITY_SPEAKING;
                 portENTER_CRITICAL(&nodeAudioMux);
@@ -3615,6 +3643,7 @@ void pumpNodeServerSocket() {
              }
           } else if (cleanText.length() > 0) {
              Serial.println("[NODE] Waiting for Binary PCM audio stream...");
+             activeTtsText = reply;
              portENTER_CRITICAL(&nodeAudioMux);
              nodeAudioPending = true;
              nodeAudioStreamDone = false;
@@ -3647,7 +3676,7 @@ void pumpNodeServerSocket() {
           }
 
           // Deferred / system actions - Move all to deferred to prevent cutting off AI confirmation speech
-          if      (reply.indexOf("[BREATHE]")   >= 0) { scheduleDeferredAiAction(DEFERRED_AI_GOHOME); } // BREATHE is basically GOHOME with a twist
+          if      (reply.indexOf("[BREATHE]")   >= 0) { scheduleDeferredAiAction(DEFERRED_AI_MEDITATE, "breathing"); } 
           else if (reply.indexOf("[MEDITATE")   >= 0) { 
               int mIdx = reply.indexOf("[MEDITATE:");
               String mParam = (mIdx >= 0) ? reply.substring(mIdx+10, reply.indexOf("]", mIdx)) : "calm";
@@ -3663,6 +3692,11 @@ void pumpNodeServerSocket() {
           else if (reply.indexOf("[IMURESET]")  >= 0) { scheduleDeferredAiAction(DEFERRED_AI_IMURESET); }
           else if (reply.indexOf("[CHECKUP]")   >= 0) { scheduleDeferredAiAction(DEFERRED_AI_CHECKUP); }
           else if (reply.indexOf("[EMERGENCY]") >= 0) { scheduleDeferredAiAction(DEFERRED_AI_EMERGENCY); }
+          else if (reply.indexOf("[SLEEP]")     >= 0) { isSleepMode = true; }
+          else if (reply.indexOf("[WAKEUP]")    >= 0) { isSleepMode = false; }
+          else if (reply.indexOf("[CALIBRATE_IMU]") >= 0) { calibrateIMUGyro(); }
+          else if (reply.indexOf("[SCAN]")      >= 0) { queueMovementCommand("SPIN_L"); queueMovementCommand("STOP"); }
+          else if (reply.indexOf("[EXPLORE]")   >= 0) { setAutoAvoidMode(true); }
           else if (reply.indexOf("[FORGET]")    >= 0) { clearAllMemory(); }
           
           if (reply.indexOf("[PLAYSONG:") >= 0 || reply.indexOf("[PLAY:") >= 0) {
@@ -3686,6 +3720,7 @@ void pumpNodeServerSocket() {
         }
       } else if (strcmp(type, "turn_complete") == 0) {
         Serial.println("[NODE] Turn complete.");
+        lastInteractionTime = millis();
         isProcessingAI = false;
         portENTER_CRITICAL(&nodeAudioMux);
         nodeAudioPending = false;
@@ -4031,8 +4066,7 @@ void drainNodeAudio() {
       nodeAudioPendingSince = 0;
       Serial.println("[NODE] Audio playback complete, mic re-enabled.");
       if (currentMode == MODE_AI && aiInputUsesMic) {
-        currentRobotActivity = ROBOT_ACTIVITY_LISTENING;
-        aiRequestStatus = "Listening...";
+        resumeAiMicAfterSpeech("node audio complete");
       }
     }
   } else if (avail > 0) {
@@ -4041,7 +4075,7 @@ void drainNodeAudio() {
 
   // Safety timeout: if nodeAudioPending has been stuck for >4s with no audio, unblock mic
   if (nodeAudioPending && !vAgentPlayingAudio && nodeAudioPendingSince > 0
-      && millis() - nodeAudioPendingSince > 10000) {
+      && millis() - nodeAudioPendingSince > NODE_AUDIO_START_TIMEOUT_MS) {
     Serial.println("[NODE] Audio timeout — no binary frame received, unblocking mic.");
     portENTER_CRITICAL(&nodeAudioMux);
     nodeAudioPending = false;
@@ -4052,6 +4086,7 @@ void drainNodeAudio() {
     drainEmptySinceMs = 0;
     isProcessingAI = false;
     isSpeaking = false;
+    resumeAiMicAfterSpeech("node audio timeout");
   }
 }
 
@@ -6104,16 +6139,8 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 
     Serial.printf("[MQTT] Topic: %s | Msg: %s\n", topic, msg.c_str());
 
-    if (sTopic == "ella/telegram/in") {
-        StaticJsonDocument<512> doc;
-        DeserializationError error = deserializeJson(doc, msg);
-        if (!error) {
-            String text = doc["text"].as<String>();
-            String chatId = doc["chatId"].as<String>();
-            handleIncomingTelegramCommand(text, chatId);
-        }
-        return;
-    }
+    // Telegram commands now handled via direct polling (pollTelegramDirect)
+    if (sTopic == "ella/telegram/in") return; 
 
     if (sTopic.startsWith("ella/commands/")) {
         String key = sTopic.substring(14);
@@ -6181,14 +6208,11 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 }
 
 void reconnectMQTT() {
-  // Allow MQTT during music playback so web app can control it
-  bool musicPlaying = audio.isRunning() && !isSpeaking && !isProcessingAI;
-  
-  if (offlineModeLocked || !networkAvailable() || (currentMode == MODE_AI && !musicPlaying) || (networkIsQuiet() && !musicPlaying) || isSpeaking || isProcessingAI) {
+  if (offlineModeLocked || !networkAvailable() || currentMode == MODE_AI || networkIsQuiet() || isSpeaking || isProcessingAI) {
     if (mqtt.connected()) {
       mqtt.disconnect();
       mqttClientNet->stop(); // Force stop to free TLS buffers
-      Serial.println("[MQTT] Paused while audio or quiet mode is active");
+      Serial.println("[MQTT] Paused while AI/audio/quiet mode is active");
     }
     return; 
   }
@@ -6208,8 +6232,6 @@ void reconnectMQTT() {
       String clientId = "EllaBox-" + String(random(0xffff), HEX);
       if (mqtt.connect(clientId.c_str(), MQTT_USER, MQTT_PASS)) {
         Serial.println("[MQTT] connected");
-        mqtt.subscribe("ella/telegram/in");
-        Serial.println("[MQTT] Subscribed to ella/telegram/in (Bridge)");
         mqtt.subscribe("ella/commands/#");
         mqtt.subscribe("ella/settings/#");
         publishStatusSnapshot(true);
@@ -6227,9 +6249,6 @@ void setup() {
 
 
   Serial.begin(115200);
-
-  // Setup mouth display (secondary ESP)
-  setupMouth();
 
   // Allocate PSRAM buffers for OPUS
   opusPcmBuffer = (int16_t*)heap_caps_malloc(OPUS_FRAME_SIZE * sizeof(int16_t), MALLOC_CAP_SPIRAM);
@@ -6569,6 +6588,7 @@ void startupSequence() {
   if (savedValid) {
       Serial.println("[WiFi] Connecting to SAVED credentials: " + wifiSSID);
       WiFi.mode(WIFI_STA);
+      esp_wifi_set_ps(WIFI_PS_NONE);
       WiFi.setSleep(false);
       WiFi.begin(wifiSSID.c_str(), wifiPass.c_str());
   } else {
@@ -6580,6 +6600,7 @@ void startupSequence() {
       }
       Serial.println("[WiFi] Connecting to HARDCODED credentials...");
       WiFi.mode(WIFI_STA);
+      esp_wifi_set_ps(WIFI_PS_NONE);
       WiFi.setSleep(false);
       WiFi.begin(ssid, password);
   }
@@ -6652,6 +6673,7 @@ void resetWiFiStationForRetry() {
   WiFi.mode(WIFI_OFF);
   delay(100);
   WiFi.mode(WIFI_STA);
+  esp_wifi_set_ps(WIFI_PS_NONE); // Disable WiFi power save for ultra-low latency audio
   WiFi.setSleep(false);
 }
 
@@ -6910,10 +6932,7 @@ void processTouchScreen() {
 
   // ── Main Content Area ─────────────────────────────────────────
   if (currentMode == MODE_AI) {
-    // In AI mode, keep content taps quiet so the mode doesn't bounce.
-    // Only stop audio if something is speaking; use the nav bar BACK button to leave AI.
     if (screenY < 240) {
-      // Tapping screen in AI mode while audio plays -> stop audio
       if (audio.isRunning() || isSpeaking) {
         modeSwitchUsedThisPress = true;
         Serial.println("[Touch] Stopping audio");
@@ -6921,13 +6940,21 @@ void processTouchScreen() {
       }
     }
   } else {
-    // Normal mode: tap screen to go to AI mode (or exit breathing)
+    // Normal / Music / Breathing
     if (currentMedState == MED_BREATHING) {
-      if (screenX < 80 && screenY > 200) { // Bottom-Left STOP button
+      if (screenX < 80 && screenY > 200) {
         Serial.println("[Touch] Breathing -> STOP");
         currentMedState = MED_IDLE;
         drawNormalScreen(true);
         speakText("Exercise ended.");
+      }
+    } else if (audio.isRunning() && !isSpeaking && !isProcessingAI) {
+      // Special Music Stop Button (Center of screen)
+      if (screenX > 50 && screenX < 190 && screenY > 120 && screenY < 220) {
+        Serial.println("[Touch] Music -> STOP & AI_MODE");
+        stopActiveAudioPlayback(true);
+        switchToAIMode();
+        return;
       }
     } else if (screenY < 240 && !modeSwitchUsedThisPress) {
       modeSwitchUsedThisPress = true;
@@ -7653,6 +7680,7 @@ void processDeferredAiAction() {
         audio.setConnectionTimeout(3000, 8000);
         audio.forceMono(true);
         audio.setVolume(21);
+        currentMusicGenre = "Relax: " + param;
         Serial.println("[Relax] Connecting to stream: " + playUrl);
         audio.connecttohost(playUrl.c_str());
       } else {
@@ -7682,15 +7710,60 @@ void processDeferredAiAction() {
       sendEmergencyAlert("Voice Command Emergency");
       break;
 
+    case DEFERRED_AI_MEDITATE:
+      startMeditation(param);
+      break;
+
     case DEFERRED_AI_NONE:
     default:
       break;
   }
 }
 
+void drawMusicUI(bool force) {
+  static unsigned long lastDraw = 0;
+  if (!force && millis() - lastDraw < 500) return;
+  lastDraw = millis();
+
+  tft.fillScreen(ILI9341_BLACK);
+  
+  // Design Header
+  tft.fillRect(0, 0, SCR_W, 45, UI_PRIMARY);
+  tft.setFont();
+  tft.setTextSize(2);
+  tft.setTextColor(ILI9341_WHITE);
+  tft.setCursor(15, 12);
+  tft.print("ELLA AUDIO PLAYER");
+
+  // Genre / Song Info
+  tft.setTextColor(ILI9341_CYAN);
+  tft.setTextSize(2);
+  String label = currentMusicGenre;
+  if (label.length() > 0) {
+      int textW = label.length() * 12;
+      tft.setCursor(max(10, (SCR_W - textW)/2), 90);
+      tft.print(label);
+  }
+
+  // STOP Button (Middle)
+  tft.fillRoundRect(50, 140, 140, 60, 12, ILI9341_RED);
+  tft.drawRoundRect(50, 140, 140, 60, 12, ILI9341_WHITE);
+  tft.setTextColor(ILI9341_WHITE);
+  tft.setTextSize(3);
+  tft.setCursor(85, 158);
+  tft.print("STOP");
+
+  // Pulse effect (random bars for aesthetics)
+  for (int i = 0; i < 6; i++) {
+    int h = random(10, 50);
+    tft.fillRect(25 + (i * 35), 240, 25, h, UI_SECONDARY);
+  }
+}
+
 void switchToAIMode() {
   if (currentMode == MODE_AI) return;
   Serial.println("[Mode] Switching to AI");
+  stopActiveAudioPlayback(true);
   setAutoAvoidMode(false);
   setGuardMode(false);
   if (!offlineModeLocked) {
@@ -7779,6 +7852,7 @@ void read_max30102() {
            irBuffer[i]  = particleSensor.getIR();
            redBuffer[i] = particleSensor.getRed();
            particleSensor.nextSample();
+            if (i % 20 == 0) drawNormalScreen(false);
            
            if (i == 0) Serial.printf("[MAX30102] Raw IR: %lu\n", irBuffer[i]);
 
@@ -7810,6 +7884,7 @@ void read_max30102() {
            irBuffer[i]  = particleSensor.getIR();
            redBuffer[i] = particleSensor.getRed();
            particleSensor.nextSample();
+            if (i % 5 == 0) drawNormalScreen(false);
            
            if (irBuffer[i] < 7000) {
                Serial.println("[MAX30102] Finger removed during rolling read - Aborting");
@@ -7862,8 +7937,7 @@ void read_max30102() {
 // ============================================================
 // DISPLAY
 // ============================================================
-#define SCR_W 240
-#define SCR_H 320
+// Screen settings moved to UI section
 
 // Navigation bar at bottom
 void drawNavigationBar() {
@@ -7918,7 +7992,8 @@ void drawNormalScreen(bool force) {
   static uint16_t lastAssistColor = UI_CARD_BG;
   
   // Throttle (skip if not forced)
-  if (!force && millis() - lastDraw < 500) return;
+  unsigned long throttleMs = (currentMedState == MED_MEASURING || currentMedState == MED_PLACE_FINGER) ? 100 : 500;
+  if (!force && millis() - lastDraw < throttleMs) return;
   lastDraw = millis();
 
   // Full redraw only when state changes or forced
@@ -7936,8 +8011,8 @@ void drawNormalScreen(bool force) {
     tft.setCursor(10, 5);
     tft.print("ELLA");
     
-    // Status Dot (Firebase)
-    drawStatusDot(firebaseReady);
+    // Status Dot (Network Availability)
+    drawStatusDot(networkAvailable());
 
     drawNavigationBar();
     lastRenderedState = currentMedState;
@@ -8765,10 +8840,14 @@ void drawAIScreen(bool force) {
     }
     text.trim();
 
-    // Wrap text manually
+    // Wrap text manually and filter non-ASCII
     int x = 15, y = TRANSCRIPT_Y + 18;
     for(int i=0; i<text.length(); i++) {
-      tft.print(text[i]);
+      unsigned char c = (unsigned char)text[i];
+      if (c >= 128) continue; // Skip UTF-8 multi-byte characters to prevent garbled "signs"
+      if (c < 32 && c != '\n' && c != '\r') continue; // Skip other control chars
+      
+      tft.print((char)c);
       if (tft.getCursorX() > SCR_W - 25) {
         y += 10;
         if (y > TRANSCRIPT_Y + TRANSCRIPT_H - 10) break;
@@ -8798,7 +8877,11 @@ void drawAIScreen(bool force) {
 
     int x = 15, y = RESPONSE_Y + 18;
     for(int i=0; i<text.length(); i++) {
-      tft.print(text[i]);
+      unsigned char c = (unsigned char)text[i];
+      if (c >= 128) continue; // Skip UTF-8 multi-byte characters to prevent garbled "signs"
+      if (c < 32 && c != '\n' && c != '\r') continue; // Skip other control chars
+      
+      tft.print((char)c);
       if (tft.getCursorX() > SCR_W - 25) {
         y += 10;
         if (y > RESPONSE_Y + RESPONSE_H - 10) break;
@@ -8850,29 +8933,11 @@ void drawAIScreen(bool force) {
 void setEyeExpression(String expr) {
   Serial.println("[Eyes] Set to: " + expr);
   currentEyeExpression = expr;
+  
+  // Clear any pending transition to prevent overwriting this manual expression
+  nextEyeExpression = "";
+  
   updateEyes();
-
-  // Also update mouth expression
-  expr.toUpperCase();
-  if (expr == "HAPPY" || expr == "JOY" || expr == "LOVE" || expr == "EXCITED" || expr == "WINK") {
-    sendMouthExpression("HAPPY");
-  }
-  else if (expr == "SAD" || expr == "SORRY" || expr == "WORRIED") {
-    sendMouthExpression("SAD");
-  }
-  else if (expr == "SURPRISE" || expr == "SHOCK" || expr == "ANGRY") {
-    sendMouthExpression("SURPRISE");
-  }
-  else if (expr == "LISTENING") {
-    sendMouthExpression("LISTEN");
-  }
-  else if (expr == "SPEAKING") {
-    sendMouthExpression("SPEAK");
-  }
-  else {
-    // Default idle
-    sendMouthIdle();
-  }
 }
 
 void updateEmotionEngine() {
@@ -8914,7 +8979,6 @@ void updateEmotionEngine() {
 
 void updateEyes() {
   static unsigned long lastUpdate = 0;
-  static String nextEyeExpression = "";
   static unsigned long lastIdleChange = 0;
 
   // Run Emotion Math
@@ -9924,21 +9988,32 @@ void logMoodToFirebase() {
 // ============================================================
 // Send alert via server (no SSL on ESP32!)
 bool sendTelegramAlert(String msg) {
-  if (!nodeWsConnected) {
-    Serial.println("[Telegram] Server not connected");
-    return false;
-  }
+  if (cloudBotToken.length() < 10) return false;
   
-  StaticJsonDocument<512> doc;
-  doc["type"] = "telegram_alert";
-  doc["message"] = msg;
+  WiFiClientSecure client;
+  client.setInsecure();
+  HTTPClient https;
+  
+  String url = "https://api.telegram.org/bot" + cloudBotToken + "/sendMessage";
+  
+  StaticJsonDocument<1024> doc;
+  doc["chat_id"] = cloudChatId;
+  doc["text"] = msg;
+  doc["parse_mode"] = "Markdown";
   
   String payload;
   serializeJson(doc, payload);
   
-  bool sent = nodeWsSendText(payload.c_str());
-  Serial.printf("[Telegram] Alert sent: %s (Status: %s)\n", msg.substring(0, 50).c_str(), sent ? "OK" : "FAIL");
-  return sent;
+  if (https.begin(client, url)) {
+    https.addHeader("Content-Type", "application/json");
+    int httpCode = https.POST(payload);
+    https.end();
+    
+    bool success = (httpCode == HTTP_CODE_OK);
+    Serial.printf("[Telegram] Direct alert: %s (Status: %d)\n", msg.substring(0, 50).c_str(), httpCode);
+    return success;
+  }
+  return false;
 }
 
 // Handle incoming Telegram commands from server
@@ -9976,17 +10051,98 @@ void handleTelegramCommand(String command) {
     }
   }
   
-  // Send response back to server
-  if (response.length() > 0 && nodeWsConnected) {
+  // Send response back directly to Telegram
+  if (response.length() > 0 && cloudBotToken.length() > 10) {
+    WiFiClientSecure client;
+    client.setInsecure();
+    HTTPClient https;
+    
+    String url = "https://api.telegram.org/bot" + cloudBotToken + "/sendMessage";
+    
     StaticJsonDocument<1024> doc;
-    doc["type"] = "telegram_response";
-    doc["message"] = response;
+    doc["chat_id"] = cloudChatId;
+    doc["text"] = response;
+    doc["parse_mode"] = "Markdown";
     
     String payload;
     serializeJson(doc, payload);
     
-    nodeWsSendText(payload.c_str());
-    Serial.println("[Telegram] Response sent");
+    if (https.begin(client, url)) {
+      https.addHeader("Content-Type", "application/json");
+      https.POST(payload);
+      https.end();
+      Serial.println("[Telegram] Direct response sent");
+    }
+  }
+}
+
+// New background polling function for direct Telegram
+void pollTelegramDirect() {
+  if (cloudBotToken.length() < 10) return;
+  if (isSpeaking || isProcessingAI || !networkAvailable()) return;
+  
+  static unsigned long lastPoll = 0;
+  if (millis() - lastPoll < 5000) return; // Poll every 5s
+  lastPoll = millis();
+  
+  Serial.println("[Telegram] Polling direct API...");
+  
+  WiFiClientSecure client;
+  client.setInsecure();
+  client.setBufferSizes(1024, 512);
+  HTTPClient https;
+  
+  String url = "https://api.telegram.org/bot" + cloudBotToken + "/getUpdates?offset=" + String(lastTelegramUpdateId + 1) + "&limit=5&timeout=0";
+  
+  if (https.begin(client, url)) {
+    int httpCode = https.GET();
+    if (httpCode == HTTP_CODE_OK) {
+      String payload = https.getString();
+      StaticJsonDocument<4096> doc;
+      DeserializationError error = deserializeJson(doc, payload);
+      
+      if (error) {
+        Serial.print("[Telegram] JSON Error: ");
+        Serial.println(error.c_str());
+      } else if (!doc["ok"]) {
+        Serial.print("[Telegram] API Error: ");
+        Serial.println(doc["description"] | "unknown");
+        // If "offset is too old", reset it
+        String desc = doc["description"] | "";
+        if (desc.indexOf("offset") >= 0) lastTelegramUpdateId = 0;
+      } else {
+        JsonArray updates = doc["result"].as<JsonArray>();
+        if (updates.size() > 0) {
+          Serial.printf("[Telegram] Received %d updates\n", updates.size());
+        }
+        for (JsonObject update : updates) {
+          lastTelegramUpdateId = update["update_id"];
+          if (update.containsKey("message")) {
+            String text = update["message"]["text"].as<String>();
+            String chatId = String(update["message"]["chat"]["id"].as<long>());
+            
+            // Auto-capture chat ID if missing
+            if (cloudChatId == "" || cloudChatId == "null" || cloudChatId == "0") {
+              cloudChatId = chatId;
+              Preferences prefs;
+              prefs.begin("ella", false);
+              prefs.putString("chatId", cloudChatId);
+              prefs.end();
+              Serial.println("[Telegram] Auto-captured Chat ID: " + cloudChatId);
+            }
+            
+            if (chatId == cloudChatId) {
+              handleIncomingTelegramCommand(text, chatId);
+            }
+          }
+        }
+      }
+    } else {
+      Serial.printf("[Telegram] Poll failed, HTTP Code: %d\n", httpCode);
+    }
+    https.end();
+  } else {
+    Serial.println("[Telegram] Connection failed");
   }
 }
 
@@ -10069,6 +10225,8 @@ void checkTimeBasedCheckUp() {
   if (autoAvoidEnabled || guardModeEnabled || guardAlarmActive) return;
   if (currentMode != MODE_NORMAL) return;
   if (millis() - lastCheckUpTime < CHECK_UP_INTERVAL) return;
+  if (millis() - lastInteractionTime < CHECK_UP_IDLE_REQUIRED_MS) return;
+  if (audio.isRunning() || isSpeaking || isProcessingAI || isMoving || driveControlActive || turnControlActive) return;
 
   lastCheckUpTime = millis();
   speakText("Hi! Just checking in. How are you feeling today?");
@@ -10230,6 +10388,10 @@ void announceMedicalResults() {
   static bool isAnnouncing = false;
 
   if (isAnnouncing) return;
+  if (medicalResultsAnnounced) {
+    Serial.println("[Med] Announcement already completed for this session.");
+    return;
+  }
   
   // Guard against very rapid calls (e.g. from multiple triggers)
   if (millis() - lastAnnounceMs < 5000) return;
@@ -10301,6 +10463,9 @@ void announceMedicalResults() {
   Serial.println("[Med] Announcing: " + announcement);
   drawNormalScreen(true);
   speakText(announcement.c_str());
+  
+  medicalResultsAnnounced = true;
+  isAnnouncing = false;
 }
 
 
@@ -12982,9 +13147,6 @@ void speakText(const char* text, bool longForm) {
   }
   t.trim();
 
-  // Show text on mouth display
-  sendMouthText(t.c_str());
-
   // Hard cap for AI conversation speech: keep it short enough to avoid TTS skips.
 
   if (t.length() == 0) {
@@ -13058,7 +13220,8 @@ void speakText(const char* text, bool longForm) {
 
 // Helper to clear AI text
 void clearAIResponse() {
-    currentInterimText = ""; 
+    clearStringKeepCapacity(currentInterimText);
+    clearStringKeepCapacity(lastAiResponse);
     // Force redraw if in AI mode to clear text area
     if (currentMode == MODE_AI) {
        drawAIScreen(true); // Force redraw
@@ -13137,7 +13300,7 @@ void stopActiveAudioPlayback(bool scheduleMicRestart) {
     disconnectAssemblyAI(0);
     mic_i2s.end();
     micI2SActive = false;
-    scheduleMicAIReconnect(MIC_RECONNECT_AFTER_TTS_MS, "audio stop");
+    resumeAiMicAfterSpeech("audio stop");
   } else {
     clearMicAIReconnectSchedule();
   }
@@ -13175,6 +13338,7 @@ void audio_eof_speech(const char* info) {
   }
   
   isSpeaking = false;
+  setEyeExpression("NORMAL");
   isProcessingAI = false;
   currentRobotActivity = ROBOT_ACTIVITY_IDLE;
   clearStringKeepCapacity(aiRequestStatus);
@@ -13196,7 +13360,7 @@ void audio_eof_speech(const char* info) {
   
   // SCHEDULE MIC RESTART (short delay to prevent audio loopback)
   if (currentMode == MODE_AI && aiInputUsesMic) {
-      scheduleMicAIReconnect(MIC_RECONNECT_AFTER_TTS_MS, "speech EOF");
+      resumeAiMicAfterSpeech("speech EOF");
   }
   clearTtsChunkQueue();
   clearMovementQueue();
@@ -13219,8 +13383,8 @@ void animateEyesWhileSpeaking() {
     return;
   }
   
-  // FIX: Don't overwrite special emotions (LOVE, DEAD, etc.)
-  if (currentEyeExpression != "NORMAL" && currentEyeExpression != "HAPPY" && currentEyeExpression != "THINKING") {
+  // FIX: Don't overwrite special emotions (LOVE, DEAD, WINK, etc.)
+  if (currentEyeExpression != "NORMAL" && currentEyeExpression != "HAPPY" && currentEyeExpression != "THINKING" && currentEyeExpression != "WINK") {
       return; 
   }
 
@@ -13253,6 +13417,7 @@ void audio_eof_mp3(const char* info) {
   }
 
   isSpeaking = false;
+  setEyeExpression("NORMAL");
   isProcessingAI = false;
   currentRobotActivity = ROBOT_ACTIVITY_IDLE;
   ttsChunkCount = 0;
@@ -13277,7 +13442,7 @@ void audio_eof_mp3(const char* info) {
       }
   }
   if (currentMode == MODE_AI && aiInputUsesMic) {
-      scheduleMicAIReconnect(MIC_RECONNECT_AFTER_TTS_MS, "mp3 EOF");
+      resumeAiMicAfterSpeech("mp3 EOF");
   }
   clearTtsChunkQueue();
   clearMovementQueue();
@@ -13418,6 +13583,7 @@ bool readCleanSerialLine(String& outLine) {
 // ============================================================
 
 void playMusic(String genre) {
+  if (currentMode != MODE_NORMAL) switchToNormalMode(); 
   genre.toLowerCase();
   String normalized = genre;
   normalized.replace("-", "");
@@ -13462,9 +13628,11 @@ void playMusic(String genre) {
   }
 
   isProcessingAI = false;
-  isSpeaking = true;
+  isSpeaking = false;
   lastMusicAction = millis();
+  currentMusicGenre = genre;
   setEyeExpression("HAPPY");
+  drawMusicUI(true);
 
   // WebSocket disconnect removed.
 
@@ -13877,6 +14045,9 @@ void startMeditation(String preset) {
     } else if (preset.indexOf("deep") >= 0 || preset.indexOf("rest") >= 0 || preset.indexOf("sleep") >= 0) {
         currentMeditationType = MED_TYPE_DEEP_REST;
         speakText("Starting a ten minute deep rest session. Get comfortable.");
+    } else if (preset.indexOf("breath") >= 0) {
+        currentMeditationType = MED_TYPE_BREATHING;
+        speakText("Starting breathing exercise. Breathe in... and breathe out.");
     } else {
         // Default to body scan
         currentMeditationType = MED_TYPE_BODY_SCAN;
@@ -14046,8 +14217,15 @@ void checkSleepTracking() {
 // MAIN LOOP MOVED TO BOTTOM FOR SCOPING
 // ============================================================
 void loop() {
-  reconnectMQTT();
-  if (mqtt.connected()) {
+  if (currentMode != MODE_AI) {
+    reconnectMQTT();
+  } else if (mqtt.connected()) {
+    mqtt.disconnect();
+    mqttClientNet->stop();
+    Serial.println("[MQTT] Disconnected during AI mode");
+  }
+
+  if (currentMode != MODE_AI && mqtt.connected()) {
     mqtt.loop();
   }
   if (currentMode == MODE_AI) {
@@ -14058,6 +14236,10 @@ void loop() {
 
   if (otaReady) {
     ArduinoOTA.handle();
+  }
+  
+  if (networkAvailable()) {
+    pollTelegramDirect(); 
   }
 
 
@@ -14263,8 +14445,7 @@ void loop() {
   static bool lastSpeaking = false;
   if (lastSpeaking && !isSpeaking) {
       Serial.println("[AI] Final Safety Clear");
-      currentInterimText = "";
-      if (currentMode == MODE_AI) drawAIScreen(true);
+      clearAIResponse();
       
       // Reconnect to Node server if disconnected during speech
       if (USE_NODE_SERVER && !nodeWsConnected && !nodeWsConnecting && aiInputUsesMic) {
@@ -14490,6 +14671,7 @@ void loop() {
         if (elapsed > 5000) {
            if (irValue > 50000) {
              currentMedState = MED_MEASURING;
+             medicalResultsAnnounced = false; 
              medStateTimer = millis();
              Serial.println("[Med] Starting measurement...");
              drawNormalScreen(true); // Redraw for Measuring UI
@@ -14554,7 +14736,13 @@ void loop() {
   static unsigned long lastDisplayUpdate = 0;
   unsigned long displayInterval = (currentMode == MODE_AI) ? 800 : 500;
   if (millis() - lastDisplayUpdate > displayInterval) {
-    if (currentMode == MODE_NORMAL) drawNormalScreen(false);
+    if (currentMode == MODE_NORMAL) {
+        if (audio.isRunning() && !isSpeaking && !isProcessingAI) {
+            drawMusicUI(false);
+        } else {
+            drawNormalScreen(false);
+        }
+    }
     else drawAIScreen(false);
     lastDisplayUpdate = millis();
   }

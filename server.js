@@ -302,14 +302,17 @@ app.get(["/audio/:id", "/audio/:id.mp3"], (req, res) => {
 });
 
 const stripActionTags = (text) => text.replace(/\[[^\]]*\]/g, " ").replace(/\s+/g, " ").trim();
-const normalizeTtsText = (text) => text
-    .replace(/[“”]/g, '"')
-    .replace(/[‘’]/g, "'")
-    .replace(/[–—‑]/g, "-")
-    .replace(/…/g, "...")
-    .replace(/[^\x20-\x7E]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+const normalizeTtsText = (text) => {
+    if (!text) return "";
+    return text
+        .replace(/[“”]/g, '"')
+        .replace(/[‘’]/g, "'")
+        .replace(/[–—‑]/g, "-")
+        .replace(/…/g, "...")
+        .replace(/[^\x20-\x7E]/g, " ") // Strip non-ASCII
+        .replace(/\s+/g, " ")
+        .trim();
+};
 
 const RESPONSE_EMOTION_TAGS = new Set([
     "[HAPPY]", "[SAD]", "[WORRIED]", "[THINKING]", "[LOVE]", "[WINK]",
@@ -360,11 +363,6 @@ const cleanAssistantResponse = (text) => {
     return `${firstEmotion} ${body} ${actionTags.join(" ")}`.replace(/\s+/g, " ").trim();
 };
 
-const normalizeTtsText = (text) => {
-    if (!text) return "";
-    // Strip all non-ASCII characters to prevent garbled display on ESP32
-    return text.replace(/[^\x00-\x7F]/g, "");
-};
 
 const shortenForGoogleTts = (text, maxChars = 150) => {
     const clean = normalizeTtsText(stripActionTags(text));
@@ -1540,7 +1538,7 @@ wss.on('connection', (ws, request) => {
             } else if (data.type === "telegram_alert") {
                 // Telegram relay disabled (now uses direct ESP32 path)
             } else if (data.type === "telegram_init") {
-                // Telegram init disabled (now uses direct ESP32 path)
+                // Telegram relay disabled (now uses direct ESP32 path)
             }
         } catch (e) {
             console.warn("[Server] Failed to parse text message:", e.message);
