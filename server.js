@@ -110,6 +110,7 @@ const initTelegramBot = (token) => {
                 const cmd = { type: 'telegram_command', command: 'status' };
                 firebaseSet('/commands/telegram', cmd);
                 console.log('[Telegram] Relayed /status command to Firebase');
+                telegramBot.sendMessage(chatId, "⏳ *Fetching Ella's status...*", { parse_mode: 'Markdown' });
                 
                 if (esp32Connection && esp32Connection.readyState === WebSocket.OPEN) {
                     esp32Connection.send(JSON.stringify(cmd));
@@ -118,6 +119,7 @@ const initTelegramBot = (token) => {
                 const cmd = { type: 'telegram_command', command: 'health' };
                 firebaseSet('/commands/telegram', cmd);
                 console.log('[Telegram] Relayed /health command to Firebase');
+                telegramBot.sendMessage(chatId, "⏳ *Fetching health vitals...*", { parse_mode: 'Markdown' });
                 
                 if (esp32Connection && esp32Connection.readyState === WebSocket.OPEN) {
                     esp32Connection.send(JSON.stringify(cmd));
