@@ -1,7 +1,7 @@
 const WebSocket = require('ws');
 const express = require('express');
 const http = require('http');
-const fetch = (...args) => import('node-fetch').then(({default: f}) => f(...args));
+const fetch = (...args) => import('node-fetch').then(({ default: f }) => f(...args));
 const TelegramBot = require('node-telegram-bot-api');
 
 const app = express();
@@ -22,31 +22,31 @@ const initTelegramBot = (token) => {
             console.log('[Telegram] Stopping existing bot polling...');
             telegramBot.stopPolling();
         }
-        
+
         TELEGRAM_BOT_TOKEN = token;
         telegramBot = new TelegramBot(token, { polling: true });
         console.log('[Telegram] Bot initialized successfully');
-        
+
         // Handle incoming Telegram commands
         telegramBot.on('message', async (msg) => {
             const chatId = msg.chat.id.toString();
             const text = msg.text || '';
-            
+
             console.log(`[Telegram] Message from ${chatId}: ${text}`);
-            
+
             // Auto-capture chat ID if not set
             if (!TELEGRAM_CHAT_ID || TELEGRAM_CHAT_ID === 'null') {
                 TELEGRAM_CHAT_ID = chatId;
                 process.env.TELEGRAM_CHAT_ID = chatId;
                 console.log(`[Telegram] Auto-captured Chat ID: ${chatId}`);
             }
-            
+
             // Only respond to authorized chat
             if (TELEGRAM_CHAT_ID && chatId !== TELEGRAM_CHAT_ID) {
                 console.log(`[Telegram] Unauthorized chat: ${chatId}`);
                 return;
             }
-            
+
             // Handle commands
             if (text === '/status' || text === '/start') {
                 if (esp32Connection && esp32Connection.readyState === WebSocket.OPEN) {
@@ -71,11 +71,11 @@ const initTelegramBot = (token) => {
                 telegramBot.sendMessage(chatId, '❓ Unknown command. Type /help for available commands.');
             }
         });
-        
+
         telegramBot.on('polling_error', (error) => {
             console.error('[Telegram] Polling error:', error.message);
         });
-        
+
     } catch (error) {
         console.error('[Telegram] Failed to initialize bot:', error.message);
     }
@@ -96,7 +96,7 @@ const sendTelegramMessage = async (message, parseMode = 'HTML') => {
         console.log('[Telegram] Bot not configured, message not sent');
         return false;
     }
-    
+
     try {
         await telegramBot.sendMessage(TELEGRAM_CHAT_ID, message, { parse_mode: parseMode });
         console.log(`[Telegram] Message sent: ${message.substring(0, 50)}...`);
@@ -118,7 +118,7 @@ const TTS_PROVIDER = "google"; // FORCE GOOGLE AS REQUESTED
 const DEEPGRAM_TTS_MODEL = process.env.DEEPGRAM_TTS_MODEL || "aura-2-thalia-en";
 const DEEPGRAM_STT_MODEL = process.env.DEEPGRAM_STT_MODEL || "flux-general-en";
 const DEEPGRAM_STT_LANGUAGE = process.env.DEEPGRAM_STT_LANGUAGE || "en-US";
-const STT_PROVIDER = (process.env.STT_PROVIDER || "deepgram").trim().toLowerCase(); 
+const STT_PROVIDER = (process.env.STT_PROVIDER || "deepgram").trim().toLowerCase();
 const DEEPGRAM_ENDPOINTING_MS = Number(process.env.DEEPGRAM_ENDPOINTING_MS || 300);
 const DEEPGRAM_UTTERANCE_END_MS = Number(process.env.DEEPGRAM_UTTERANCE_END_MS || 1000);
 const DEEPGRAM_KEEPALIVE_MS = Number(process.env.DEEPGRAM_KEEPALIVE_MS || 4000);
@@ -152,8 +152,8 @@ const ELLA_PERSONA = process.env.ELLA_PERSONA || [
     "Start every reply with exactly one emotion tag from: [HAPPY] [SAD] [WORRIED] [THINKING] [LOVE] [WINK] [EXCITED] [FRUSTRATED] [ANGRY] [SUSPICIOUS] [NORMAL]",
     "Any action or tool tags must be at the very end of the reply. Do not invent new tags.",
     "When the user asks to 'Go back to home screen' or 'Go home', always use [GOHOME].",
-    "Supported useful tags include [MOVE: FWD|BWD|LEFT|RIGHT|STOP|PAUSE], [PLAYSONG: afrobeats|jazz|classical|hip hop|pop|lofi], [RADIO: URL], [SCAN], [EXPLORE], [DANCE], [BREATHE], [MEDITATE: calm|breathing|body scan|deep rest], [RELAX: rain|ocean|forest], [CHECKUP], [SLEEP], [WAKEUP], [GOHOME], [STOPAUDIO], [IMURESET], [CALIBRATE_IMU], [EMERGENCY], [FORGET], [REMINDER: Title | Time | alarm|chat|notification], [SEARCH: query].",
-    "CRITICAL: If you are asked about news, facts, prices, or anything you do not know, ALWAYS use the [SEARCH: query] tag to find the answer. You can also play radio stations using [RADIO: URL] if the user asks for news or music streams (e.g., CSPAN: https://playerservices.streamtheworld.com/api/livestream-redirect/CSPANRADIOAAC.aac).",
+    "Supported useful tags include [MOVE: FWD|BWD|LEFT|RIGHT|STOP|PAUSE], [PLAYSONG: afrobeats|jazz|classical|hip hop|pop|lofi], [SCAN], [EXPLORE], [DANCE], [BREATHE], [MEDITATE: calm|breathing|body scan|deep rest], [RELAX: rain|ocean|forest], [CHECKUP], [SLEEP], [WAKEUP], [GOHOME], [STOPAUDIO], [IMURESET], [CALIBRATE_IMU], [EMERGENCY], [FORGET], [REMINDER: Title | Time | alarm|chat|notification], [SEARCH: query].",
+    "CRITICAL: If you are asked about news, facts, prices, or anything you do not know, ALWAYS use the [SEARCH: query] tag to find the answer. You are a highly intelligent medical and general assistant.",
     "NEVER use [PLAYSONG], [PLAY], [MOVE], [DANCE], or [CHECKUP] unless the user explicitly asks for that specific action. They are NOT filler. Do NOT use them for greetings or casual talk.",
     "When complimented, act vain. When pushed too hard, act overwhelmed. Keep a little friction and personality unless it is an emergency.",
     "Do not overthink. Think briefly and answer directly."
@@ -285,7 +285,7 @@ const synthesizeGoogleSpeech = async (text) => {
 
     const { spawn } = require('child_process');
     const googleUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(cleanText.substring(0, 200))}&tl=en&client=tw-ob`;
-    
+
     console.log(`[Google TTS] Fetching: ${googleUrl}`);
     const response = await fetch(googleUrl);
     if (!response.ok) {
@@ -304,12 +304,12 @@ const synthesizeGoogleSpeech = async (text) => {
 
         let pcmBuffer = Buffer.alloc(0);
         ffmpeg.stdout.on('data', (chunk) => { pcmBuffer = Buffer.concat([pcmBuffer, chunk]); });
-        ffmpeg.stderr.on('data', (data) => { 
-             // Log ffmpeg errors if they occur
-             const msg = data.toString();
-             if (msg.includes("Error") || msg.includes("Failed")) {
-                 console.error(`[ffmpeg Error] ${msg.trim()}`);
-             }
+        ffmpeg.stderr.on('data', (data) => {
+            // Log ffmpeg errors if they occur
+            const msg = data.toString();
+            if (msg.includes("Error") || msg.includes("Failed")) {
+                console.error(`[ffmpeg Error] ${msg.trim()}`);
+            }
         });
         ffmpeg.on('error', (err) => {
             console.error("[ffmpeg Spawn Error]", err);
@@ -415,7 +415,7 @@ const callGroqChat = async ({ userText, latestContext, memory }) => {
 wss.on('connection', (ws, request) => {
     console.log('ESP32 Connected!');
     esp32Connection = ws; // Track this connection for Telegram commands
-    
+
     let deepgramLive = null;
     let transcriptBuffer = "";
     let isThinking = false;
@@ -425,7 +425,7 @@ wss.on('connection', (ws, request) => {
     let finalizationReason = "";
     let latestContext = "";
     let esp32HeartbeatInterval = null;
-    let conversationId = null; 
+    let conversationId = null;
     let lastAppendedFinalTranscript = "";
     let lastSentInterim = "";
     let bestHeardTranscript = "";
@@ -530,11 +530,11 @@ wss.on('connection', (ws, request) => {
         // For AssemblyAI: buffer to minimum chunk size
         if (STT_PROVIDER === "assemblyai") {
             aaiAudioBuffer = Buffer.concat([aaiAudioBuffer, chunk]);
-            
+
             while (aaiAudioBuffer.length >= AAI_MIN_CHUNK_SIZE) {
                 const toSend = aaiAudioBuffer.subarray(0, AAI_MIN_CHUNK_SIZE);
                 aaiAudioBuffer = aaiAudioBuffer.subarray(AAI_MIN_CHUNK_SIZE);
-                
+
                 if (deepgramLive && deepgramOpen && deepgramLive.readyState === WebSocket.OPEN) {
                     deepgramLive.send(toSend);
                 } else {
@@ -570,7 +570,7 @@ wss.on('connection', (ws, request) => {
             console.error("[Tavily] API KEY MISSING");
             return "Search failed: Tavily API key not configured.";
         }
-        
+
         try {
             console.log(`[Tavily] Searching: ${query}`);
             const isNews = /news|latest|today|current|breaking/i.test(query);
@@ -586,15 +586,15 @@ wss.on('connection', (ws, request) => {
                     include_answer: true
                 })
             });
-            
+
             const data = await res.json();
             if (!res.ok) throw new Error(data.detail || res.statusText);
-            
+
             let result = data.answer || "";
             if (data.results && data.results.length > 0) {
                 if (result) result += "\n\nSources:\n";
                 data.results.forEach((r, i) => {
-                    result += `${i+1}. ${r.title}: ${r.content.substring(0, 200)}... (${r.url})\n`;
+                    result += `${i + 1}. ${r.title}: ${r.content.substring(0, 200)}... (${r.url})\n`;
                 });
             }
             return result || "No results found.";
@@ -925,13 +925,13 @@ wss.on('connection', (ws, request) => {
                 if (searchMatch && searchMatch[1]) {
                     const query = searchMatch[1].trim();
                     console.log(`[AI] Triggered Search: ${query}`);
-                    
+
                     const searchResults = await callTavilySearch(query);
                     console.log("[AI] Search results fetched, re-synthesizing...");
-                    
+
                     // Second turn: synthesize search results
                     const followUpPrompt = `The user asked: "${text}"\n\nWeb Search Results:\n${searchResults}\n\nSynthesize a helpful, conversational reply as ELLA based on these results. Keep it concise (1-3 sentences). Use your ELLA persona.`;
-                    
+
                     try {
                         if (AI_PROVIDER === "mistral") {
                             fullResponse = await callMistralAgent(followUpPrompt);
@@ -957,8 +957,8 @@ wss.on('connection', (ws, request) => {
                 console.log(`[TTS] ESP speak text shortened: "${espTtsText}"`);
             }
             const googleUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(stripActionTags(espTtsText).substring(0, 200))}&tl=en&client=tw-ob`;
-            ws.send(JSON.stringify({ 
-                type: "tts", 
+            ws.send(JSON.stringify({
+                type: "tts",
                 text: espTtsText,
                 display_text: fullResponse,
                 url: googleUrl
@@ -1044,7 +1044,7 @@ wss.on('connection', (ws, request) => {
         }
 
         const dgUrl = `wss://api.deepgram.com/${dgVersion}/listen?${dgParams.toString()}`;
-        
+
         if (!DEEPGRAM_API_KEY) {
             console.error("[Deepgram] API KEY MISSING");
             return;
@@ -1191,7 +1191,7 @@ wss.on('connection', (ws, request) => {
                 console.error(`[Deepgram] Handshake rejected: ${response.statusCode} ${response.statusMessage || ""} ${body.substring(0, 500)}`.trim());
             });
         });
-        
+
         deepgramLive.on('close', (code, reason) => {
             if (socketId !== deepgramSocketId) return;
             deepgramOpen = false;
@@ -1308,24 +1308,24 @@ wss.on('connection', (ws, request) => {
         deepgramLive.on('message', (data) => {
             try {
                 const msg = JSON.parse(data.toString());
-                
+
                 // Handle session start
                 if (msg.type === "Begin") {
                     console.log(`[AssemblyAI] Session Started: ${msg.id}`);
                     return;
                 }
-                
+
                 // Handle errors
                 if (msg.type === "Error") {
                     console.error("[AssemblyAI] Error:", JSON.stringify(msg, null, 2));
                     return;
                 }
-                
+
                 // Handle v3 streaming format (turn_order field present)
                 if (msg.turn_order !== undefined) {
                     const transcript = (msg.transcript || "").trim();
                     const isEndOfTurn = msg.end_of_turn === true;
-                    
+
                     if (transcript.length > 0) {
                         if (isEndOfTurn) {
                             console.log(`[STT] EndOfTurn: "${transcript}"`);
@@ -1356,7 +1356,7 @@ wss.on('connection', (ws, request) => {
         deepgramLive.on('close', (code, reason) => {
             deepgramOpen = false;
             console.log(`[AssemblyAI] Closed (${code}): ${reason || "No reason given"}`);
-            
+
             // Only reconnect if ESP32 is still connected and not a fatal error
             if (ws.readyState === WebSocket.OPEN && code !== 1008) {
                 console.log("[AssemblyAI] Reconnecting in 2s...");
