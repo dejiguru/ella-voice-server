@@ -27,8 +27,8 @@ mqttClient.on('error', (err) => {
 });
 
 // Telegram Bot Configuration
-let TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-let TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
+let TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8328121908:AAFY_6cC9xk41xoo1vML62rPsN7CiDGtOZY';
+let TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID || '7039195212';
 let telegramBot = null;
 let esp32Connection = null; // Track active ESP32 connection
 let pendingTelegramCommands = []; // Queue for REST polling fallback
