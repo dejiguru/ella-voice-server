@@ -82,11 +82,11 @@ const initTelegramBot = (token) => {
 };
 
 // Initial boot initialization
-if (TELEGRAM_BOT_TOKEN) {
-    initTelegramBot(TELEGRAM_BOT_TOKEN);
-} else {
-    console.log('[Telegram] Bot token not configured - Waiting for dynamic init from app');
-}
+// if (TELEGRAM_BOT_TOKEN) {
+//     initTelegramBot(TELEGRAM_BOT_TOKEN);
+// } else {
+//     console.log('[Telegram] Bot token not configured - Waiting for dynamic init from app');
+// }
 
 // (Listeners now attached inside initTelegramBot)
 
@@ -358,6 +358,12 @@ const cleanAssistantResponse = (text) => {
 
     const body = dedupeRepeatedSentences(stripActionTags(raw));
     return `${firstEmotion} ${body} ${actionTags.join(" ")}`.replace(/\s+/g, " ").trim();
+};
+
+const normalizeTtsText = (text) => {
+    if (!text) return "";
+    // Strip all non-ASCII characters to prevent garbled display on ESP32
+    return text.replace(/[^\x00-\x7F]/g, "");
 };
 
 const shortenForGoogleTts = (text, maxChars = 150) => {
@@ -1041,6 +1047,10 @@ wss.on('connection', (ws, request) => {
             fullResponse = cleanAssistantResponse(fullResponse);
 
             rememberTurn(text, fullResponse);
+            
+            // ASCII Hardening: Ensure no non-ASCII characters reach the robot screen or voice
+            fullResponse = normalizeTtsText(fullResponse);
+            
             console.log(`[AI] Reply: ${fullResponse}`);
 
             // INTERCEPT SEARCH TAG
@@ -1089,8 +1099,13 @@ wss.on('connection', (ws, request) => {
             }));
 
             // Forward to Telegram so user has the chat history
-            if (telegramBot && TELEGRAM_CHAT_ID) {
-                sendTelegramMessage(fullResponse);
+            // Only send if NOT in AI mode to avoid notification clutter
+            if (currentRobotMode !== "AI") {
+                if (telegramBot && TELEGRAM_CHAT_ID) {
+                    sendTelegramMessage(fullResponse);
+                }
+            } else {
+                console.log("[Telegram] Skipping AI response forwarding (Robot is in AI Mode)");
             }
 
             // Buffer before ending turn to ensure ESP32 starts playback
@@ -1521,28 +1536,11 @@ wss.on('connection', (ws, request) => {
                 else if (data.text.includes("Mode: NORMAL")) currentRobotMode = "NORMAL";
                 console.log(`[Context Update] Mode: ${currentRobotMode}`);
             } else if (data.type === "telegram_response") {
-                // ESP32 sent sensor data in response to Telegram command
-                if (currentRobotMode === "NORMAL" && telegramBot && TELEGRAM_CHAT_ID) {
-                    sendTelegramMessage(data.message);
-                }
+                // Telegram relay disabled (now uses direct ESP32 path)
             } else if (data.type === "telegram_alert") {
-                // ESP32 wants to send an alert via Telegram
-                if (telegramBot && TELEGRAM_CHAT_ID) {
-                    sendTelegramMessage(data.message);
-                }
+                // Telegram relay disabled (now uses direct ESP32 path)
             } else if (data.type === "telegram_init") {
-                // ESP32 app sent credentials for the bot
-                const token = data.botToken;
-                const chatId = data.chatId;
-                if (token && token !== TELEGRAM_BOT_TOKEN) {
-                    console.log(`[Telegram] Received dynamic token from app: ${token.substring(0, 5)}...`);
-                    initTelegramBot(token);
-                }
-                if (chatId && chatId !== TELEGRAM_CHAT_ID) {
-                    console.log(`[Telegram] Received dynamic chat ID from app: ${chatId}`);
-                    TELEGRAM_CHAT_ID = chatId;
-                    process.env.TELEGRAM_CHAT_ID = chatId;
-                }
+                // Telegram init disabled (now uses direct ESP32 path)
             }
         } catch (e) {
             console.warn("[Server] Failed to parse text message:", e.message);
