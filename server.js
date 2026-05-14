@@ -13,6 +13,26 @@ let TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 let TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 let telegramBot = null;
 let esp32Connection = null; // Track active ESP32 connection
+let pendingTelegramCommands = []; // Queue for REST polling fallback
+
+// REST Endpoints for ESP32 fallback (HTTPS instead of WebSocket)
+app.use(express.json());
+
+app.get('/api/telegram/poll', (req, res) => {
+    res.json({ commands: pendingTelegramCommands });
+    pendingTelegramCommands = []; // Clear after delivery
+});
+
+app.post('/api/telegram/relay', (req, res) => {
+    const { text, type } = req.body;
+    console.log(`[REST] Received ${type || 'message'} for relay: ${text?.substring(0, 50)}`);
+    if (text) {
+        sendTelegramMessage(text);
+        res.status(200).json({ success: true });
+    } else {
+        res.status(400).json({ error: "Missing text" });
+    }
+});
 
 // Function to initialize or re-initialize the Telegram bot
 const initTelegramBot = (token) => {
@@ -49,16 +69,20 @@ const initTelegramBot = (token) => {
 
             // Handle commands
             if (text === '/status' || text === '/start') {
+                const cmd = { type: 'telegram_command', command: 'status' };
+                pendingTelegramCommands.push(cmd);
+                if (pendingTelegramCommands.length > 5) pendingTelegramCommands.shift(); // Keep queue small
+
                 if (esp32Connection && esp32Connection.readyState === WebSocket.OPEN) {
-                    esp32Connection.send(JSON.stringify({ type: 'telegram_command', command: 'status' }));
-                } else {
-                    telegramBot.sendMessage(chatId, '❌ ELLA is offline');
+                    esp32Connection.send(JSON.stringify(cmd));
                 }
             } else if (text === '/health') {
+                const cmd = { type: 'telegram_command', command: 'health' };
+                pendingTelegramCommands.push(cmd);
+                if (pendingTelegramCommands.length > 5) pendingTelegramCommands.shift();
+
                 if (esp32Connection && esp32Connection.readyState === WebSocket.OPEN) {
-                    esp32Connection.send(JSON.stringify({ type: 'telegram_command', command: 'health' }));
-                } else {
-                    telegramBot.sendMessage(chatId, '❌ ELLA is offline');
+                    esp32Connection.send(JSON.stringify(cmd));
                 }
             } else if (text === '/help') {
                 const helpText = `📱 <b>ELLA Bot Commands</b>\n\n` +
@@ -738,60 +762,50 @@ wss.on('connection', (ws, request) => {
     };
 
     const callMistralAgent = async (userInput) => {
-        const body = {
-            inputs: [{ role: 'user', content: userInput }]
-        };
-        let mistralUrl = 'https://api.mistral.ai/v1/conversations';
+        try {
+            console.log("[Mistral] Calling Agent:", MISTRAL_AGENT_ID);
+            const messages = [
+                { role: "system", content: Array.isArray(ELLA_PERSONA) ? ELLA_PERSONA.join("\n") : ELLA_PERSONA }
+            ];
 
-        if (conversationId) {
-            mistralUrl = `${mistralUrl}/${encodeURIComponent(conversationId)}`;
-        } else {
-            body.agent_id = MISTRAL_AGENT_ID;
-            body.agent_version = MISTRAL_AGENT_VERSION;
-        }
-
-        const res = await fetch(mistralUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${MISTRAL_API_KEY}`
-            },
-            body: JSON.stringify(body)
-        });
-
-        const responseData = await res.json();
-        console.log("[Mistral RAW]", JSON.stringify(responseData).substring(0, 500));
-
-        if (!res.ok) {
-            const detail = responseData.detail || responseData.message || responseData.error || res.statusText;
-            throw new Error(`Mistral API ${res.status}: ${JSON.stringify(detail).substring(0, 500)}`);
-        }
-
-        if (responseData.conversation_id || responseData.id) {
-            conversationId = responseData.conversation_id || responseData.id;
-            console.log(`[Mistral] Conversation: ${conversationId}`);
-        }
-
-        let fullResponse = "";
-        const outputs = responseData.outputs || responseData.choices || [];
-
-        for (const output of outputs) {
-            const content = output.content || output.message?.content || "";
-            if (Array.isArray(content)) {
-                for (const part of content) {
-                    if (part.type === "text") fullResponse += part.text;
-                }
-            } else if (typeof content === "string") {
-                fullResponse += content;
+            if (latestContext) {
+                messages.push({ role: "system", content: `[SYSTEM CONTEXT]\n${latestContext}` });
             }
-        }
 
-        if (!fullResponse) {
-            if (responseData.message?.content) fullResponse = responseData.message.content;
-            else if (typeof responseData.message === "string") fullResponse = responseData.message;
-        }
+            for (const turn of conversationMemory) {
+                messages.push({ role: "user", content: turn.user });
+                messages.push({ role: "assistant", content: turn.assistant });
+            }
 
-        return stripThinkingBlocks(fullResponse);
+            messages.push({ role: "user", content: userInput });
+
+            const res = await fetch("https://api.mistral.ai/v1/agents/completions", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${MISTRAL_API_KEY}`
+                },
+                body: JSON.stringify({
+                    agent_id: MISTRAL_AGENT_ID,
+                    messages: messages
+                })
+            });
+
+            const responseData = await res.json();
+            
+            if (!res.ok) {
+                const detail = responseData.error?.message || responseData.message || res.statusText;
+                console.error("[Mistral] API Error:", detail);
+                throw new Error(`Mistral API ${res.status}: ${detail}`);
+            }
+
+            console.log("[Mistral] Success");
+            const fullResponse = responseData.choices?.[0]?.message?.content || "";
+            return stripThinkingBlocks(fullResponse);
+        } catch (err) {
+            console.error("[Mistral] Fallback Failed:", err.message);
+            return "My brain is a bit scrambled right now. Try again in a minute!";
+        }
     };
 
     const resetSilenceTimer = () => {
@@ -1543,10 +1557,14 @@ wss.on('connection', (ws, request) => {
                 }
                 console.log(`[Context Update] Mode Detected: ${currentRobotMode}`);
                 console.log(`[Context Update] Mode: ${currentRobotMode}`);
-            } else if (data.type === "telegram_response") {
-                // Telegram relay disabled (now uses direct ESP32 path)
-            } else if (data.type === "telegram_alert") {
-                // Telegram relay disabled (now uses direct ESP32 path)
+            } else if (data.type === "telegram_response" || data.type === "telegram_alert") {
+                const isAlert = data.type === "telegram_alert";
+                console.log(`[Telegram] Relaying ${isAlert ? "alert" : "response"} to user...`);
+                if (telegramBot && TELEGRAM_CHAT_ID) {
+                    sendTelegramMessage(data.text);
+                } else {
+                    console.warn("[Telegram] Bot not configured, relay failed");
+                }
             } else if (data.type === "telegram_init") {
                 // Telegram relay disabled (now uses direct ESP32 path)
             }
