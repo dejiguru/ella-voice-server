@@ -3,10 +3,28 @@ const express = require('express');
 const http = require('http');
 const fetch = (...args) => import('node-fetch').then(({ default: f }) => f(...args));
 const TelegramBot = require('node-telegram-bot-api');
+const mqtt = require('mqtt');
 
 const app = express();
+app.use(express.json()); // Essential for Webhooks!
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
+
+// MQTT Configuration (HiveMQ Cloud)
+const MQTT_URL = `mqtts://29a395ae67d44ef5a9803532efe719ce.s1.eu.hivemq.cloud:8883`;
+const mqttClient = mqtt.connect(MQTT_URL, {
+    username: 'ellarobot',
+    password: 'Ella1234',
+    rejectUnauthorized: false // Skip CA verification for simplicity
+});
+
+mqttClient.on('connect', () => {
+    console.log('[MQTT] Connected to HiveMQ Cloud');
+});
+
+mqttClient.on('error', (err) => {
+    console.error('[MQTT] Connection error:', err.message);
+});
 
 // Telegram Bot Configuration
 let TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
@@ -44,10 +62,25 @@ const initTelegramBot = (token) => {
         }
 
         TELEGRAM_BOT_TOKEN = token;
-        telegramBot = new TelegramBot(token, { polling: true });
-        console.log('[Telegram] Bot initialized successfully');
+        // Use Webhook instead of polling to save Render hours
+        telegramBot = new TelegramBot(token);
+        
+        const RENDER_URL = process.env.RENDER_EXTERNAL_URL || 'https://ella-voice-server.onrender.com';
+        const WEBHOOK_URL = `${RENDER_URL}/api/telegram/webhook`;
+        
+        telegramBot.setWebHook(WEBHOOK_URL).then(() => {
+            console.log(`[Telegram] Webhook set to: ${WEBHOOK_URL}`);
+        });
 
-        // Handle incoming Telegram commands
+        console.log('[Telegram] Bot initialized in Webhook mode');
+
+        // Handle Webhook POSTs from Telegram
+        app.post('/api/telegram/webhook', (req, res) => {
+            telegramBot.processUpdate(req.body);
+            res.sendStatus(200);
+        });
+
+        // Handle incoming Telegram commands (Relay to MQTT)
         telegramBot.on('message', async (msg) => {
             const chatId = msg.chat.id.toString();
             const text = msg.text || '';
@@ -67,20 +100,20 @@ const initTelegramBot = (token) => {
                 return;
             }
 
-            // Handle commands
+            // Handle commands (Relay to MQTT for instant robot response)
             if (text === '/status' || text === '/start') {
                 const cmd = { type: 'telegram_command', command: 'status' };
-                pendingTelegramCommands.push(cmd);
-                if (pendingTelegramCommands.length > 5) pendingTelegramCommands.shift(); // Keep queue small
-
+                mqttClient.publish('ella/commands/telegram', JSON.stringify(cmd));
+                console.log('[Telegram] Relayed /status command to MQTT');
+                
                 if (esp32Connection && esp32Connection.readyState === WebSocket.OPEN) {
                     esp32Connection.send(JSON.stringify(cmd));
                 }
             } else if (text === '/health') {
                 const cmd = { type: 'telegram_command', command: 'health' };
-                pendingTelegramCommands.push(cmd);
-                if (pendingTelegramCommands.length > 5) pendingTelegramCommands.shift();
-
+                mqttClient.publish('ella/commands/telegram', JSON.stringify(cmd));
+                console.log('[Telegram] Relayed /health command to MQTT');
+                
                 if (esp32Connection && esp32Connection.readyState === WebSocket.OPEN) {
                     esp32Connection.send(JSON.stringify(cmd));
                 }
