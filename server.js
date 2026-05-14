@@ -3,28 +3,34 @@ const express = require('express');
 const http = require('http');
 const fetch = (...args) => import('node-fetch').then(({ default: f }) => f(...args));
 const TelegramBot = require('node-telegram-bot-api');
-const mqtt = require('mqtt');
 
 const app = express();
 app.use(express.json()); // Essential for Webhooks!
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-// MQTT Configuration (HiveMQ Cloud)
-const MQTT_URL = `mqtts://29a395ae67d44ef5a9803532efe719ce.s1.eu.hivemq.cloud:8883`;
-const mqttClient = mqtt.connect(MQTT_URL, {
-    username: 'ellarobot',
-    password: 'Ella1234',
-    rejectUnauthorized: false // Skip CA verification for simplicity
-});
+// Firebase RTDB Configuration (REST API — no extra SDK needed)
+const FIREBASE_DB_URL = 'https://ellacloudai-default-rtdb.firebaseio.com';
+const FIREBASE_DB_SECRET = process.env.FIREBASE_DB_SECRET || 'Aj3Sw5IWZfFvDkh1Qb2Jx1QVA3BGG8HXGjlZIIbW';
 
-mqttClient.on('connect', () => {
-    console.log('[MQTT] Connected to HiveMQ Cloud');
-});
+// Simple Firebase REST helper
+const firebaseSet = async (path, data) => {
+    try {
+        const url = `${FIREBASE_DB_URL}${path}.json?auth=${FIREBASE_DB_SECRET}`;
+        const res = await fetch(url, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        if (!res.ok) console.error(`[Firebase] Write failed: ${path} — ${res.status}`);
+        return res.ok;
+    } catch (err) {
+        console.error(`[Firebase] Write error: ${path} —`, err.message);
+        return false;
+    }
+};
 
-mqttClient.on('error', (err) => {
-    console.error('[MQTT] Connection error:', err.message);
-});
+console.log('[Firebase] REST API ready for:', FIREBASE_DB_URL);
 
 // Telegram Bot Configuration
 let TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8328121908:AAFY_6cC9xk41xoo1vML62rPsN7CiDGtOZY';
@@ -99,19 +105,19 @@ const initTelegramBot = (token) => {
                 return;
             }
 
-            // Handle commands — relay to ESP32 via MQTT + WebSocket
+            // Handle commands — relay to ESP32 via Firebase + WebSocket
             if (text === '/status' || text === '/start') {
                 const cmd = { type: 'telegram_command', command: 'status' };
-                mqttClient.publish('ella/commands/telegram', JSON.stringify(cmd));
-                console.log('[Telegram] Relayed /status command to MQTT');
+                firebaseSet('/commands/telegram', cmd);
+                console.log('[Telegram] Relayed /status command to Firebase');
                 
                 if (esp32Connection && esp32Connection.readyState === WebSocket.OPEN) {
                     esp32Connection.send(JSON.stringify(cmd));
                 }
             } else if (text === '/health') {
                 const cmd = { type: 'telegram_command', command: 'health' };
-                mqttClient.publish('ella/commands/telegram', JSON.stringify(cmd));
-                console.log('[Telegram] Relayed /health command to MQTT');
+                firebaseSet('/commands/telegram', cmd);
+                console.log('[Telegram] Relayed /health command to Firebase');
                 
                 if (esp32Connection && esp32Connection.readyState === WebSocket.OPEN) {
                     esp32Connection.send(JSON.stringify(cmd));
