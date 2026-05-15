@@ -17,9 +17,19 @@ let telegramBot = null;
 let esp32Connection = null; // Track active ESP32 connection
 
 // Function to initialize or re-initialize the Telegram bot
-const initTelegramBot = (token) => {
+const initTelegramBot = (token, chatId = TELEGRAM_CHAT_ID) => {
     if (!token) return;
     try {
+        const nextChatId = chatId && chatId !== 'null' ? String(chatId) : TELEGRAM_CHAT_ID;
+        if (telegramBot && TELEGRAM_BOT_TOKEN === token && TELEGRAM_CHAT_ID === nextChatId) {
+            return;
+        }
+
+        if (nextChatId) {
+            TELEGRAM_CHAT_ID = nextChatId;
+            process.env.TELEGRAM_CHAT_ID = TELEGRAM_CHAT_ID;
+        }
+
         if (telegramBot) {
             console.log('[Telegram] Stopping existing bot polling...');
             telegramBot.stopPolling();
@@ -84,23 +94,23 @@ const initTelegramBot = (token) => {
 };
 
 // Initial boot initialization
-// if (TELEGRAM_BOT_TOKEN) {
-//     initTelegramBot(TELEGRAM_BOT_TOKEN);
-// } else {
-//     console.log('[Telegram] Bot token not configured - Waiting for dynamic init from app');
-// }
-
-// (Listeners now attached inside initTelegramBot)
+if (TELEGRAM_BOT_TOKEN) {
+    initTelegramBot(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID);
+} else {
+    console.log('[Telegram] Bot token not configured - waiting for dynamic init from ESP/app');
+}
 
 // Helper function to send Telegram messages
-const sendTelegramMessage = async (message, parseMode = 'HTML') => {
-    if (!telegramBot || !TELEGRAM_CHAT_ID) {
+const sendTelegramMessage = async (message, parseMode = null, chatId = TELEGRAM_CHAT_ID) => {
+    const targetChatId = chatId || TELEGRAM_CHAT_ID;
+    if (!telegramBot || !targetChatId) {
         console.log('[Telegram] Bot not configured, message not sent');
         return false;
     }
 
     try {
-        await telegramBot.sendMessage(TELEGRAM_CHAT_ID, message, { parse_mode: parseMode });
+        const options = parseMode ? { parse_mode: parseMode } : {};
+        await telegramBot.sendMessage(targetChatId, message, options);
         console.log(`[Telegram] Message sent: ${message.substring(0, 50)}...`);
         return true;
     } catch (error) {
@@ -1568,11 +1578,11 @@ wss.on('connection', (ws, request) => {
                 else if (data.text.includes("Mode: NORMAL")) currentRobotMode = "NORMAL";
                 console.log(`[Context Update] Mode: ${currentRobotMode}`);
             } else if (data.type === "telegram_response") {
-                // Telegram relay disabled (now uses direct ESP32 path)
+                if (data.text) sendTelegramMessage(data.text, 'Markdown', data.chatId);
             } else if (data.type === "telegram_alert") {
-                // Telegram relay disabled (now uses direct ESP32 path)
+                if (data.text) sendTelegramMessage(data.text, null, data.chatId);
             } else if (data.type === "telegram_init") {
-                // Telegram relay disabled (now uses direct ESP32 path)
+                if (data.botToken) initTelegramBot(data.botToken, data.chatId);
             }
         } catch (e) {
             console.warn("[Server] Failed to parse text message:", e.message);
