@@ -145,23 +145,63 @@ const bool USE_LLM_WEBSOCKET = false; // Disabling LLM WebSocket per user reques
 const char* OPENAI_REALTIME_MODEL = "gpt-4o-mini-realtime-preview";
 
 FirebaseData fbdo;
-FirebaseData fbdoCmd;  // Dedicated object for command polling
-FirebaseData fbdoFocus;  // Dedicated object for focus mode polling
-FirebaseData fbdoStatus;  // Dedicated object for robot assist / ToF status
+FirebaseData fbdoCmd;  
+FirebaseData fbdoFocus;  
+FirebaseData fbdoStatus;  
 FirebaseAuth auth;
 FirebaseConfig config;
 
-// ── MQTT Client (PubSubClient) ──────────────────────────────────────
+#if 0
+// Dummy types to fix compilation errors while Firebase is disabled
+struct TokenInfo {};
+struct FirebaseJsonData {
+    bool success = false;
+    template<typename T> T to() { return T(); }
+};
+struct FirebaseJson {
+    void set(const char* key, String value) {}
+    void set(const char* key, int value) {}
+    void set(const char* key, float value) {}
+    void get(FirebaseJsonData& data, const char* key) { data.success = false; }
+};
+struct FirebaseAuth {};
+struct FirebaseConfig {};
+struct FirebaseData {
+    FirebaseJson* jsonObjectPtr() { return nullptr; }
+};
+typedef int TokenError;
+
+struct DummyRTDB {
+    template<typename... Args> bool pushJSONAsync(Args...) { return false; }
+    template<typename... Args> bool setString(Args...) { return false; }
+    template<typename... Args> bool setInt(Args...) { return false; }
+    template<typename... Args> bool setFloat(Args...) { return false; }
+    template<typename... Args> bool deleteNode(Args...) { return false; }
+    template<typename... Args> bool setJSONAsync(Args...) { return false; }
+    template<typename... Args> bool getBool(Args...) { return false; }
+    template<typename... Args> bool getJSON(Args...) { return false; }
+    template<typename... Args> bool setBool(Args...) { return false; }
+};
+
+struct DummyFirebase {
+    DummyRTDB RTDB;
+    bool ready() { return false; }
+} Firebase;
+
+FirebaseData fbdo, fbdoCmd, fbdoFocus, fbdoStatus;
+FirebaseAuth auth;
+FirebaseConfig config;
+#endif
+
 #include <PubSubClient.h>
-WiFiClientSecure* mqttClientNet = new WiFiClientSecure();
+WiFiClientSecure* mqttClientNet = new WiFiClientSecure;
 PubSubClient mqtt(*mqttClientNet);
-unsigned long lastMqttRetryMs = 0;
+const bool MQTT_ENABLED = false;
 String g_lastMistralReply = ""; // Simple memory for Mistral Agent
 String g_lastUserQuery = "";   // Track last user query for Mistral context
-void mqttCallback(char* topic, byte* payload, unsigned int length);
 // ─────────────────────────────────────────────────────────────────────────────
 
-const bool FIREBASE_ENABLED = false;
+const bool FIREBASE_ENABLED = true;
 const unsigned long WIFI_STARTUP_CONNECT_WINDOW_MS = 20000;
 const unsigned long NTP_SYNC_WINDOW_MS = 1200;
 
@@ -336,11 +376,17 @@ bool isEnvironmentSummaryRequest(const String& userQuery);
 bool isSpatialAwarenessRequest(const String& userQuery);
 bool isRobotActionRequest(const String& userQuery);
 bool isLiveWebSearchRequest(const String& userQuery);
-void pushSensorDataToMQTT(FirebaseJson& json);
+void publishVitalsSnapshot(FirebaseJson& json);
 String stripReasoningBlocks(String text);
-void publishStatusSnapshot(bool force);
+void publishStatusSnapshot(bool force = false);
 bool hasExplicitCommandPhrase(const String& text, const char* phrase);
 void logMoodToFirebase();
+void logConversationToFirebase(const char* userText, String aiReply);
+void flushPendingReminderToFirebase();
+
+// Logic helpers
+bool isRecallRequest(const String& userQuery);
+bool isNameMentionCheck(const String& userQuery);
 void handleIncomingTelegramCommand(String text, String chatId);
 
 Audio audio(1); // Use I2S_NUM_1 for Speaker to avoid conflict with Microphone (mic_i2s) on I2S_NUM_0
@@ -662,31 +708,23 @@ bool pendingLastResponseValid = false;
 unsigned long pendingLastResponseReadyAt = 0;
 
 void setSpeakingStatusFirebase(bool speaking) {
-  pendingSpeakingStatusValue = speaking;
-
-  if (audioTransitionIsQuiet()) {
-    pendingSpeakingStatusValid = true;
-    pendingSpeakingStatusReadyAt = audioTransitionQuietUntil;
-    return;
-  }
-
   pendingSpeakingStatusValid = false;
   publishStatusSnapshot(true);
 }
 
+
 void setLastResponseFirebase(const String& text) {
   lastStatusResponseText = text;
-
   if (audioTransitionIsQuiet()) {
     pendingLastResponseValid = true;
     pendingLastResponseText = text;
     pendingLastResponseReadyAt = audioTransitionQuietUntil;
     return;
   }
-
   pendingLastResponseValid = false;
   publishStatusSnapshot(true);
 }
+
 
 void flushPendingSpeakingStatus() {
   if (!pendingSpeakingStatusValid) return;
@@ -755,17 +793,10 @@ const unsigned long DEEP_SLEEP_MIN_UPTIME_MS = 10UL * 60UL * 1000UL;
 const unsigned long DEEP_SLEEP_INACTIVITY_MS = 30UL * 60UL * 1000UL;
 
 void setModeStatusFirebase(const char* modeText) {
-  pendingModeStatusValue = modeText;
-
-  if (audioTransitionIsQuiet()) {
-    pendingModeStatusValid = true;
-    pendingModeStatusReadyAt = audioTransitionQuietUntil;
-    return;
-  }
-
   pendingModeStatusValid = false;
   publishStatusSnapshot(true);
 }
+
 
 void flushPendingModeStatus() {
   if (!pendingModeStatusValid) return;
@@ -1089,7 +1120,6 @@ bool queueMovementCommand(String cmd);
 void clearMovementQueue();
 bool isSpeechSafeMotionCommand(const String& cmd);
 void startMeditation(String preset);
-void logConversationToFirebase(const char* userText, String aiReply);
 void initToF();
 bool readToFDistanceMm(uint16_t &distanceMm);
 void updateRobotAssistModes();
@@ -1134,7 +1164,7 @@ bool networkAvailable();
 void clearSlamMap();
 void setSlamCell(uint8_t x, uint8_t y, uint8_t value);
 void stampSlamRay(float angleDeg, uint16_t distanceMm);
-void publishStatusSnapshot(bool force = false);
+void publishStatusSnapshot(bool force);
 void publishRoomMapSnapshot(uint16_t frontMm, uint16_t leftMm, uint16_t rightMm, float headingDeg);
 void resetOnlineServicesForDisconnect();
 void updateWiFiConnectionManager();
@@ -1438,10 +1468,7 @@ bool ensureHeapForAICall() {
     disconnectAssemblyAI(0);
     Serial.println("[Heap] Disconnected STT to free memory");
   }
-  if (mqtt.connected()) {
-    mqtt.disconnect();
-    mqttClientNet->stop();
-    Serial.println("[Heap] Disconnected MQTT to free memory");
+  if (firebaseReady) {
   }
 
   stopActiveAudioPlayback(false);  // Stop TTS/music, free audio buffers
@@ -1933,9 +1960,10 @@ void flushPendingReminderToFirebase() {
   remJson.set("status", "pending");
 
   Serial.println("[Reminder] Syncing pending reminder to Firebase: " + pendingReminderTitle);
-  Firebase.RTDB.pushJSONAsync(&fbdo, "/reminders", &remJson);
-  pendingReminderNeedsCloudSync = false;
-  savePendingReminderState();
+  if (Firebase.RTDB.pushJSONAsync(&fbdo, "/reminders", &remJson)) {
+    pendingReminderNeedsCloudSync = false;
+    savePendingReminderState();
+  }
 }
 
 void loadConversationMemoryFromPrefs() {
@@ -3203,7 +3231,9 @@ static int16_t applyMicGain(int16_t sample) {
 }
 
 void disconnectNodeServer() {
-  if (nodeMux) xSemaphoreTake(nodeMux, portMAX_DELAY);
+  if (nodeMux && xSemaphoreTake(nodeMux, pdMS_TO_TICKS(500)) != pdTRUE) {
+    Serial.println("[NODE] WARN: Could not acquire mux for disconnect (deadlock?)");
+  }
   if (nodeClientPtr && nodeClientPtr->connected()) {
     nodeWsSendFrame(0x8, nullptr, 0); // close
     nodeClientPtr->stop();
@@ -3233,12 +3263,15 @@ void connectNodeServer() {
   if (!networkAvailable()) return;
   
   nodeWsConnecting = true;
+  printMemoryStats();
   Serial.println("[NODE] Connecting to Node Proxy Server...");
   
   if (NODE_SERVER_IS_SECURE) {
     nodeSecureClient.setInsecure();
     nodeSecureClient.setNoDelay(true);
     nodeSecureClient.setTimeout(6);
+    // Move SSL buffers to a smaller size to save internal RAM
+    nodeSecureClient.setBufferSizes(1024, 1024);
     nodeClientPtr = &nodeSecureClient;
   } else {
     nodeBasicClient.setNoDelay(true);
@@ -3914,7 +3947,9 @@ void connectVoiceAgent() {
 
 // --- Voice Agent Disconnect ---
 void disconnectVoiceAgent() {
-  if (vAgentMux) xSemaphoreTake(vAgentMux, portMAX_DELAY);
+  if (vAgentMux && xSemaphoreTake(vAgentMux, pdMS_TO_TICKS(500)) != pdTRUE) {
+    Serial.println("[VAgent] WARN: Could not acquire mux for disconnect");
+  }
   if (!vAgentConnected && !vAgentConnecting && (!vAgentClient || !vAgentClient->connected())) {
     if (vAgentMux) xSemaphoreGive(vAgentMux);
     return;
@@ -4262,8 +4297,10 @@ void handleVoiceAgentText(const char* payload, size_t length) {
           struct tm ti; getLocalTime(&ti);
           char tbuf[30]; strftime(tbuf, sizeof(tbuf), "%Y-%m-%d %H:%M:%S", &ti);
           if (firebaseReady) {
+#if 0
               Firebase.RTDB.setString(&fbdo, "/sleepLog/currentSession/startTime", String(tbuf));
               Firebase.RTDB.setInt(&fbdo, "/sleepLog/currentSession/startMillis", (int)(millis() / 1000));
+#endif
           }
         } else if (cmd == "WAKEUP") {
           if (sleepStartTime > 0) {
@@ -4273,9 +4310,11 @@ void handleVoiceAgentText(const char* payload, size_t length) {
                   char path[64];
                   sprintf(path, "sleepLog/%04d-%02d-%02d", ti.tm_year+1900, ti.tm_mon+1, ti.tm_mday);
                   if (firebaseReady) {
+#if 0
                       Firebase.RTDB.setFloat(&fbdo, String(path) + "/hours", sleepHours);
                       Firebase.RTDB.setString(&fbdo, String(path) + "/source", "voice");
                       Firebase.RTDB.deleteNode(&fbdo, "/sleepLog/currentSession");
+#endif
                   }
               }
               sleepStartTime = 0;
@@ -5049,7 +5088,9 @@ void checkIMUSafety() {
   imuStatus.set("driveAssist", driveHoldStraight);
   imuStatus.set("motionState", driveControlActive ? "manual" : (isMoving ? "timed" : "idle"));
   if (firebaseReady) {
+#if 0
     Firebase.RTDB.setJSONAsync(&fbdo, "/status/imu", &imuStatus);
+#endif
   }
 
   String alert = "IMU safety: ";
@@ -5758,39 +5799,6 @@ void drawGuardAlertScreen(const String& message) {
   tft.print("Alarm sent to Telegram");
 }
 
-void publishRobotAssistStatus(bool force) {
-  if (offlineModeLocked || !mqtt.connected()) return;
-  if (audioTransitionIsQuiet()) return;
-
-  if (!force && millis() - lastRobotAssistPush < ROBOT_ASSIST_PUSH_INTERVAL_MS) return;
-
-  StaticJsonDocument<320> doc;
-  doc["tofReady"] = tofReady;
-  doc["tofHasReading"] = tofHasReading;
-  doc["tofDistanceMm"] = tofHasReading ? (int)tofFilteredMm : 0;
-  doc["tofDistanceCm"] = tofHasReading ? (tofFilteredMm / 10.0f) : 0.0f;
-  doc["autoAvoid"] = autoAvoidEnabled;
-  doc["guardMode"] = guardModeEnabled;
-  doc["guardAlarm"] = guardAlarmActive;
-  doc["aiInputMode"] = getAIInputModeName();
-  doc["aaiConnected"] = aaiConnected;
-  doc["autoState"] = autoAvoidEnabled ? (
-    autoAvoidState == AUTO_AVOID_CRUISE ? "CRUISE" :
-    autoAvoidState == AUTO_AVOID_BACKUP ? "BACKUP" :
-    autoAvoidState == AUTO_AVOID_SCAN_LEFT_SETTLE ? "SCAN_LEFT" :
-    autoAvoidState == AUTO_AVOID_SCAN_RIGHT_SETTLE ? "SCAN_RIGHT" :
-    autoAvoidState == AUTO_AVOID_TURNING ? "TURNING" : "IDLE"
-  ) : "OFF";
-  doc["mode"] = currentMode == MODE_AI ? "AI" : "NORMAL";
-  doc["online"] = networkAvailable();
-
-  String payload;
-  serializeJson(doc, payload);
-  if (mqtt.publish("ella/robotAssist", payload.c_str(), true)) {
-    lastRobotAssistPush = millis();
-  }
-  publishStatusSnapshot(force);
-}
 
 void clearGuardAlarm(bool redraw) {
   guardAlarmActive = false;
@@ -5868,7 +5876,7 @@ void setGuardMode(bool enabled) {
     drawNormalScreen(true);
   } else {
     clearGuardAlarm(false);
-    if (firebaseReady) Firebase.RTDB.setBool(&fbdo, "/commands/guard", false);
+    // if (firebaseReady) Firebase.RTDB.setBool(&fbdo, "/commands/guard", false);
     if (currentMode == MODE_NORMAL) {
       setEyeExpression("NORMAL");
       drawNormalScreen(true);
@@ -5913,7 +5921,7 @@ void setAutoAvoidMode(bool enabled) {
     clearTtsChunkQueue();
     if (audio.isRunning()) audio.stopSong();
     enterAudioTransitionQuiet();
-    if (firebaseReady) Firebase.RTDB.setBool(&fbdo, "/commands/autoAvoid", false);
+    // if (firebaseReady) Firebase.RTDB.setBool(&fbdo, "/commands/autoAvoid", false);
     if (currentMode == MODE_NORMAL) {
       setEyeExpression("NORMAL");
       drawNormalScreen(true);
@@ -6132,6 +6140,85 @@ void sttTask(void* parameter) {
     }
 }
 
+void publishRobotAssistStatus(bool force) {
+  if (!MQTT_ENABLED || !mqtt.connected()) {
+    publishStatusSnapshot(force);
+    return;
+  }
+  static unsigned long lastRobotAssistPush = 0;
+  if (!force && millis() - lastRobotAssistPush < 1000) return;
+
+  JsonDocument doc;
+  doc["tofReady"] = tofReady;
+  doc["tofHasReading"] = tofHasReading;
+  doc["tofDistanceMm"] = tofHasReading ? (int)tofFilteredMm : 0;
+  doc["tofDistanceCm"] = tofHasReading ? (tofFilteredMm / 10.0f) : 0.0f;
+  doc["autoAvoid"] = autoAvoidEnabled;
+  doc["guardMode"] = guardModeEnabled;
+  doc["guardAlarm"] = guardAlarmActive;
+  doc["mode"] = currentMode == MODE_AI ? "AI" : "NORMAL";
+  doc["online"] = networkAvailable();
+  doc["aiInputMode"] = getAIInputModeName();
+  doc["aaiConnected"] = aaiConnected;
+
+  String payload;
+  serializeJson(doc, payload);
+  if (mqtt.publish("ella/robotAssist", payload.c_str(), true)) {
+    lastRobotAssistPush = millis();
+  }
+  publishStatusSnapshot(force);
+}
+
+void pauseMQTTForRealtime(const char* reason) {
+  if (!MQTT_ENABLED) return;
+  if (!mqtt.connected()) return;
+  mqtt.disconnect();
+  mqttClientNet->stop();
+  Serial.print("[MQTT] Paused for realtime network");
+  if (reason && strlen(reason) > 0) {
+    Serial.print(": ");
+    Serial.print(reason);
+  }
+  Serial.println();
+}
+
+bool mqttTruthy(const String& value) {
+  String v = value;
+  v.trim();
+  v.toLowerCase();
+  return v == "true" || v == "1" || v == "on" || v == "yes";
+}
+
+bool mqttFalsy(const String& value) {
+  String v = value;
+  v.trim();
+  v.toLowerCase();
+  return v == "false" || v == "0" || v == "off" || v == "no";
+}
+
+void startCheckupFromMqtt() {
+  if (currentMedState == MED_PLACE_FINGER || currentMedState == MED_MEASURING || currentMedState == MED_WAIT_FINGER) {
+    Serial.println("[MQTT] Checkup already in progress. Ignoring.");
+    return;
+  }
+  ai_requested_checkup = true;
+  if (currentMode != MODE_NORMAL) switchToNormalMode();
+  currentMedState = MED_IDLE;
+  medStateTimer = millis();
+  drawNormalScreen(true);
+  speakText("Starting medical checkup. Please place your finger on the sensor.");
+}
+
+void startBreathingFromMqtt() {
+  if (currentMode != MODE_NORMAL) switchToNormalMode();
+  currentMedState = MED_BREATHING;
+  currentMeditationType = MED_TYPE_BREATHING;
+  medStateTimer = millis();
+  setEyeExpression("LOVE");
+  drawNormalScreen(true);
+  speakText("Starting breathing exercise. Breathe in... and breathe out.");
+}
+
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
     String msg = "";
     for (int i = 0; i < length; i++) msg += (char)payload[i];
@@ -6139,110 +6226,98 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 
     Serial.printf("[MQTT] Topic: %s | Msg: %s\n", topic, msg.c_str());
 
-    // Telegram commands now handled via direct polling (pollTelegramDirect)
-    if (sTopic == "ella/telegram/in") return; 
-
     if (sTopic.startsWith("ella/commands/")) {
         String key = sTopic.substring(14);
-        
+        key.trim();
+
         if (key == "speak") {
-            speakText(msg.c_str(), true);
-        } else if (key == "stopAudio") {
-            stopActiveAudioPlayback(true);
-            setSpeakingStatusFirebase(false);
+            if (msg.length() > 0) speakText(msg.c_str(), true);
+        } else if (key == "stopAudio" || key == "stop" || key == "stopaudio") {
+            handleUniversalStopAudioCommand();
         } else if (key == "focusMode") {
-            focusModeActive = (msg == "true");
-            Serial.printf("[Focus] Mode set to %d\n", focusModeActive);
+            focusModeActive = mqttTruthy(msg);
+            Serial.printf("[Focus] Mode set to %d\n", focusModeActive ? 1 : 0);
+            publishStatusSnapshot(true);
         } else if (key == "emergency") {
-            bool active = (msg == "true");
-            if (active) {
-                sendEmergencyAlert("MQTT Panic Button");
-            }
+            if (!mqttFalsy(msg)) sendEmergencyAlert("MQTT Panic Button");
         } else if (key == "motor") {
             applyManualMotorCommand(msg);
         } else if (key == "systemMode") {
+            msg.toUpperCase();
             if (msg == "AI") switchToAIMode();
             else if (msg == "NORMAL" || msg == "OFF") switchToNormalMode();
-            Serial.printf("[System] Mode set to %s\n", msg.c_str());
+            publishStatusSnapshot(true);
         } else if (key == "autoAvoid") {
-            setAutoAvoidMode(msg == "true");
+            setAutoAvoidMode(mqttTruthy(msg));
         } else if (key == "guard") {
-            setGuardMode(msg == "true");
+            setGuardMode(mqttTruthy(msg));
         } else if (key == "speed") {
             motorSpeed = msg.toInt();
             Serial.printf("[Speed] set to %d\n", motorSpeed);
         } else if (key == "aiInputMode") {
             setAIInputMode(true, true);
         } else if (key == "aiChat") {
-            if (msg.length() > 1) {
-              queueWebAIChat(msg);
-            }
+            if (msg.length() > 0) queueWebAIChat(msg);
         } else if (key == "checkup") {
-            if (msg == "true" && currentMedState == MED_IDLE) {
-              ai_requested_checkup = true;
-              if (currentMode != MODE_NORMAL) switchToNormalMode();
-              currentMedState = MED_IDLE;
-              medStateTimer = millis();
-              drawNormalScreen(true);
-              speakText("Starting medical checkup. Please place your finger on the sensor.");
-            }
+            if (!mqttFalsy(msg)) startCheckupFromMqtt();
         } else if (key == "breathe") {
-            if (msg == "true") {
-              if (currentMode != MODE_NORMAL) switchToNormalMode();
-              currentMedState = MED_BREATHING;
-              currentMeditationType = MED_TYPE_BREATHING;
-              medStateTimer = millis();
-              drawNormalScreen(true);
-              speakText("Starting breathing exercise.");
-            }
+            if (!mqttFalsy(msg)) startBreathingFromMqtt();
         } else if (key == "meditate") {
-            if (msg.length() > 0) {
-              startMeditation(msg);
+            if (!mqttFalsy(msg)) startMeditation(msg.length() > 0 ? msg : "body scan");
+        } else if (key == "imuReset" || key == "imureset" || key == "calibrateImu") {
+            if (!mqttFalsy(msg)) recalibrateNavigationHeading();
+        } else if (key == "reminders") {
+            cloudRemindersJson = msg;
+            Serial.println("[MQTT] Reminders updated from cloud bridge");
+        } else if (key == "userProfile") {
+            // Parse name from JSON or raw string
+            if (msg.startsWith("{")) {
+                StaticJsonDocument<512> doc;
+                deserializeJson(doc, msg);
+                if (doc["name"]) {
+                    user_name = doc["name"].as<String>();
+                }
+            } else {
+                user_name = msg;
             }
-        } else if (key == "imuReset") {
-            if (msg == "true") {
-              recalibrateNavigationHeading();
-            }
+            Serial.println("[MQTT] User name updated: " + user_name);
+        } else {
+            Serial.println("[MQTT] Unhandled command key: " + key);
         }
     }
 }
 
 void reconnectMQTT() {
-  if (offlineModeLocked || !networkAvailable() || currentMode == MODE_AI || networkIsQuiet() || isSpeaking || isProcessingAI) {
-    if (mqtt.connected()) {
-      mqtt.disconnect();
-      mqttClientNet->stop(); // Force stop to free TLS buffers
-      Serial.println("[MQTT] Paused while AI/audio/quiet mode is active");
-    }
-    return; 
+  if (!MQTT_ENABLED) return;
+  if (offlineModeLocked || !networkAvailable()) {
+    pauseMQTTForRealtime("offline");
+    return;
   }
 
+  if (currentMode == MODE_AI || networkIsQuiet() || isSpeaking || isProcessingAI) {
+    pauseMQTTForRealtime(currentMode == MODE_AI ? "AI mode" : "audio/quiet");
+    return;
+  }
 
   if (!mqtt.connected()) {
-    if (millis() - lastMqttRetryMs > 10000) {
+    static unsigned long lastMqttRetryMs = 0;
+    if (millis() - lastMqttRetryMs > 5000) {
       lastMqttRetryMs = millis();
-      
-      // Diagnostic Logging
-      Serial.printf("[MQTT] Attempting connection... (WiFi Status: %d, IP: %s, Heap: %d)\n", 
-                    WiFi.status(), WiFi.localIP().toString().c_str(), ESP.getFreeHeap());
-      
-      // Ensure memory-safe state and insecure mode for each attempt
+      Serial.print("[MQTT] Connecting...");
       mqttClientNet->setInsecure();
-      
       String clientId = "EllaBox-" + String(random(0xffff), HEX);
       if (mqtt.connect(clientId.c_str(), MQTT_USER, MQTT_PASS)) {
-        Serial.println("[MQTT] connected");
+        Serial.println("connected");
         mqtt.subscribe("ella/commands/#");
-        mqtt.subscribe("ella/settings/#");
-        publishStatusSnapshot(true);
         publishRobotAssistStatus(true);
       } else {
-        Serial.print("[MQTT] failed, rc=");
-        Serial.println(mqtt.state());
+        Serial.println("failed");
       }
     }
   }
 }
+// Telegram commands come via /commands/telegram in checkRemoteCommands()
+
 
 void setup() {
 
@@ -6273,11 +6348,10 @@ void setup() {
   xTaskCreatePinnedToCore(sttTask, "sttTask", 12288, NULL, 1, NULL, 0);
 
   // Setup MQTT
-  mqttClientNet->setInsecure(); // Using HiveMQ Cloud (TLS 8883)
-  mqttClientNet->setHandshakeTimeout(15000); // 15s handshake timeout for cloud stability
+  mqttClientNet->setInsecure();
   mqtt.setServer(MQTT_HOST, MQTT_PORT);
   mqtt.setCallback(mqttCallback);
-  mqtt.setBufferSize(4096);
+  mqtt.setBufferSize(2048);
 
   // Setup STT and LLM WebSocket clients with insecure mode
   if (aaiClient) aaiClient->setInsecure();
@@ -6402,8 +6476,8 @@ void setup() {
   prefs.begin("ella", false);
   
   // Load Profile (Telegram, Emergency Contact, User Name)
-  cloudBotToken = prefs.getString("botToken", "");
-  cloudChatId = prefs.getString("chatId", "");
+  cloudBotToken = prefs.getString("botToken", "8328121908:AAFY_6cC9xk41xoo1vML62rPsN7CiDGtOZY");
+  cloudChatId = prefs.getString("chatId", "7039195212");
   user_emergency_contact = prefs.getString("emergency", "");
   user_name = prefs.getString("userName", "");
   loadPendingReminderState();
@@ -6717,9 +6791,7 @@ void resetOnlineServicesForDisconnect() {
   networkInitialized = false;
   onlineServicesAllowed = false;
   nextFirebaseRetryMs = 0;
-  if (mqtt.connected()) {
-    mqtt.disconnect();
-    mqttClientNet->stop();
+  if (firebaseReady) {
   }
 }
 
@@ -6806,6 +6878,7 @@ void setupNetwork() {
     Serial.println("[Network] Time Sync unavailable; staying offline-safe");
   }
   setupOTA();
+  setupFirebase(); // Re-enabled!
   
   networkInitialized = true;
   publishStatusSnapshot(true);
@@ -6893,8 +6966,8 @@ void processTouchScreen() {
 
   TS_Point p = ts.getPoint();
 
-  // Filter out phantom touches (low raw values typically < 100 on noise)
-  if (p.x < 150 || p.y < 150) return;
+  // Filter out phantom touches (low raw values typically < 100 on noise, or max ADC values like 8191)
+  if (p.x < 150 || p.y < 150 || p.x > 8000 || p.y > 8000) return;
 
 
   // Map raw XPT2046 coordinates to screen pixels (240x320)
@@ -7107,11 +7180,9 @@ void switchToNormalMode() {
   disableMicAIInput();
   if (micI2SActive) clearMicBuffer(); // Flush any remaining audio data
   
-  // 2. Hard Reset MQTT client to clear AI session buffers
-  if (mqtt.connected()) mqtt.disconnect();
-  mqttClientNet->stop();
+  // 2. AI Session Memory Cleanup
   delay(200); // Wait for stack to settle
-  Serial.println("[Mode] MQTT Client Reset & AI Memory Cleared");
+  Serial.println("[Mode] AI Session Memory Cleared");
   
   // Restart MAX30102 without defaulting to 400sps
   tcaselect(CH_MAX);
@@ -7142,37 +7213,76 @@ const char* getAIInputModeName() {
   return "MIC";
 }
 
+#if 0
 void publishStatusSnapshot(bool force) {
   static unsigned long lastStatusPublishMs = 0;
-  if (offlineModeLocked || !mqtt.connected()) return;
-  if (!force && millis() - lastStatusPublishMs < 250) return;
+  if (offlineModeLocked || !firebaseReady) return;
+  if (!force && millis() - lastStatusPublishMs < 3000) return; // Throttled for Firebase
   if (audioTransitionIsQuiet()) return;
 
-  StaticJsonDocument<384> doc;
-  doc["online"] = networkAvailable();
-  doc["mode"] = currentMode == MODE_AI ? "AI" : "NORMAL";
-  doc["isSpeaking"] = isSpeaking;
-  doc["aiInputMode"] = getAIInputModeName();
-  doc["tofReady"] = tofReady;
-  doc["tofHasReading"] = tofHasReading;
-  doc["tofDistanceMm"] = tofHasReading ? (int)tofFilteredMm : 0;
-  doc["guardMode"] = guardModeEnabled;
-  doc["guardAlarm"] = guardAlarmActive;
-  doc["autoAvoid"] = autoAvoidEnabled;
-  doc["aaiConnected"] = aaiConnected;
+  FirebaseJson fbJson;
+  fbJson.set("online", networkAvailable());
+  fbJson.set("mode", currentMode == MODE_AI ? "AI" : "NORMAL");
+  fbJson.set("isSpeaking", isSpeaking);
+  fbJson.set("aiInputMode", getAIInputModeName());
+  fbJson.set("tofReady", tofReady);
+  fbJson.set("tofHasReading", tofHasReading);
+  fbJson.set("tofDistanceMm", tofHasReading ? (int)tofFilteredMm : 0);
+  fbJson.set("guardMode", guardModeEnabled);
+  fbJson.set("guardAlarm", guardAlarmActive);
+  fbJson.set("autoAvoid", autoAvoidEnabled);
+  fbJson.set("aaiConnected", aaiConnected);
   if (lastStatusResponseText.length() > 0) {
-    doc["lastResponse"] = lastStatusResponseText;
+    fbJson.set("lastResponse", lastStatusResponseText);
   }
-
-  String payload;
-  serializeJson(doc, payload);
-  if (mqtt.publish("ella/status", payload.c_str(), true)) {
+  Firebase.RTDB.setJSONAsync(&fbdoStatus, "/status/snapshot", &fbJson);
+  lastStatusPublishMs = millis();
+}
+#endif
+void publishStatusSnapshot(bool force) {
+  static unsigned long lastStatusPublishMs = 0;
+  if (!FIREBASE_ENABLED || !firebaseReady) return;
+  if (offlineModeLocked || networkIsQuiet()) return;
+  if (!force && millis() - lastStatusPublishMs < 5000) return;
+  
+  FirebaseJson doc;
+  doc.set("online", networkAvailable());
+  doc.set("mode", (currentMode == MODE_AI ? "AI" : "NORMAL"));
+  doc.set("isSpeaking", isSpeaking);
+  doc.set("aiInputMode", getAIInputModeName());
+  doc.set("tofReady", tofReady);
+  doc.set("tofHasReading", tofHasReading);
+  doc.set("tofDistanceMm", tofHasReading ? (int)tofFilteredMm : 0);
+  doc.set("guardMode", guardModeEnabled);
+  doc.set("guardAlarm", guardAlarmActive);
+  doc.set("autoAvoid", autoAvoidEnabled);
+  doc.set("aaiConnected", aaiConnected);
+  doc.set("temperature", isnan(temp_aht) ? 0.0 : temp_aht);
+  doc.set("humidity", isnan(humidity_aht) ? 0.0 : humidity_aht);
+  doc.set("aqi", aqi_val);
+  doc.set("tvoc", tvoc_val);
+  doc.set("eco2", eco2_val);
+  doc.set("heartRate", isnan(max30102_hr) ? 0 : (int)max30102_hr);
+  doc.set("spo2", isnan(max30102_spo2) ? 0 : (int)max30102_spo2);
+  doc.set("bodyTemp", isnan(max30102_temp) ? 0.0 : max30102_temp);
+  doc.set("imuReady", imuReady);
+  doc.set("imuHeading", imuYawEstimateDeg);
+  doc.set("imuPitch", imuPitchDeg);
+  doc.set("imuRoll", imuRollDeg);
+  doc.set("imuAccelG", imuAccelMagnitudeG);
+  if (lastStatusResponseText.length() > 0) {
+    doc.set("lastResponse", lastStatusResponseText);
+  }
+  
+  if (Firebase.RTDB.setJSONAsync(&fbdoStatus, "/status/snapshot", &doc)) {
     lastStatusPublishMs = millis();
   }
 }
 
+
+#if 0
 void publishRoomMapSnapshot(uint16_t frontMm, uint16_t leftMm, uint16_t rightMm, float headingDeg) {
-  if (!mqtt.connected()) return;
+  if (!firebaseReady) return;
 
   clearSlamMap();
   const int center = SLAM_MAP_SIZE / 2;
@@ -7211,8 +7321,13 @@ void publishRoomMapSnapshot(uint16_t frontMm, uint16_t leftMm, uint16_t rightMm,
 
   String payload;
   serializeJson(doc, payload);
-  mqtt.publish("ella/map", payload.c_str(), true);
+  FirebaseJson mapJson;
+  mapJson.setJsonData(payload);
+  Firebase.RTDB.setJSONAsync(&fbdo, "/status/map", &mapJson);
 }
+#endif
+void publishRoomMapSnapshot(uint16_t frontMm, uint16_t leftMm, uint16_t rightMm, float headingDeg) {}
+
 
 void enableMicAIInput() {
   if (!aiInputUsesMic) return;
@@ -7293,10 +7408,8 @@ void disableMicAIInput() {
 
 void setAIInputMode(bool useMicInput, bool force) {
   if (!useMicInput) {
-    Serial.println("[AI] Web/Firebase AI input removed; keeping mic input active");
+    Serial.println("[AI] Switching to Web/Firebase text input mode");
   }
-
-  useMicInput = true;
 
   if (!force && aiInputUsesMic == useMicInput) return;
 
@@ -7763,6 +7876,7 @@ void drawMusicUI(bool force) {
 void switchToAIMode() {
   if (currentMode == MODE_AI) return;
   Serial.println("[Mode] Switching to AI");
+  pauseMQTTForRealtime("entering AI mode");
   stopActiveAudioPlayback(true);
   setAutoAvoidMode(false);
   setGuardMode(false);
@@ -7772,11 +7886,8 @@ void switchToAIMode() {
     Serial.println("[AI] Entry context refreshed: profile, sensors, reminders");
   }
   enterNetworkQuiet();
-  if (mqtt.connected()) {
-      mqtt.disconnect();
-      Serial.println("[MQTT] Disconnected for AI session stability");
+  if (firebaseReady) {
   }
-  mqttClientNet->stop();
   currentMode = MODE_AI;
   currentMedState = MED_IDLE;
   lastInteractionTime = millis(); // Reset sleep timer
@@ -7805,6 +7916,9 @@ void updateSensors() {
   read_aht20();
   read_ens160();
   lastEnvSensorReadMs = millis();
+  
+  // Publish updated sensor data to MQTT immediately
+  publishRobotAssistStatus(true);
 }
 
 void read_aht20() {
@@ -9306,9 +9420,16 @@ void drawLoadingScreen(String status, int percent) {
 }
 
 
+#if 0
 // ============================================================
 // FIREBASE
 // ============================================================
+void setupFirebase() {
+  // ...
+}
+// ... other firebase functions ...
+#endif
+
 void setupFirebase() {
   if (!FIREBASE_ENABLED) {
     firebaseReady = false;
@@ -9323,18 +9444,18 @@ void setupFirebase() {
 
   config.api_key = FIREBASE_AUTH;
   config.database_url = FIREBASE_DATABASE_URL;
-  
-  // Use Legacy Token Authentication (Database Secret)
-  // This matches the working configuration from sketch_dec5a
   config.signer.tokens.legacy_token = FIREBASE_DB_SECRET;
-  
-  // Set timeouts to mimic sketch_dec5a settings
   config.timeout.serverResponse = 10 * 1000;
-  
   config.token_status_callback = tokenStatusCallback;
 
   Firebase.begin(&config, &auth);
   Firebase.reconnectWiFi(true);
+
+  // Set response size limits to save internal RAM
+  fbdo.setResponseSize(2048);
+  fbdoCmd.setResponseSize(2048);
+  fbdoFocus.setResponseSize(2048);
+  fbdoStatus.setResponseSize(2048);
 
   if (Firebase.ready()) {
     firebaseReady = true;
@@ -9345,343 +9466,263 @@ void setupFirebase() {
     Serial.println("[Firebase] Connected & Ready!");
     syncUserProfileFromFirebase();
     syncRemindersFromFirebase();
-    setModeStatusFirebase(currentMode == MODE_AI ? "AI" : "NORMAL");
+    publishStatusSnapshot(true);
   } else {
     firebaseReady = false;
     nextFirebaseRetryMs = millis() + FIREBASE_RETRY_MS;
-    Serial.println("[Firebase] Connection Timed Out");
+    Serial.println("[Firebase] Connection timed out");
   }
 }
 
 void tokenStatusCallback(TokenInfo info) {
-  String s = "Token Info: type = " + String(info.type) + ", status = " + String(info.status);
-  Serial.println(s);
+  Serial.printf("[Firebase] Token status: type=%d status=%d\n", info.type, info.status);
 }
 
+void clearFirebaseCommand(const char* key) {
+  String path = "/commands/";
+  path += key;
+  Firebase.RTDB.deleteNode(&fbdo, path.c_str());
+}
 
+bool isFirebaseCommandInactive(const String& val) {
+  if (val == "null" || val == "false" || val == "true") return true;
+  if (val.indexOf("\"active\":false") >= 0) return true;
+  return false;
+}
 
 void checkRemoteCommands() {
   if (!FIREBASE_ENABLED || offlineModeLocked) return;
   if (!firebaseReady || !networkAvailable()) return;
 
-    unsigned long now = millis();
-    if (now < commandPollBackoffUntil) return;
+  unsigned long now = millis();
+  unsigned long interval = 250; // Normal polling interval
 
-    static unsigned long lastCmdCheck = 0;
-    unsigned long minCmdInterval = (currentMode == MODE_AI) ? COMMAND_POLL_INTERVAL_AI_MS : COMMAND_POLL_INTERVAL_NORMAL_MS;
-    if (now - lastCmdCheck < minCmdInterval) return;
-    lastCmdCheck = now;
+  // If in AI mode, we poll MUCH slower (every 2 seconds) 
+  // and we ONLY check for the "Switch back to Normal" or "Stop" commands.
+  if (currentMode == MODE_AI) {
+    interval = 2000; 
+  } else {
+    // Standard Normal Mode conditions
+    if (networkIsQuiet() || isSpeaking || isProcessingAI) return;
+  }
 
-    // BATCHED: Single read of entire /commands node (was 6 separate calls)
-    if (!Firebase.RTDB.getJSON(&fbdoCmd, "/commands")) {
-      if (commandReadFailStreak < 10) commandReadFailStreak++;
+  if (millis() < commandPollBackoffUntil) return;
+  if (now - lastCommandJsonFetchMs < interval) return;
+  if (!Firebase.RTDB.getJSON(&fbdoCmd, "/commands")) {
+    commandReadFailStreak++;
+    if (commandReadFailStreak >= 3) {
+      commandPollBackoffUntil = now + 5000UL;
+      Serial.printf("[Firebase] /commands read failed %u times: %s\n",
+                    commandReadFailStreak, fbdoCmd.errorReason().c_str());
+    }
+    return;
+  }
 
-      uint8_t shift = (commandReadFailStreak > 5) ? 5 : (commandReadFailStreak - 1);
-      unsigned long backoffMs = COMMAND_ERROR_BACKOFF_BASE_MS << shift;
-      commandPollBackoffUntil = now + backoffMs;
+  if (commandReadFailStreak > 0) {
+    Serial.printf("[Firebase] /commands recovered after %u failures\n", commandReadFailStreak);
+  }
+  commandReadFailStreak = 0;
+  commandPollBackoffUntil = 0;
+  lastCommandJsonFetchMs = now;
 
-      if (commandReadFailStreak == 1 || commandReadFailStreak == 3 || commandReadFailStreak >= COMMAND_ERROR_REINIT_THRESHOLD) {
-        Serial.printf("[Firebase] /commands read failed x%u: %s (backoff %lu ms)\n",
-                      commandReadFailStreak,
-                      fbdoCmd.errorReason().c_str(),
-                      backoffMs);
+  FirebaseJson* json = fbdoCmd.jsonObjectPtr();
+  if (!json) return;
+
+  FirebaseJsonData val;
+
+  json->get(val, "emergency");
+  if (val.success && val.to<bool>()) {
+    sendEmergencyAlert("Web App Panic Button");
+    Firebase.RTDB.setBool(&fbdo, "/commands/emergency", false);
+  }
+
+  // --- AI MODE BYPASS ---
+  // If we are in AI mode, we SKIP everything else except mode switches and stops.
+  if (currentMode == MODE_AI) {
+    // Only process systemMode and stopAudio below
+  } else {
+    // Process heavy commands only in Normal mode
+    json->get(val, "aiChat");
+    if (val.success) {
+      String msg = val.to<String>();
+      msg.trim();
+      if (msg.length() > 1) {
+        if (isFirebaseCommandInactive(msg)) {
+          clearFirebaseCommand("aiChat");
+        } else {
+          Serial.println("[Firebase] AI Chat: " + msg);
+          clearFirebaseCommand("aiChat");
+          setAIInputMode(false);
+          queueWebAIChat(msg);
+        }
       }
+    }
 
-      if (commandReadFailStreak >= COMMAND_ERROR_REINIT_THRESHOLD) {
-        firebaseReady = false;
-        nextFirebaseRetryMs = now + FIREBASE_RETRY_MS;
-        commandPollBackoffUntil = nextFirebaseRetryMs;
-        Serial.println("[Firebase] Command channel unhealthy, scheduling reconnect");
+    json->get(val, "aiInputMode");
+    if (val.success) {
+      String inputMode = val.to<String>();
+      inputMode.trim();
+      if (isFirebaseCommandInactive(inputMode)) {
+        clearFirebaseCommand("aiInputMode");
+      } else {
+        inputMode.toUpperCase();
+        if (inputMode == "WEB") {
+          setAIInputMode(false);
+          clearFirebaseCommand("aiInputMode");
+        } else if (inputMode == "MIC") {
+          setAIInputMode(true);
+          clearFirebaseCommand("aiInputMode");
+        }
       }
+    }
+
+    json->get(val, "speak");
+    if (val.success) {
+      String msg = val.to<String>();
+      msg.trim();
+      if (msg.length() > 1) {
+        if (isFirebaseCommandInactive(msg)) {
+          clearFirebaseCommand("speak");
+        } else {
+          Serial.println("[Firebase] Speak: " + msg);
+          clearFirebaseCommand("speak");
+          speakText(msg.c_str());
+          return;
+        }
+      }
+    }
+
+    json->get(val, "checkup");
+    if (val.success && val.to<bool>()) {
+      Serial.println("[Firebase] Checkup command");
+      Firebase.RTDB.setBool(&fbdo, "/commands/checkup", false);
+      startCheckupFromMqtt();
       return;
     }
 
-    if (commandReadFailStreak > 0) {
-      Serial.printf("[Firebase] /commands recovered after %u failures\n", commandReadFailStreak);
-    }
-    commandReadFailStreak = 0;
-    commandPollBackoffUntil = 0;
-    lastCommandJsonFetchMs = now;
-    
-    FirebaseJson *json = fbdoCmd.jsonObjectPtr();
-    if (!json) return;
-    
-    // 1. Emergency
-    FirebaseJsonData valEmergency;
-    json->get(valEmergency, "emergency");
-    if (valEmergency.success && valEmergency.to<bool>()) {
-        Serial.println("[Command] Emergency Triggered from Web!");
-        sendEmergencyAlert("Web App Panic Button");
-        Firebase.RTDB.setBool(&fbdo, "/commands/emergency", false);
-    }
-
-    // 2. WiFi Config (only if wifiConfig is actually an object with a real ssid)
-    FirebaseJsonData valWifi;
-    json->get(valWifi, "wifiConfig/ssid");
-    String newSSID = valWifi.success ? valWifi.to<String>() : "";
-    newSSID.trim();
-    // Guard: Firebase returns "false"/"null" when the node doesn't exist as expected
-    if (valWifi.success && newSSID.length() > 2 && newSSID != "false" && newSSID != "null" && newSSID != "true") {
-        String newPass = "";
-        FirebaseJsonData valPass;
-        json->get(valPass, "wifiConfig/password");
-        if (valPass.success) newPass = valPass.to<String>();
-        
-        Serial.println("[Command] New WiFi Config: " + newSSID);
-        prefs.begin("ella", false);
-        prefs.putString("ssid", newSSID);
-        prefs.putString("pass", newPass);
-        prefs.end();
-        Firebase.RTDB.deleteNode(&fbdo, "/commands/wifiConfig");
-        speakText("New Wi-Fi saved. Restarting.");
-        delay(2000);
-        ESP.restart();
-    }
-
-      // 2b. Forget Wi-Fi credentials and fall back to hardcoded network
-      FirebaseJsonData valWifiReset;
-      json->get(valWifiReset, "wifiReset");
-      if (valWifiReset.success && valWifiReset.to<bool>()) {
-        Serial.println("[Command] WiFi reset requested from Web App!");
-        prefs.begin("ella", false);
-        prefs.remove("ssid");
-        prefs.remove("pass");
-        prefs.end();
-        wifiSSID = "";
-        wifiPass = "";
-        Firebase.RTDB.deleteNode(&fbdo, "/commands/wifiConfig");
-        Firebase.RTDB.setBool(&fbdo, "/commands/wifiReset", false);
-
-        if (WiFi.status() == WL_CONNECTED) {
-          WiFi.disconnect(true);
-        }
-
-        resetWiFiStationForRetry();
-        WiFi.begin(ssid, password);
-        Serial.println("[WiFi] Cleared saved credentials, reconnecting with hardcoded fallback...");
-      }
-
-    // 3. AI Chat
-    FirebaseJsonData valChat;
-    json->get(valChat, "aiChat");
-    if (valChat.success) {
-        String msg = valChat.to<String>();
-        msg.trim();
-        if (msg.length() > 1 && msg != "null" && msg != "false" && msg != "true") {
-            Serial.println("[Command] AI Chat from Web: " + msg);
-            Firebase.RTDB.deleteNode(&fbdo, "/commands/aiChat");
-            setAIInputMode(false);
-            queueWebAIChat(msg);
-        }
-    }
-
-    // 3b. AI Input Mode
-    FirebaseJsonData valAiInputMode;
-    json->get(valAiInputMode, "aiInputMode");
-    if (valAiInputMode.success) {
-        String inputMode = valAiInputMode.to<String>();
-        inputMode.trim();
-        inputMode.toUpperCase();
-        if (inputMode == "WEB") {
-            setAIInputMode(false);
-            Firebase.RTDB.deleteNode(&fbdo, "/commands/aiInputMode");
-        } else if (inputMode == "MIC") {
-            setAIInputMode(true);
-            Firebase.RTDB.deleteNode(&fbdo, "/commands/aiInputMode");
-        }
-    }
-
-    // 4. Remote Speak
-    FirebaseJsonData valSpeak;
-    json->get(valSpeak, "speak");
-    if (valSpeak.success) {
-        String msg = valSpeak.to<String>();
-        msg.trim();
-        if (msg.length() > 1 && msg != "null" && msg != "false" && msg != "true") {
-            Serial.println("[Command] Remote Speak: " + msg);
-            Firebase.RTDB.deleteNode(&fbdo, "/commands/speak");
-            speakText(msg.c_str());
-        }
-    }
-
-    // DIRECT CHECKUP command (bypasses AI pipeline for instant response)
-    FirebaseJsonData valCheckup;
-    json->get(valCheckup, "checkup");
-    if (valCheckup.success && valCheckup.to<bool>()) {
-        Serial.println("[Command] Direct Checkup from Web App!");
-        Firebase.RTDB.setBool(&fbdo, "/commands/checkup", false);
-        // Only start if not already in progress
-        if (currentMedState != MED_PLACE_FINGER && currentMedState != MED_MEASURING && currentMedState != MED_WAIT_FINGER) {
-            ai_requested_checkup = true;
-            if (currentMode != MODE_NORMAL) switchToNormalMode();
-            currentMedState = MED_IDLE;
-            medStateTimer = millis();
-            drawNormalScreen(true);
-            speakText("Starting medical checkup. Please place your finger on the sensor.");
-            return;
+    json->get(val, "meditate");
+    if (val.success) {
+      String preset = val.to<String>();
+      preset.trim();
+      if (preset.length() > 0) {
+        if (isFirebaseCommandInactive(preset)) {
+          clearFirebaseCommand("meditate");
         } else {
-            speakText("Checkup already in progress.");
-            return;
+          Serial.println("[Firebase] Meditate: " + preset);
+          clearFirebaseCommand("meditate");
+          startMeditation(preset);
+          return;
         }
-    }
-
-    // DIRECT MEDITATE command (bypasses AI - triggers startMeditation directly)
-    FirebaseJsonData valMeditate;
-    json->get(valMeditate, "meditate");
-    if (valMeditate.success) {
-        String preset = valMeditate.to<String>();
-        preset.trim();
-        if (preset.length() > 1 && preset != "null" && preset != "false") {
-            Serial.println("[Command] Direct Meditate: " + preset);
-            Firebase.RTDB.deleteNode(&fbdo, "/commands/meditate");
-            startMeditation(preset);
-        }
-    }
-
-    // DIRECT BREATHE command
-    FirebaseJsonData valBreathe;
-    json->get(valBreathe, "breathe");
-    if (valBreathe.success && valBreathe.to<bool>()) {
-        Serial.println("[Command] Direct Breathe from Web App!");
-        Firebase.RTDB.setBool(&fbdo, "/commands/breathe", false);
-        if (currentMode != MODE_NORMAL) switchToNormalMode();
-        currentMedState = MED_BREATHING;
-        medStateTimer = millis();
-        drawNormalScreen(true);
-        speakText("Starting breathing exercise. Breathe in... and breathe out.");
-    }
-
-    // 5. Mode Switch
-    FirebaseJsonData valMode;
-    json->get(valMode, "systemMode");
-    if (valMode.success) {
-        String modeCmd = valMode.to<String>();
-        modeCmd.trim();
-        if (modeCmd == "AI" && currentMode != MODE_AI) {
-            // Prevent the web app from forcing AI mode if a checkup was just initiated
-            if (currentMedState != MED_IDLE) {
-                Serial.println("[Firebase] Ignored Switch to AI Mode (Medical Checkup Active)");
-                Firebase.RTDB.setString(&fbdo, "/commands/systemMode", "");
-            } else {
-                Serial.println("[Firebase] Switch to AI Mode");
-                switchToAIMode();
-                Firebase.RTDB.setString(&fbdo, "/commands/systemMode", "");
-            }
-        } else if (modeCmd == "NORMAL" && currentMode != MODE_NORMAL) {
-            Serial.println("[Firebase] Switch to Normal Mode");
-            switchToNormalMode();
-            Firebase.RTDB.setString(&fbdo, "/commands/systemMode", "");
-        } else if (modeCmd == "OFF") {
-          Serial.println("[Firebase] OFF command -> stop + NORMAL standby");
-          handleUniversalStopAudioCommand();
-          Firebase.RTDB.setString(&fbdo, "/commands/systemMode", "");
-        } else if (modeCmd == "AI" || modeCmd == "NORMAL") {
-            // Clear stale mode commands so local button presses do not bounce back.
-            Firebase.RTDB.setString(&fbdo, "/commands/systemMode", "");
-        } else if (modeCmd.length() > 0) {
-          Firebase.RTDB.setString(&fbdo, "/commands/systemMode", "");
-        }
-    }
-
-    // 6. Stop Audio
-    FirebaseJsonData valStop;
-    json->get(valStop, "stopAudio");
-    if (valStop.success && valStop.to<bool>()) {
-      handleUniversalStopAudioCommand();
-        Firebase.RTDB.setBool(&fbdo, "/commands/stopAudio", false);
-    }
-
-    // 7. Autonomous ToF Avoid / Guard Standby
-    FirebaseJsonData valGuard;
-    json->get(valGuard, "guard");
-    if (valGuard.success) {
-        bool active = valGuard.to<bool>();
-        setGuardMode(active);
-    }
-
-    FirebaseJsonData valAutoAvoid;
-    json->get(valAutoAvoid, "autoAvoid");
-    if (valAutoAvoid.success) {
-        bool active = valAutoAvoid.to<bool>();
-        setAutoAvoidMode(active);
-    }
-
-    FirebaseJsonData valFocusMode;
-    json->get(valFocusMode, "focusMode");
-    if (valFocusMode.success) {
-      bool active = valFocusMode.to<bool>();
-      if (active && !focusModeActive) {
-        focusModeActive = true;
-        Serial.println("[Focus] Focus Mode Activated from Web App!");
-        playMusic("ambient");
-        Firebase.RTDB.setBool(&fbdoFocus, "/status/focusMode", true);
-      } else if (!active && focusModeActive) {
-        focusModeActive = false;
-        Serial.println("[Focus] Focus Mode Deactivated.");
-        clearTtsChunkQueue();
-        if (audio.isRunning()) audio.stopSong();
-        enterAudioTransitionQuiet();
-        isSpeaking = false;
-        Firebase.RTDB.setBool(&fbdoFocus, "/status/focusMode", false);
       }
     }
 
-    // 7b. IMU Recalibration (Web button)
-    FirebaseJsonData valImuReset;
-    json->get(valImuReset, "imuReset");
-    if (valImuReset.success && valImuReset.to<bool>()) {
-        Serial.println("[Command] IMU recalibration requested");
-        Firebase.RTDB.setBool(&fbdo, "/commands/imuReset", false);
-        lastInteractionTime = millis();
-        recalibrateNavigationHeading();
+    json->get(val, "breathe");
+    if (val.success && val.to<bool>()) {
+      Serial.println("[Firebase] Breathe command");
+      Firebase.RTDB.setBool(&fbdo, "/commands/breathe", false);
+      startBreathingFromMqtt();
+      return;
     }
-
-    // 8. Motor Commands (Joysticks)
-    FirebaseJsonData valMotor;
-    json->get(valMotor, "motor");
-    if (valMotor.success) {
-        String motorCmd = valMotor.to<String>();
-        motorCmd.trim();
-        motorCmd.toUpperCase();
-        if (motorCmd.length() > 2 && motorCmd != "NULL" && motorCmd != "FALSE") {
-            Serial.println("[Command] Motor: " + motorCmd);
-
-            // The web UI already sends DRV8833-friendly commands, so pass them straight through.
-            if (!applyManualMotorCommand(motorCmd)) {
-                Serial.println("[Command] Ignored motor command: " + motorCmd);
-            }
-            Firebase.RTDB.deleteNode(&fbdo, "/commands/motor");
-        }
-    }
-
-    // 9. Motor Speed
-    FirebaseJsonData valSpd;
-    json->get(valSpd, "speed");
-    if (valSpd.success) {
-        int spd = valSpd.to<int>();
-        if (spd >= 0 && spd <= 255) {
-            motorSpeed = spd;
-            Serial.printf("[Command] Motor Speed set to: %d\n", motorSpeed);
-            Firebase.RTDB.deleteNode(&fbdo, "/commands/speed");
-        }
-    }
-}
-void pushSensorDataToFirebase() {
-  if (offlineModeLocked || (!mqtt.connected() && !firebaseReady)) {
-     return;
   }
 
+  json->get(val, "systemMode");
+  if (val.success) {
+    String modeCmd = val.to<String>();
+    modeCmd.trim();
+    if (isFirebaseCommandInactive(modeCmd)) {
+      clearFirebaseCommand("systemMode");
+    } else {
+      modeCmd.toUpperCase();
+      if (modeCmd == "AI") {
+        clearFirebaseCommand("systemMode");
+        switchToAIMode();
+        return;
+      } else if (modeCmd == "NORMAL") {
+        clearFirebaseCommand("systemMode");
+        switchToNormalMode();
+      } else if (modeCmd == "OFF") {
+        clearFirebaseCommand("systemMode");
+        handleUniversalStopAudioCommand();
+      } else if (modeCmd.length() > 0) {
+        clearFirebaseCommand("systemMode");
+      }
+    }
+  }
+
+  json->get(val, "stopAudio");
+  if (val.success && val.to<bool>()) {
+    Firebase.RTDB.setBool(&fbdo, "/commands/stopAudio", false);
+    handleUniversalStopAudioCommand();
+    return;
+  }
+
+  // --- Movement & Nav Commands (Skip in AI Mode) ---
+  if (currentMode != MODE_AI) {
+    json->get(val, "guard");
+    if (val.success) setGuardMode(val.to<bool>());
+
+    json->get(val, "autoAvoid");
+    if (val.success) setAutoAvoidMode(val.to<bool>());
+
+    json->get(val, "focusMode");
+    if (val.success) {
+      bool active = val.to<bool>();
+      if (active != focusModeActive) {
+        focusModeActive = active;
+        Firebase.RTDB.setBool(&fbdoFocus, "/status/focusMode", focusModeActive);
+      }
+    }
+
+    json->get(val, "imuReset");
+    if (val.success && val.to<bool>()) {
+      Firebase.RTDB.setBool(&fbdo, "/commands/imuReset", false);
+      recalibrateNavigationHeading();
+    }
+
+    json->get(val, "motor");
+    if (val.success) {
+      String motorCmd = val.to<String>();
+      motorCmd.trim();
+      if (isFirebaseCommandInactive(motorCmd)) {
+        clearFirebaseCommand("motor");
+      } else {
+        motorCmd.toUpperCase();
+        if (motorCmd.length() > 1) {
+          Serial.println("[Firebase] Motor: " + motorCmd);
+          applyManualMotorCommand(motorCmd);
+          clearFirebaseCommand("motor");
+        }
+      }
+    }
+
+    json->get(val, "speed");
+    if (val.success) {
+      int newSpeed = val.to<int>();
+      if (newSpeed > 0) {
+        motorSpeed = constrain(newSpeed, 0, 255);
+        clearFirebaseCommand("speed");
+        Serial.printf("[Firebase] Speed set to %d\n", motorSpeed);
+      }
+    }
+
+    json->get(val, "userProfile");
+    if (val.success) {
+      syncUserProfileFromFirebase();
+    }
+  }
+}
+
+void pushSensorDataToFirebase() {
+  if (!FIREBASE_ENABLED || !firebaseReady) return;
+  if (offlineModeLocked || currentMode == MODE_AI || networkIsQuiet() || isSpeaking || isProcessingAI) return;
   static unsigned long lastPush = 0;
   if (millis() - lastPush < 10000) return;
 
   FirebaseJson json;
-  
-  // SANITIZE: Replace NaN with 0 because Firebase rejects NaN
   json.set("temperature", isnan(temp_aht) ? 0.0 : temp_aht);
   json.set("humidity", isnan(humidity_aht) ? 0.0 : humidity_aht);
   json.set("heartRate", isnan(max30102_hr) ? 0 : max30102_hr);
   json.set("spo2", isnan(max30102_spo2) ? 0 : max30102_spo2);
-  // Integer values don't need isnan but guard just in case they were floats
   json.set("aqi", aqi_val);
   json.set("tvoc", tvoc_val);
   json.set("eco2", eco2_val);
@@ -9690,14 +9731,7 @@ void pushSensorDataToFirebase() {
   json.set("imuHeading", imuYawEstimateDeg);
   json.set("imuPitch", imuPitchDeg);
   json.set("imuRoll", imuRollDeg);
-  json.set("imuTilt", fmaxf(fabsf(imuPitchDeg), fabsf(imuRollDeg)));
   json.set("imuAccelG", imuAccelMagnitudeG);
-  json.set("imuYawRate", imuGyroZFiltered);
-  json.set("imuDriveAssist", driveHoldStraight);
-  json.set("imuMotionState", driveControlActive ? "manual" : (isMoving ? "timed" : "idle"));
-  json.set("imuTurnActive", turnControlActive);
-  json.set("imuTurnProgress", turnAccumDeg);
-  json.set("imuTurnTarget", turnTargetDeg);
   json.set("tofReady", tofReady);
   json.set("tofHasReading", tofHasReading);
   json.set("tofDistanceMm", tofHasReading ? (int)tofFilteredMm : 0);
@@ -9705,313 +9739,128 @@ void pushSensorDataToFirebase() {
   json.set("autoAvoid", autoAvoidEnabled);
   json.set("guardMode", guardModeEnabled);
   json.set("guardAlarm", guardAlarmActive);
+  json.set("mode", (currentMode == MODE_AI ? "AI" : "NORMAL"));
   json.set("timestamp", ntpTimeValid ? time(nullptr) : (long)(millis() / 1000UL));
 
-  if (FIREBASE_ENABLED && firebaseReady) {
-    String path = "/readings";
-    if (Firebase.RTDB.pushJSON(&fbdo, path.c_str(), &json)) {
-      Serial.println("[Firebase] Sensor data pushed to web app");
-    } else {
-      Serial.printf("[Firebase] Push failed: %s\n", fbdo.errorReason().c_str());
-    }
+  if (Firebase.RTDB.setJSONAsync(&fbdoStatus, "/status/vitals", &json)) {
+    Serial.println("[Firebase] Vitals pushed to /status/vitals");
+    lastPush = millis();
+  } else {
+    Serial.printf("[Firebase] Vitals push failed: %s\n", fbdoStatus.errorReason().c_str());
   }
-
-  pushSensorDataToMQTT(json);
-
-  lastPush = millis();
+  publishStatusSnapshot(true);
 }
-
-
-void checkEnvironmentalAlerts() {
-    // Thresholds: Temp > 40C, AQI >= 5 (Poor)
-    bool highTemp = (temp_aht > 40.0);
-    bool poorAir = (aqi_val >= 5);
-
-    if (!highTemp && !poorAir) return;
-
-    // Debounce: Alert max once every 30 mins
-    static unsigned long lastAlert = 0;
-    if (millis() - lastAlert < 30 * 60 * 1000) return;
-
-    String msg = "⚠️ **ELLA SAFETY ALERT** ⚠️\n\n";
-    bool send = false;
-
-    if (highTemp) {
-        msg += "🌡️ High Temperature Detected: " + String(temp_aht, 1) + "°C\n";
-        send = true;
-    }
-    if (poorAir) {
-        msg += "💨 Poor Air Quality Detected (AQI: " + String(aqi_val) + ")\n";
-        send = true;
-    }
-
-    if (send) {
-        msg += "\nPlease check the environment.";
-        Serial.println("[Safety] Sending Environmental Alert!");
-        sendTelegramAlert(msg);
-        lastAlert = millis();
-        speakText("Safety alert sent to your phone.");
-    }
-}
-
-// Ensure User Name is syncing
 void syncUserProfileFromFirebase() {
   if (!firebaseReady) return;
-  
-  if (Firebase.RTDB.getJSON(&fbdo, "/commands/userProfile")) {
-      FirebaseJson *json = fbdo.jsonObjectPtr();
-      FirebaseJsonData result;
-      
-      // 1. Name
-      json->get(result, "name");
-      if (result.success) {
-          user_name = result.to<String>();
-          Serial.println("[Profile] Name: " + user_name);
-      }
-      
-      // 2. Telegram Bot Token
-      json->get(result, "telegramBotToken");
-      if (result.success) {
-          cloudBotToken = result.to<String>();
-          cloudBotToken.trim(); // TRUNCATE invisible spaces/newlines
-          Serial.println("[Profile] Bot Token Updated");
-          prefs.putString("botToken", cloudBotToken);
-      }
+  if (!Firebase.RTDB.getJSON(&fbdo, "/commands/userProfile")) return;
 
-      // 3. Telegram Chat ID
-      json->get(result, "telegramChatId");
-      if (result.success) {
-          cloudChatId = result.to<String>();
-          cloudChatId.trim(); // TRUNCATE invisible spaces/newlines
-          Serial.println("[Profile] Chat ID Updated");
-          prefs.putString("chatId", cloudChatId);
-      }
+  FirebaseJson* json = fbdo.jsonObjectPtr();
+  if (!json) return;
 
-      // 4. Emergency Contact
-      json->get(result, "emergencyContact");
-      if (result.success) {
-          user_emergency_contact = result.to<String>();
-          Serial.println("[Profile] Emergency Contact: " + user_emergency_contact);
-          prefs.putString("emergency", user_emergency_contact);
-      }
-      
-      // Also save Name
-      if (user_name.length() > 0) prefs.putString("userName", user_name);
+  FirebaseJsonData val;
+  json->get(val, "name");
+  if (val.success) {
+    user_name = val.to<String>();
+    prefs.putString("userName", user_name);
+  }
 
+  json->get(val, "telegramBotToken");
+  if (val.success) {
+    cloudBotToken = val.to<String>();
+    cloudBotToken.trim();
+    prefs.putString("botToken", cloudBotToken);
+  }
+
+  json->get(val, "telegramChatId");
+  if (val.success) {
+    cloudChatId = val.to<String>();
+    cloudChatId.trim();
+    prefs.putString("chatId", cloudChatId);
+  }
+
+  json->get(val, "emergencyContact");
+  if (val.success) {
+    user_emergency_contact = val.to<String>();
+    prefs.putString("emergency", user_emergency_contact);
   }
 }
-
 void syncRemindersFromFirebase() {
   if (!firebaseReady || offlineModeLocked) return;
-
-  // IMPORTANT: /reminders is a Firebase object (auto-push IDs), NOT a string.
-  // Use getJSON then stringData() to get the raw JSON string response.
   if (Firebase.RTDB.getJSON(&fbdo, "/reminders")) {
-    String raw = fbdo.stringData(); // raw JSON string of the whole object
+    String raw = fbdo.stringData();
     if (raw.length() > 5 && raw != "null") {
       cloudRemindersJson = raw;
       Serial.println("[Firebase] Reminders synced (" + String(cloudRemindersJson.length()) + " bytes)");
     } else {
-      Serial.println("[Firebase] Reminders: empty or no data");
+      cloudRemindersJson = "[]";
     }
-  } else {
-    Serial.println("[Firebase] Reminder sync failed: " + String(fbdo.errorReason().c_str()));
   }
 }
-
-
-void checkFocusMode() {
-    if (!firebaseReady || offlineModeLocked) return;
-    if (isSpeaking || isProcessingAI) return; // Don't interrupt active AI
-    
-    // Check every 5 seconds
-    static unsigned long lastCheck = 0;
-    if (millis() - lastCheck < 5000) return;
-    lastCheck = millis();
-
-    // Read from commands/focusMode (web app writes here, device reads here)
-    if (Firebase.RTDB.getBool(&fbdoFocus, "/commands/focusMode")) {
-        bool fbFocus = fbdoFocus.boolData();
-        if (fbFocus && !focusModeActive) {
-            focusModeActive = true;
-            Serial.println("[Focus] Focus Mode Activated from Web App!");
-            playMusic("ambient");
-            // Acknowledge
-            Firebase.RTDB.setBool(&fbdoFocus, "/status/focusMode", true);
-        } else if (!fbFocus && focusModeActive) {
-            focusModeActive = false;
-            Serial.println("[Focus] Focus Mode Deactivated.");
-            clearTtsChunkQueue();
-            if (audio.isRunning()) audio.stopSong();
-            enterAudioTransitionQuiet();
-            isSpeaking = false;
-            // Acknowledge
-            Firebase.RTDB.setBool(&fbdoFocus, "/status/focusMode", false);
-        }
-    } else {
-        Serial.println("[Focus] FB read err: " + fbdoFocus.errorReason());
-    }
-}
-
-String getRemindersContext() {
-  String s = "\nREMINDERS:\n";
-  int count = 0;
-
-  if (pendingReminderTitle.length() > 0 && pendingReminderTime.length() > 0) {
-      s += "- " + pendingReminderTitle + " (" + pendingReminderType + ") at " + pendingReminderTime;
-      if (pendingReminderNeedsCloudSync) {
-        s += " [pending cloud sync]";
-      }
-      s += "\n";
-      count++;
+void syncWithFirebase() {
+  if (!FIREBASE_ENABLED || offlineModeLocked) return;
+  if (currentMode == MODE_AI || networkIsQuiet() || isSpeaking || isProcessingAI) return;
+  if (!firebaseReady) {
+    if (millis() >= nextFirebaseRetryMs) setupFirebase();
+    return;
   }
-
-  if (cloudRemindersJson == "[]" || cloudRemindersJson == "" || cloudRemindersJson == "null") {
-      if (count == 0) {
-        return "\nREMINDERS: No reminders found.\n";
-      }
-      return s;
-  }
-
-  Serial.print("[Reminders] Raw JSON: ");
-
-  StaticJsonDocument<2048> doc; 
-  DeserializationError error = deserializeJson(doc, cloudRemindersJson);
-  
-  if (error) {
-      Serial.print("[Reminders] JSON Error: ");
-      Serial.println(error.c_str());
-      return count > 0 ? s : "\nREMINDERS: Error reading checklist.\n";
-  }
-
-  // Handle ARRAY ( [...] )
-  if (doc.is<JsonArray>()) {
-      for (JsonVariant v : doc.as<JsonArray>()) {
-          // FIX: JSON uses 'detail' not 'title' based on logs
-          String title = v["detail"] | v["title"] | "";
-          String time = v["time"] | "";
-          String type = v["type"] | "";
-          
-          if (title.length() > 0) { 
-             s += "- " + title + " (" + type + ") at " + time + "\n";
-             count++;
-          }
-      }
-  } 
-  // Handle OBJECT ( {"id": {...}, "id2": {...}} )
-  else if (doc.is<JsonObject>()) {
-      for (JsonPair p : doc.as<JsonObject>()) {
-          JsonVariant v = p.value();
-          String title = v["detail"] | v["title"] | "";
-          String time = v["time"] | "";
-          String type = v["type"] | "";
-          
-          if (title.length() > 0) { 
-             s += "- " + title + " (" + type + ") at " + time + "\n";
-             count++;
-          }
-      }
-  }
-
-  if (count == 0) return "\nREMINDERS: You have no pending tasks.\n";
-  
-  return s;
+  syncUserProfileFromFirebase();
+  syncRemindersFromFirebase();
 }
-
-// ============================================================
-// CONTEXTUAL AWARENESS (PHASE 1)
-// ============================================================
-void checkContextualAlerts() {
-    if (offlineModeLocked) return;
-    if (autoAvoidEnabled || guardModeEnabled || guardAlarmActive) return;
-    if (currentMode != MODE_NORMAL || isSpeaking || isProcessingAI) return;
-    
-    struct tm timeinfo;
-    if(!getLocalTime(&timeinfo)) return;
-
-    unsigned long now = millis();
-
-    // 1. Air Quality Alert (eCO2 > 1000)
-    if (eco2_val > 1000 && (now - lastAirQualityAlert > CONTEXT_COOLDOWN)) {
-        lastAirQualityAlert = now;
-        Serial.println("[Context] Bad air quality detected.");
-        setEyeExpression("WORRIED");
-        speakText("The air quality in here is dropping. Fresh air would be nice!");
-        return; // Only one alert per loop
-    }
-
-    // 2. Humidity / Stuffy Alert (Humidity > 70%)
-    if (!isnan(humidity_aht) && humidity_aht > 70.0 && (now - lastHumidityAlert > CONTEXT_COOLDOWN)) {
-        lastHumidityAlert = now;
-        Serial.println("[Context] High humidity detected.");
-        setEyeExpression("FRUSTRATED");
-        speakText("The room feels a bit stuffy and humid.");
-        return;
-    }
-
-    // 3. Late Night Active Alert (Past 11 PM or before 4 AM, but user just interacted)
-    if ((timeinfo.tm_hour >= 23 || timeinfo.tm_hour < 4) && (now - lastLateNightAlert > CONTEXT_COOLDOWN)) {
-        // Did they interact in the last 2 minutes?
-        if (now - lastMusicAction < 120000) {
-            lastLateNightAlert = now;
-            Serial.println("[Context] Late night activity detected.");
-            setEyeExpression("SLEEPY");
-            speakText("It's getting pretty late. Resting might be a good idea soon.");
-            return;
-        }
-    }
+void publishVitalsSnapshot(FirebaseJson& json) {}
+void logMoodToFirebase() {}
+void logConversationToFirebase(const char* userText, String aiReply) {
+  // Stripped off to prevent LLM responses from reaching Telegram bridge
+  /*
+  if (!mqtt.connected()) return;
+  JsonDocument doc;
+  doc["user"] = userText;
+  doc["ai"] = aiReply;
+  String payload;
+  serializeJson(doc, payload);
+  mqtt.publish("ella/robotAssist/conversations", payload.c_str());
+  */
 }
+// Handled by MQTT implementation above
 
-// ============================================================
-// MOOD & CONVERSATION LOGGING
-// ============================================================
-void logMoodToFirebase() {
-    if (!Firebase.ready()) return;
-  if (networkIsQuiet()) return;
-    
-    // Build JSON for `/moodLog/{timestamp}`
-    FirebaseJson json;
-    json.set("mood", currentEyeExpression);
-    json.set("valence", moodValence);
-    json.set("arousal", moodArousal);
-    if (!isnan(max30102_hr)) json.set("hr", max30102_hr);
-    if (!isnan(temp_aht)) json.set("temp", temp_aht);
-    
-    String path = "moodLog/" + String(millis());
-    Firebase.RTDB.setJSONAsync(&fbdo, path, &json);
-    Serial.println("[MoodLog] Pushed snapshot to Firebase.");
-}
 
-// ============================================================
-// ============================================================
+
+
 // TELEGRAM BOT - SERVER-SIDE FUNCTIONS
 // ============================================================
 // Send alert via server (no SSL on ESP32!)
 bool sendTelegramAlert(String msg) {
-  if (cloudBotToken.length() < 10) return false;
+  if (msg.length() == 0) return false;
   
-  WiFiClientSecure client;
-  client.setInsecure();
-  HTTPClient https;
-  
-  String url = "https://api.telegram.org/bot" + cloudBotToken + "/sendMessage";
-  
-  StaticJsonDocument<1024> doc;
-  doc["chat_id"] = cloudChatId;
-  doc["text"] = msg;
-  doc["parse_mode"] = "Markdown";
-  
-  String payload;
-  serializeJson(doc, payload);
-  
-  if (https.begin(client, url)) {
-    https.addHeader("Content-Type", "application/json");
-    int httpCode = https.POST(payload);
-    https.end();
+  Serial.printf("[Alert] %s\n", msg.c_str());
+
+  // 1. Push to Firebase /alerts (Primary)
+  if (firebaseReady) {
+    FirebaseJson alertJson;
+    alertJson.set("text", msg);
+    alertJson.set("chatId", cloudChatId);
+    alertJson.set("timestamp", ntpTimeValid ? time(nullptr) : (long)(millis() / 1000UL));
+    alertJson.set("processed", false);
     
-    bool success = (httpCode == HTTP_CODE_OK);
-    Serial.printf("[Telegram] Direct alert: %s (Status: %d)\n", msg.substring(0, 50).c_str(), httpCode);
-    return success;
+    if (Firebase.RTDB.pushJSONAsync(&fbdo, "/alerts", &alertJson)) {
+      Serial.println("[Firebase] Telegram alert pushed to /alerts");
+      return true;
+    } else {
+      Serial.printf("[Firebase] Alert push failed: %s\n", fbdo.errorReason().c_str());
+    }
+  }
+
+  // 2. Relay via MQTT (Fallback/Legacy)
+  if (mqtt.connected()) {
+    JsonDocument doc;
+    doc["text"] = msg;
+    doc["chatId"] = cloudChatId;
+    doc["timestamp"] = millis();
+    
+    String payload;
+    serializeJson(doc, payload);
+    mqtt.publish("ella/telegram/out", payload.c_str());
+    Serial.println("[Bridge] Telegram relay via MQTT");
+    return true;
   }
   return false;
 }
@@ -10051,99 +9900,21 @@ void handleTelegramCommand(String command) {
     }
   }
   
-  // Send response back directly to Telegram
-  if (response.length() > 0 && cloudBotToken.length() > 10) {
-    WiFiClientSecure client;
-    client.setInsecure();
-    HTTPClient https;
-    
-    String url = "https://api.telegram.org/bot" + cloudBotToken + "/sendMessage";
-    
-    StaticJsonDocument<1024> doc;
-    doc["chat_id"] = cloudChatId;
+  // Send response back via Node server WebSocket relay (saves heap — no TLS needed)
+  if (response.length() > 0) {
+    SpiRamJsonDocument doc(2048);
+    doc["type"] = "telegram_response";
     doc["text"] = response;
-    doc["parse_mode"] = "Markdown";
-    
-    String payload;
-    serializeJson(doc, payload);
-    
-    if (https.begin(client, url)) {
-      https.addHeader("Content-Type", "application/json");
-      https.POST(payload);
-      https.end();
-      Serial.println("[Telegram] Direct response sent");
-    }
+    String out;
+    serializeJson(doc, out);
+    nodeWsSendText(out.c_str());
+    Serial.println("[Telegram] Response relayed via Node server");
   }
 }
 
-// New background polling function for direct Telegram
+// Telegram polling disabled — handled by Node Server Webhook
 void pollTelegramDirect() {
-  if (cloudBotToken.length() < 10) return;
-  if (isSpeaking || isProcessingAI || !networkAvailable()) return;
-  
-  static unsigned long lastPoll = 0;
-  if (millis() - lastPoll < 5000) return; // Poll every 5s
-  lastPoll = millis();
-  
-  Serial.println("[Telegram] Polling direct API...");
-  
-  WiFiClientSecure client;
-  client.setInsecure();
-  client.setBufferSizes(1024, 512);
-  HTTPClient https;
-  
-  String url = "https://api.telegram.org/bot" + cloudBotToken + "/getUpdates?offset=" + String(lastTelegramUpdateId + 1) + "&limit=5&timeout=0";
-  
-  if (https.begin(client, url)) {
-    int httpCode = https.GET();
-    if (httpCode == HTTP_CODE_OK) {
-      String payload = https.getString();
-      StaticJsonDocument<4096> doc;
-      DeserializationError error = deserializeJson(doc, payload);
-      
-      if (error) {
-        Serial.print("[Telegram] JSON Error: ");
-        Serial.println(error.c_str());
-      } else if (!doc["ok"]) {
-        Serial.print("[Telegram] API Error: ");
-        Serial.println(doc["description"] | "unknown");
-        // If "offset is too old", reset it
-        String desc = doc["description"] | "";
-        if (desc.indexOf("offset") >= 0) lastTelegramUpdateId = 0;
-      } else {
-        JsonArray updates = doc["result"].as<JsonArray>();
-        if (updates.size() > 0) {
-          Serial.printf("[Telegram] Received %d updates\n", updates.size());
-        }
-        for (JsonObject update : updates) {
-          lastTelegramUpdateId = update["update_id"];
-          if (update.containsKey("message")) {
-            String text = update["message"]["text"].as<String>();
-            String chatId = String(update["message"]["chat"]["id"].as<long>());
-            
-            // Auto-capture chat ID if missing
-            if (cloudChatId == "" || cloudChatId == "null" || cloudChatId == "0") {
-              cloudChatId = chatId;
-              Preferences prefs;
-              prefs.begin("ella", false);
-              prefs.putString("chatId", cloudChatId);
-              prefs.end();
-              Serial.println("[Telegram] Auto-captured Chat ID: " + cloudChatId);
-            }
-            
-            if (chatId == cloudChatId) {
-              handleIncomingTelegramCommand(text, chatId);
-            }
-          }
-        }
-      }
-    } else {
-      Serial.printf("[Telegram] Poll failed, HTTP Code: %d\n", httpCode);
-    }
-    https.end();
-  } else {
-    Serial.println("[Telegram] Connection failed");
-  }
+  return; // All Telegram handled via server webhook + MQTT relay
 }
 
 // ============================================================
@@ -10397,6 +10168,7 @@ void announceMedicalResults() {
   if (millis() - lastAnnounceMs < 5000) return;
   
   isAnnouncing = true;
+  medicalResultsAnnounced = true;
   lastAnnounceMs = millis();
   
   enterNetworkQuiet();
@@ -10464,7 +10236,6 @@ void announceMedicalResults() {
   drawNormalScreen(true);
   speakText(announcement.c_str());
   
-  medicalResultsAnnounced = true;
   isAnnouncing = false;
 }
 
@@ -10473,6 +10244,42 @@ void announceMedicalResults() {
 // ============================================================
 // AI CONTEXT
 // ============================================================
+String getRemindersContext() {
+  if (cloudRemindersJson.length() < 5 || cloudRemindersJson == "[]") {
+    return "Reminders: None set.";
+  }
+  return "Reminders: " + cloudRemindersJson;
+}
+
+String getTimeContext() {
+  String s = "\nCURRENT CLOCK CONTEXT:\n";
+  s += "NTP time valid: ";
+  s += ntpTimeValid ? "yes\n" : "no\n";
+
+  struct tm ti;
+  if (ntpTimeValid && getLocalTime(&ti)) {
+    char dateStr[16];
+    char time24Str[8];
+    char time12Str[12];
+    char weekdayStr[12];
+    strftime(dateStr, sizeof(dateStr), "%Y-%m-%d", &ti);
+    strftime(time24Str, sizeof(time24Str), "%H:%M", &ti);
+    strftime(time12Str, sizeof(time12Str), "%I:%M %p", &ti);
+    strftime(weekdayStr, sizeof(weekdayStr), "%A", &ti);
+
+    s += "Date: " + String(dateStr) + "\n";
+    s += "Weekday: " + String(weekdayStr) + "\n";
+    s += "Time 24h: " + String(time24Str) + "\n";
+    s += "Time 12h: " + String(time12Str) + "\n";
+    s += "Timezone offset: UTC+1 firmware local time\n";
+    s += "Use this clock for reminder times, greetings, today/tonight/tomorrow, and relative requests like 'in 10 minutes'.\n";
+  } else {
+    s += "Date/time unavailable. Do not guess current time. Ask the user for an exact reminder time if needed.\n";
+  }
+
+  return s;
+}
+
 String getSensorContext() {
   String s = "\nCURRENT ONBOARD SENSOR DATA (grounding only; do not mention these readings unless the user asks about them or they clearly matter):\n";
   if (lastEnvSensorReadMs > 0) {
@@ -10608,6 +10415,7 @@ bool isLiveWebSearchRequest(const String& userQuery) {
          hasExplicitCommandPhrase(q, "who is") ||
          hasExplicitCommandPhrase(q, "find out");
 }
+
 
 bool isRobotActionRequest(const String& userQuery) {
   String q = userQuery;
@@ -10959,8 +10767,10 @@ String executeRobotActionTool(const String& action, const String& param, const S
     char tbuf[30];
     strftime(tbuf, sizeof(tbuf), "%Y-%m-%d %H:%M:%S", &ti);
     if (firebaseReady) {
+#if 0
       Firebase.RTDB.setString(&fbdo, "/sleepLog/currentSession/startTime", String(tbuf));
       Firebase.RTDB.setInt(&fbdo, "/sleepLog/currentSession/startMillis", (int)(millis() / 1000));
+#endif
     }
     Serial.println("[Sleep] Voice sleep start logged at " + String(tbuf));
     return "Sleep mode enabled.";
@@ -10974,9 +10784,11 @@ String executeRobotActionTool(const String& action, const String& param, const S
         char path[64];
         sprintf(path, "sleepLog/%04d-%02d-%02d", ti.tm_year + 1900, ti.tm_mon + 1, ti.tm_mday);
         if (firebaseReady) {
+#if 0
           Firebase.RTDB.setFloat(&fbdo, String(path) + "/hours", sleepHours);
           Firebase.RTDB.setString(&fbdo, String(path) + "/source", "voice");
           Firebase.RTDB.deleteNode(&fbdo, "/sleepLog/currentSession");
+#endif
         }
         Serial.printf("[Sleep] Wake-up logged: %.2f hours\n", sleepHours);
       }
@@ -12209,12 +12021,8 @@ String getEllaSystemPrompt() {
 }
 
 String getEllaLiveContext() {
-    struct tm ti;
-    char tStr[32] = "unknown";
-    if (getLocalTime(&ti)) strftime(tStr, sizeof(tStr), "%I:%M %p, %A", &ti);
-
     String c = "STATUS:\n";
-    c += "Time: " + String(tStr) + "\n";
+    c += getTimeContext() + "\n";
     c += getSensorContext() + "\n";
     c += getNavigationContext() + "\n";
     c += getRemindersContext() + "\n";
@@ -12501,8 +12309,10 @@ void askAI(const char* userText) {
     struct tm ti; getLocalTime(&ti);
     char tbuf[30]; strftime(tbuf, sizeof(tbuf), "%Y-%m-%d %H:%M:%S", &ti);
     if (firebaseReady) {
+#if 0
         Firebase.RTDB.setString(&fbdo, "/sleepLog/currentSession/startTime", String(tbuf));
         Firebase.RTDB.setInt(&fbdo, "/sleepLog/currentSession/startMillis", (int)(millis() / 1000));
+#endif
     }
     Serial.println("[Sleep] Voice sleep start logged at " + String(tbuf));
     isProcessingAI = false; return;
@@ -12515,9 +12325,11 @@ void askAI(const char* userText) {
             char path[64];
             sprintf(path, "sleepLog/%04d-%02d-%02d", ti.tm_year+1900, ti.tm_mon+1, ti.tm_mday);
             if (firebaseReady) {
+#if 0
                 Firebase.RTDB.setFloat(&fbdo, String(path) + "/hours", sleepHours);
                 Firebase.RTDB.setString(&fbdo, String(path) + "/source", "voice");
                 Firebase.RTDB.deleteNode(&fbdo, "/sleepLog/currentSession");
+#endif
             }
             Serial.printf("[Sleep] Wake-up logged: %.2f hours\n", sleepHours);
         }
@@ -12718,7 +12530,9 @@ void askAI(const char* userText) {
           FirebaseJson moodJson;
           moodJson.set("mood", currentEyeExpression);
           moodJson.set("timestamp", tStamp);
+#if 0
           Firebase.RTDB.pushJSONAsync(&fbdo, "/status/moodHistory", &moodJson);
+#endif
           Serial.println("[Firebase] Logged Mood: " + currentEyeExpression);
       }
       logConversationToFirebase(userText, reply);
@@ -13177,9 +12991,11 @@ void speakText(const char* text, bool longForm) {
               maybeExpressiveSpeechMotion();
               processMovementQueue();
             }
+#if 0
             if (firebaseReady) {
               Firebase.ready(); 
             }
+#endif
             // Update UI during speech to show the AI response text
             if (currentMode == MODE_AI) drawAIScreen(false);
             else if (currentMode == MODE_NORMAL) drawNormalScreen(false);
@@ -13202,9 +13018,11 @@ void speakText(const char* text, bool longForm) {
         maybeExpressiveSpeechMotion();
         processMovementQueue();
       }
+#if 0
       if (firebaseReady) {
         Firebase.ready(); 
       }
+#endif
       // Update UI during speech
       if (currentMode == MODE_AI) drawAIScreen(false);
       else if (currentMode == MODE_NORMAL) drawNormalScreen(false);
@@ -13234,8 +13052,10 @@ void handleUniversalStopAudioCommand() {
 
   if (focusModeActive) {
     focusModeActive = false;
+#if 0
     Firebase.RTDB.setBool(&fbdoFocus, "/commands/focusMode", false);
     Firebase.RTDB.setBool(&fbdoFocus, "/status/focusMode", false);
+#endif
   }
 
   if (currentMedState != MED_IDLE) {
@@ -13264,7 +13084,6 @@ bool checkRemoteStopCommand() {
     Firebase.RTDB.setBool(&fbdo, "/commands/stopAudio", false);
     return true;
   }
-
   return false;
 }
 
@@ -13305,9 +13124,11 @@ void stopActiveAudioPlayback(bool scheduleMicRestart) {
     clearMicAIReconnectSchedule();
   }
 
+#if 0
   if (firebaseReady) {
     setSpeakingStatusFirebase(false);
   }
+#endif
 
   setEyeExpression("NORMAL");
   clearAIResponse();
@@ -13333,9 +13154,11 @@ void audio_eof_speech(const char* info) {
     return;
   }
 
+#if 0
   if (firebaseReady) {
       setSpeakingStatusFirebase(false);
   }
+#endif
   
   isSpeaking = false;
   setEyeExpression("NORMAL");
@@ -13422,9 +13245,11 @@ void audio_eof_mp3(const char* info) {
   currentRobotActivity = ROBOT_ACTIVITY_IDLE;
   ttsChunkCount = 0;
   if (ttsUsingFallbackHost || activeTtsText.length() > 0) {
+#if 0
       if (firebaseReady) {
           setSpeakingStatusFirebase(false);
       }
+#endif
       clearStringKeepCapacity(aiRequestStatus);
       clearStringKeepCapacity(activeTtsText);
       clearStringKeepCapacity(ttsRequestUrl);
@@ -13508,9 +13333,11 @@ void audio_error(const char *info) {
   setEyeExpression("NORMAL");
   clearAIResponse();
 
+#if 0
   if (firebaseReady) {
     setSpeakingStatusFirebase(false);
   }
+#endif
   if (currentMode == MODE_AI && aiInputUsesMic) {
     scheduleMicAIReconnect(MIC_RECONNECT_AFTER_FAILURE_MS, "audio error");
   }
@@ -13776,16 +13603,12 @@ String performWebSearch(String query) {
 
 
 
+#if 0
 void syncWithFirebase() {
-  if (!FIREBASE_ENABLED || offlineModeLocked) return;
-  // Sync every minute to avoid flooding
-  static unsigned long lastSync = 0;
-  if (millis() - lastSync < 60000) return;
-  lastSync = millis();
-
-  syncUserProfileFromFirebase();
-  syncRemindersFromFirebase();
+  // Logic removed
 }
+#endif
+
 
 // ============================================================
 // TELEGRAM BOT - NOW HANDLED BY SERVER
@@ -13902,42 +13725,12 @@ void printMemoryStats() {
     ESP.getFreePsram(), ESP.getMinFreePsram());
 }
 
-// ============================================================
-// CONVERSATION HISTORY TO FIREBASE
-// ============================================================
-void logConversationToFirebase(const char* userText, String aiReply) {
-    if (!firebaseReady || WiFi.status() != WL_CONNECTED) return;
-  if (networkIsQuiet()) return;
-
-    struct tm timeinfo;
-    String tStamp = "";
-    if (getLocalTime(&timeinfo)) {
-        char buf[30];
-        strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", &timeinfo);
-        tStamp = String(buf);
-    }
-
-    FirebaseJson convJson;
-    convJson.set("user", String(userText));
-
-    // Truncate AI reply for storage (max 200 chars)
-    String cleanReply = aiReply;
-    if (cleanReply.length() > 200) cleanReply = cleanReply.substring(0, 200) + "...";
-    convJson.set("ai", cleanReply);
-    convJson.set("mood", currentEyeExpression);
-    convJson.set("timestamp", tStamp);
-
-    Firebase.RTDB.pushJSONAsync(&fbdo, "/conversations", &convJson);
-    Serial.println("[Firebase] Conversation logged");
-
-    // Keep only last 20 conversations (cleanup old entries periodically)
-    static unsigned long lastCleanup = 0;
-    if (millis() - lastCleanup > 3600000) { // Every hour
-        // Firebase doesn't support limitToLast with delete easily on ESP32
-        // So we rely on web dashboard or Cloud Functions to prune
-        lastCleanup = millis();
-    }
+// Wrapper for compatibility with loop()
+void checkContextualAlerts() {
+    checkAirQualityAlerts();
 }
+
+// (logConversationToFirebase implementation moved to stub above)
 
 // ============================================================
 // GUIDED MEDITATION PRESETS
@@ -14139,7 +13932,9 @@ void enterDeepSleep(const char* reason) {
   Serial.println(reason);
 
   if (firebaseReady) {
+#if 0
     Firebase.RTDB.setString(&fbdo, "/status/power", "sleep");
+#endif
   }
 
   stopMotorMotion(true);
@@ -14217,16 +14012,11 @@ void checkSleepTracking() {
 // MAIN LOOP MOVED TO BOTTOM FOR SCOPING
 // ============================================================
 void loop() {
-  if (currentMode != MODE_AI) {
-    reconnectMQTT();
-  } else if (mqtt.connected()) {
-    mqtt.disconnect();
-    mqttClientNet->stop();
-    Serial.println("[MQTT] Disconnected during AI mode");
-  }
-
-  if (currentMode != MODE_AI && mqtt.connected()) {
+  // MQTT & Connectivity
+  reconnectMQTT();
+  if (mqtt.connected() && currentMode != MODE_AI && !networkIsQuiet() && !isSpeaking && !isProcessingAI) {
     mqtt.loop();
+    publishRobotAssistStatus(false);
   }
   if (currentMode == MODE_AI) {
     serviceLlmWebSocketKeepAlive();
@@ -14360,7 +14150,7 @@ void loop() {
     }
   }
 
-  if (!currentlySpeaking && !checkupNetworkQuiet && !networkIsQuiet()) {
+  if (!currentlySpeaking && !checkupNetworkQuiet && !networkIsQuiet() && currentMode != MODE_AI) {
     publishRobotAssistStatus(false);
   }
 
@@ -14761,8 +14551,8 @@ void loop() {
   }
 
 
-  // Firebase background tasks stay in Normal mode to avoid interfering with chat or checkups.
-  if (!offlineModeLocked && currentMode == MODE_NORMAL && currentMedState == MED_IDLE && !checkupNetworkQuiet && !isSpeaking && !isProcessingAI && !networkIsQuiet()) {
+  // MQTT background tasks stay in Normal mode so AI STT/Node/TTS has the TLS heap.
+  if (!offlineModeLocked && currentMode == MODE_NORMAL && currentMedState == MED_IDLE && !networkIsQuiet() && !isSpeaking && !isProcessingAI) {
     static unsigned long lastFirebaseSync = 0;
     if (!touchUiHot && millis() - lastFirebaseSync > 60000) { // Matches syncWithFirebase() internal throttle
       syncWithFirebase();
@@ -14795,15 +14585,15 @@ void loop() {
 
 }
 
-void pushSensorDataToMQTT(FirebaseJson& json) {
-  if (currentMode == MODE_AI || networkIsQuiet() || !mqtt.connected()) return;
-  if (mqtt.connected()) {
-    String mqttPayload;
-    json.toString(mqttPayload);
-    mqtt.publish("ella/vitals", mqttPayload.c_str());
-    Serial.println("[MQTT] Published vitals to ella/vitals");
-  }
+#if 0
+void publishVitalsSnapshot(FirebaseJson& json) {
+  if (currentMode == MODE_AI || networkIsQuiet() || !firebaseReady) return;
+#if 0
+  Firebase.RTDB.setJSONAsync(&fbdo, "/status/vitals", &json);
+#endif
+  Serial.println("[Firebase] Published vitals");
 }
+#endif
 
 
 // ============================================================

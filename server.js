@@ -3,87 +3,31 @@ const express = require('express');
 const http = require('http');
 const fetch = (...args) => import('node-fetch').then(({ default: f }) => f(...args));
 const TelegramBot = require('node-telegram-bot-api');
+const { initializeApp: initializeFirebase } = require('firebase/app');
+const { getDatabase, ref: fbRef, onChildAdded, remove: fbRemove } = require('firebase/database');
 
 const app = express();
-app.use(express.json()); // Essential for Webhooks!
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-// Firebase RTDB Configuration (REST API — no extra SDK needed)
-const FIREBASE_DB_URL = 'https://ellacloudai-default-rtdb.firebaseio.com';
-const FIREBASE_DB_SECRET = process.env.FIREBASE_DB_SECRET || 'Aj3Sw5IWZfFvDkh1Qb2Jx1QVA3BGG8HXGjlZIIbW';
-
-// Simple Firebase REST helper
-const firebaseSet = async (path, data) => {
-    try {
-        const url = `${FIREBASE_DB_URL}${path}.json?auth=${FIREBASE_DB_SECRET}`;
-        const res = await fetch(url, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-        });
-        if (!res.ok) console.error(`[Firebase] Write failed: ${path} — ${res.status}`);
-        return res.ok;
-    } catch (err) {
-        console.error(`[Firebase] Write error: ${path} —`, err.message);
-        return false;
-    }
-};
-
-console.log('[Firebase] REST API ready for:', FIREBASE_DB_URL);
-
 // Telegram Bot Configuration
-let TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8328121908:AAFY_6cC9xk41xoo1vML62rPsN7CiDGtOZY';
-let TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID || '7039195212';
+let TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+let TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 let telegramBot = null;
 let esp32Connection = null; // Track active ESP32 connection
-let pendingTelegramCommands = []; // Queue for REST polling fallback
-
-// REST Endpoints for ESP32 fallback (HTTPS instead of WebSocket)
-app.use(express.json());
-
-app.get('/api/telegram/poll', (req, res) => {
-    res.json({ commands: pendingTelegramCommands });
-    pendingTelegramCommands = []; // Clear after delivery
-});
-
-app.post('/api/telegram/relay', (req, res) => {
-    const { text, type } = req.body;
-    console.log(`[REST] Received ${type || 'message'} for relay: ${text?.substring(0, 50)}`);
-    if (text) {
-        sendTelegramMessage(text);
-        res.status(200).json({ success: true });
-    } else {
-        res.status(400).json({ error: "Missing text" });
-    }
-});
-
-// Telegram Webhook route — registered ONCE at startup (not per-init)
-app.post('/api/telegram/webhook', (req, res) => {
-    if (telegramBot) {
-        telegramBot.processUpdate(req.body);
-    }
-    res.sendStatus(200);
-});
 
 // Function to initialize or re-initialize the Telegram bot
 const initTelegramBot = (token) => {
     if (!token) return;
     try {
-        TELEGRAM_BOT_TOKEN = token;
-        // Create bot instance (no polling — we use webhooks)
-        telegramBot = new TelegramBot(token);
-        
-        const RENDER_URL = process.env.RENDER_EXTERNAL_URL || 'https://ella-voice-server.onrender.com';
-        const WEBHOOK_URL = `${RENDER_URL}/api/telegram/webhook`;
-        
-        telegramBot.setWebHook(WEBHOOK_URL).then(() => {
-            console.log(`[Telegram] Webhook set to: ${WEBHOOK_URL}`);
-        }).catch(err => {
-            console.error('[Telegram] Failed to set webhook:', err.message);
-        });
+        if (telegramBot) {
+            console.log('[Telegram] Stopping existing bot polling...');
+            telegramBot.stopPolling();
+        }
 
-        console.log('[Telegram] Bot initialized in Webhook mode');
+        TELEGRAM_BOT_TOKEN = token;
+        telegramBot = new TelegramBot(token, { polling: true });
+        console.log('[Telegram] Bot initialized successfully');
 
         // Handle incoming Telegram commands
         telegramBot.on('message', async (msg) => {
@@ -105,24 +49,18 @@ const initTelegramBot = (token) => {
                 return;
             }
 
-            // Handle commands — relay to ESP32 via Firebase + WebSocket
+            // Handle commands
             if (text === '/status' || text === '/start') {
-                const cmd = { type: 'telegram_command', command: 'status' };
-                firebaseSet('/commands/telegram', cmd);
-                console.log('[Telegram] Relayed /status command to Firebase');
-                telegramBot.sendMessage(chatId, "⏳ *Fetching Ella's status...*", { parse_mode: 'Markdown' });
-                
                 if (esp32Connection && esp32Connection.readyState === WebSocket.OPEN) {
-                    esp32Connection.send(JSON.stringify(cmd));
+                    esp32Connection.send(JSON.stringify({ type: 'telegram_command', command: 'status' }));
+                } else {
+                    telegramBot.sendMessage(chatId, '❌ ELLA is offline');
                 }
             } else if (text === '/health') {
-                const cmd = { type: 'telegram_command', command: 'health' };
-                firebaseSet('/commands/telegram', cmd);
-                console.log('[Telegram] Relayed /health command to Firebase');
-                telegramBot.sendMessage(chatId, "⏳ *Fetching health vitals...*", { parse_mode: 'Markdown' });
-                
                 if (esp32Connection && esp32Connection.readyState === WebSocket.OPEN) {
-                    esp32Connection.send(JSON.stringify(cmd));
+                    esp32Connection.send(JSON.stringify({ type: 'telegram_command', command: 'health' }));
+                } else {
+                    telegramBot.sendMessage(chatId, '❌ ELLA is offline');
                 }
             } else if (text === '/help') {
                 const helpText = `📱 <b>ELLA Bot Commands</b>\n\n` +
@@ -136,17 +74,21 @@ const initTelegramBot = (token) => {
             }
         });
 
+        telegramBot.on('polling_error', (error) => {
+            console.error('[Telegram] Polling error:', error.message);
+        });
+
     } catch (error) {
         console.error('[Telegram] Failed to initialize bot:', error.message);
     }
 };
 
-// Boot init: if token set via env var, init immediately
-if (TELEGRAM_BOT_TOKEN) {
-    initTelegramBot(TELEGRAM_BOT_TOKEN);
-} else {
-    console.log('[Telegram] Bot token not configured — waiting for ESP32 credentials');
-}
+// Initial boot initialization
+// if (TELEGRAM_BOT_TOKEN) {
+//     initTelegramBot(TELEGRAM_BOT_TOKEN);
+// } else {
+//     console.log('[Telegram] Bot token not configured - Waiting for dynamic init from app');
+// }
 
 // (Listeners now attached inside initTelegramBot)
 
@@ -166,6 +108,36 @@ const sendTelegramMessage = async (message, parseMode = 'HTML') => {
         return false;
     }
 };
+
+// --- Firebase Realtime Alert Relay ---
+const firebaseApp = initializeFirebase({
+    databaseURL: "https://ellacloudai-default-rtdb.firebaseio.com"
+});
+const db = getDatabase(firebaseApp);
+const alertsRef = fbRef(db, 'alerts');
+
+console.log('[Firebase] Monitoring /alerts for Telegram relay...');
+onChildAdded(alertsRef, async (snapshot) => {
+    const alertId = snapshot.key;
+    const alertData = snapshot.val();
+
+    if (alertData && alertData.text) {
+        console.log(`[Firebase Alert] New alert: ${alertData.text}`);
+        
+        // Forward to Telegram
+        const success = await sendTelegramMessage(alertData.text);
+        
+        if (success) {
+            // Remove the alert node after successful delivery
+            try {
+                await fbRemove(fbRef(db, `alerts/${alertId}`));
+                console.log(`[Firebase Alert] Handled and removed: ${alertId}`);
+            } catch (err) {
+                console.error(`[Firebase Alert] Failed to remove handled alert: ${err.message}`);
+            }
+        }
+    }
+});
 
 const DEEPGRAM_API_KEY = process.env.DEEPGRAM_API_KEY;
 const MISTRAL_API_KEY = process.env.MISTRAL_API_KEY;
@@ -369,8 +341,7 @@ const normalizeTtsText = (text) => {
         .replace(/[‘’]/g, "'")
         .replace(/[–—‑]/g, "-")
         .replace(/…/g, "...")
-        .replace(/[^\x20-\x7E]/g, " ") 
-        .replace(/[^\x00-\x7F]/g, "")
+        .replace(/[^\x20-\x7E]/g, " ") // Strip non-ASCII
         .replace(/\s+/g, " ")
         .trim();
 };
@@ -424,10 +395,6 @@ const cleanAssistantResponse = (text) => {
     return `${firstEmotion} ${body} ${actionTags.join(" ")}`.replace(/\s+/g, " ").trim();
 };
 
-const stripNonAscii = (text) => {
-    if (!text) return "";
-    return text.replace(/[^\x00-\x7F]/g, "");
-};
 
 const shortenForGoogleTts = (text, maxChars = 150) => {
     const clean = normalizeTtsText(stripActionTags(text));
@@ -798,50 +765,60 @@ wss.on('connection', (ws, request) => {
     };
 
     const callMistralAgent = async (userInput) => {
-        try {
-            console.log("[Mistral] Calling Agent:", MISTRAL_AGENT_ID);
-            const messages = [
-                { role: "system", content: Array.isArray(ELLA_PERSONA) ? ELLA_PERSONA.join("\n") : ELLA_PERSONA }
-            ];
+        const body = {
+            inputs: [{ role: 'user', content: userInput }]
+        };
+        let mistralUrl = 'https://api.mistral.ai/v1/conversations';
 
-            if (latestContext) {
-                messages.push({ role: "system", content: `[SYSTEM CONTEXT]\n${latestContext}` });
-            }
-
-            for (const turn of conversationMemory) {
-                messages.push({ role: "user", content: turn.user });
-                messages.push({ role: "assistant", content: turn.assistant });
-            }
-
-            messages.push({ role: "user", content: userInput });
-
-            const res = await fetch("https://api.mistral.ai/v1/agents/completions", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${MISTRAL_API_KEY}`
-                },
-                body: JSON.stringify({
-                    agent_id: MISTRAL_AGENT_ID,
-                    messages: messages
-                })
-            });
-
-            const responseData = await res.json();
-            
-            if (!res.ok) {
-                const detail = responseData.error?.message || responseData.message || res.statusText;
-                console.error("[Mistral] API Error:", detail);
-                throw new Error(`Mistral API ${res.status}: ${detail}`);
-            }
-
-            console.log("[Mistral] Success");
-            const fullResponse = responseData.choices?.[0]?.message?.content || "";
-            return stripThinkingBlocks(fullResponse);
-        } catch (err) {
-            console.error("[Mistral] Fallback Failed:", err.message);
-            return "My brain is a bit scrambled right now. Try again in a minute!";
+        if (conversationId) {
+            mistralUrl = `${mistralUrl}/${encodeURIComponent(conversationId)}`;
+        } else {
+            body.agent_id = MISTRAL_AGENT_ID;
+            body.agent_version = MISTRAL_AGENT_VERSION;
         }
+
+        const res = await fetch(mistralUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${MISTRAL_API_KEY}`
+            },
+            body: JSON.stringify(body)
+        });
+
+        const responseData = await res.json();
+        console.log("[Mistral RAW]", JSON.stringify(responseData).substring(0, 500));
+
+        if (!res.ok) {
+            const detail = responseData.detail || responseData.message || responseData.error || res.statusText;
+            throw new Error(`Mistral API ${res.status}: ${JSON.stringify(detail).substring(0, 500)}`);
+        }
+
+        if (responseData.conversation_id || responseData.id) {
+            conversationId = responseData.conversation_id || responseData.id;
+            console.log(`[Mistral] Conversation: ${conversationId}`);
+        }
+
+        let fullResponse = "";
+        const outputs = responseData.outputs || responseData.choices || [];
+
+        for (const output of outputs) {
+            const content = output.content || output.message?.content || "";
+            if (Array.isArray(content)) {
+                for (const part of content) {
+                    if (part.type === "text") fullResponse += part.text;
+                }
+            } else if (typeof content === "string") {
+                fullResponse += content;
+            }
+        }
+
+        if (!fullResponse) {
+            if (responseData.message?.content) fullResponse = responseData.message.content;
+            else if (typeof responseData.message === "string") fullResponse = responseData.message;
+        }
+
+        return stripThinkingBlocks(fullResponse);
     };
 
     const resetSilenceTimer = () => {
@@ -1153,6 +1130,7 @@ wss.on('connection', (ws, request) => {
 
             // Forward to Telegram so user has the chat history
             // Only send if NOT in AI mode to avoid notification clutter
+            /*
             if (currentRobotMode !== "AI") {
                 if (telegramBot && TELEGRAM_CHAT_ID) {
                     sendTelegramMessage(fullResponse);
@@ -1160,6 +1138,7 @@ wss.on('connection', (ws, request) => {
             } else {
                 console.log("[Telegram] Skipping AI response forwarding (Robot is in AI Mode)");
             }
+            */
 
             // Buffer before ending turn to ensure ESP32 starts playback
             await sleep(2000);
@@ -1585,33 +1564,15 @@ wss.on('connection', (ws, request) => {
             const data = JSON.parse(message.toString());
             if (data.type === "context") {
                 latestContext = data.text;
-                // Improve mode detection
-                if (data.text.includes("Mode: AI")) {
-                    currentRobotMode = "AI";
-                } else if (data.text.includes("Mode: NORMAL")) {
-                    currentRobotMode = "NORMAL";
-                }
-                console.log(`[Context Update] Mode Detected: ${currentRobotMode}`);
+                if (data.text.includes("Mode: AI")) currentRobotMode = "AI";
+                else if (data.text.includes("Mode: NORMAL")) currentRobotMode = "NORMAL";
                 console.log(`[Context Update] Mode: ${currentRobotMode}`);
-            } else if (data.type === "telegram_response" || data.type === "telegram_alert") {
-                const isAlert = data.type === "telegram_alert";
-                console.log(`[Telegram] Relaying ${isAlert ? "alert" : "response"} to user...`);
-                if (telegramBot && TELEGRAM_CHAT_ID) {
-                    sendTelegramMessage(data.text, 'Markdown');
-                } else {
-                    console.warn("[Telegram] Bot not configured, relay failed");
-                }
+            } else if (data.type === "telegram_response") {
+                // Telegram relay disabled (now uses direct ESP32 path)
+            } else if (data.type === "telegram_alert") {
+                // Telegram relay disabled (now uses direct ESP32 path)
             } else if (data.type === "telegram_init") {
-                console.log("[Telegram] Received credentials from ESP32");
-                if (data.botToken) {
-                    process.env.TELEGRAM_BOT_TOKEN = data.botToken;
-                    if (data.chatId) {
-                        process.env.TELEGRAM_CHAT_ID = data.chatId;
-                        TELEGRAM_CHAT_ID = data.chatId;
-                    }
-                    // Initialize the bot webhook dynamically
-                    initTelegramBot(data.botToken);
-                }
+                // Telegram relay disabled (now uses direct ESP32 path)
             }
         } catch (e) {
             console.warn("[Server] Failed to parse text message:", e.message);
