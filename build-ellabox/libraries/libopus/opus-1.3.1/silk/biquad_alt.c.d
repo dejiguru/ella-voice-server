@@ -1,0 +1,24 @@
+/home/dejiguru/Arduino/ellabox/build-ellabox/libraries/libopus/opus-1.3.1/silk/biquad_alt.c.o: \
+ /home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/biquad_alt.c \
+ /home/dejiguru/Arduino/libraries/libopus/src/opus_config.h \
+ /home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/SigProc_FIX.h \
+ /home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/typedef.h \
+ /home/dejiguru/Arduino/libraries/libopus/src/opus_types.h \
+ /home/dejiguru/Arduino/libraries/libopus/src/../src/opus-1.3.1/include/opus_types.h \
+ /home/dejiguru/Arduino/libraries/libopus/src/opus_defines.h \
+ /home/dejiguru/Arduino/libraries/libopus/src/../src/opus-1.3.1/include/opus_defines.h \
+ /home/dejiguru/Arduino/libraries/libopus/src/../src/opus-1.3.1/include/opus_types.h \
+ /home/dejiguru/Arduino/hardware/espressif/esp32/tools/esp32-arduino-libs/esp32s3/include/newlib/platform_include/stdio.h \
+ /home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/resampler_structs.h \
+ /home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/macros.h \
+ /home/dejiguru/Arduino/libraries/libopus/src/arch.h \
+ /home/dejiguru/Arduino/libraries/libopus/src/../src/opus-1.3.1/celt/arch.h \
+ /home/dejiguru/Arduino/libraries/libopus/src/../src/opus-1.3.1/celt/fixed_generic.h \
+ /home/dejiguru/Arduino/libraries/libopus/src/ecintrin.h \
+ /home/dejiguru/Arduino/libraries/libopus/src/../src/opus-1.3.1/celt/ecintrin.h \
+ /home/dejiguru/Arduino/libraries/libopus/src/../src/opus-1.3.1/celt/arch.h \
+ /home/dejiguru/Arduino/libraries/libopus/src/cpu_support.h \
+ /home/dejiguru/Arduino/libraries/libopus/src/../src/opus-1.3.1/celt/cpu_support.h \
+ /home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/Inlines.h \
+ /home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/MacroCount.h \
+ /home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/MacroDebug.h

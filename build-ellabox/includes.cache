@@ -1,0 +1,3642 @@
+[
+  {
+    "Sourcefile": null,
+    "Include": "",
+    "Includepath": "/home/dejiguru/Arduino/hardware/espressif/esp32/cores/esp32"
+  },
+  {
+    "Sourcefile": null,
+    "Include": "",
+    "Includepath": "/home/dejiguru/Arduino/hardware/espressif/esp32/variants/esp32s3"
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/ellabox/build-ellabox/sketch/ellabox.ino.cpp",
+    "Include": "WiFi.h",
+    "Includepath": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/WiFi/src"
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/ellabox/build-ellabox/sketch/ellabox.ino.cpp",
+    "Include": "Network.h",
+    "Includepath": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/Network/src"
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/ellabox/build-ellabox/sketch/ellabox.ino.cpp",
+    "Include": "ArduinoOTA.h",
+    "Includepath": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/ArduinoOTA/src"
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/ellabox/build-ellabox/sketch/ellabox.ino.cpp",
+    "Include": "Update.h",
+    "Includepath": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/Update/src"
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/ellabox/build-ellabox/sketch/ellabox.ino.cpp",
+    "Include": "HTTPClient.h",
+    "Includepath": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/HTTPClient/src"
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/ellabox/build-ellabox/sketch/ellabox.ino.cpp",
+    "Include": "NetworkClientSecure.h",
+    "Includepath": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/NetworkClientSecure/src"
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/ellabox/build-ellabox/sketch/ellabox.ino.cpp",
+    "Include": "ArduinoJson.h",
+    "Includepath": "/home/dejiguru/Arduino/libraries/ArduinoJson/src"
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/ellabox/build-ellabox/sketch/ellabox.ino.cpp",
+    "Include": "Audio.h",
+    "Includepath": "/home/dejiguru/Arduino/libraries/ESP32-audioI2S-master/src"
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/ellabox/build-ellabox/sketch/ellabox.ino.cpp",
+    "Include": "FFat.h",
+    "Includepath": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/FFat/src"
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/ellabox/build-ellabox/sketch/ellabox.ino.cpp",
+    "Include": "FS.h",
+    "Includepath": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/FS/src"
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/ellabox/build-ellabox/sketch/ellabox.ino.cpp",
+    "Include": "SD.h",
+    "Includepath": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/SD/src"
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/ellabox/build-ellabox/sketch/ellabox.ino.cpp",
+    "Include": "SPI.h",
+    "Includepath": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/SPI/src"
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/ellabox/build-ellabox/sketch/ellabox.ino.cpp",
+    "Include": "SD_MMC.h",
+    "Includepath": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/SD_MMC/src"
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/ellabox/build-ellabox/sketch/ellabox.ino.cpp",
+    "Include": "ESP_I2S.h",
+    "Includepath": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/ESP_I2S/src"
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/ellabox/build-ellabox/sketch/ellabox.ino.cpp",
+    "Include": "SPIFFS.h",
+    "Includepath": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/SPIFFS/src"
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/ellabox/build-ellabox/sketch/ellabox.ino.cpp",
+    "Include": "Adafruit_GFX.h",
+    "Includepath": "/home/dejiguru/Arduino/libraries/Adafruit_GFX_Library"
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/ellabox/build-ellabox/sketch/ellabox.ino.cpp",
+    "Include": "Adafruit_I2CDevice.h",
+    "Includepath": "/home/dejiguru/Arduino/libraries/Adafruit_BusIO"
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/ellabox/build-ellabox/sketch/ellabox.ino.cpp",
+    "Include": "Wire.h",
+    "Includepath": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/Wire/src"
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/ellabox/build-ellabox/sketch/ellabox.ino.cpp",
+    "Include": "Adafruit_ILI9341.h",
+    "Includepath": "/home/dejiguru/Arduino/libraries/Adafruit_ILI9341"
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/ellabox/build-ellabox/sketch/ellabox.ino.cpp",
+    "Include": "Adafruit_AHTX0.h",
+    "Includepath": "/home/dejiguru/Arduino/libraries/Adafruit_AHTX0"
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/ellabox/build-ellabox/sketch/ellabox.ino.cpp",
+    "Include": "Adafruit_Sensor.h",
+    "Includepath": "/home/dejiguru/Arduino/libraries/Adafruit_Unified_Sensor"
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/ellabox/build-ellabox/sketch/ellabox.ino.cpp",
+    "Include": "ScioSense_ENS16x.h",
+    "Includepath": "/home/dejiguru/Arduino/libraries/ScioSense_ENS16x/src"
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/ellabox/build-ellabox/sketch/ellabox.ino.cpp",
+    "Include": "MAX30105.h",
+    "Includepath": "/home/dejiguru/Arduino/libraries/SparkFun_MAX3010x_Pulse_and_Proximity_Sensor_Library/src"
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/ellabox/build-ellabox/sketch/ellabox.ino.cpp",
+    "Include": "U8g2lib.h",
+    "Includepath": "/home/dejiguru/Arduino/libraries/U8g2/src"
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/ellabox/build-ellabox/sketch/ellabox.ino.cpp",
+    "Include": "Firebase_ESP_Client.h",
+    "Includepath": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src"
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/ellabox/build-ellabox/sketch/ellabox.ino.cpp",
+    "Include": "LittleFS.h",
+    "Includepath": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/LittleFS/src"
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/ellabox/build-ellabox/sketch/ellabox.ino.cpp",
+    "Include": "Preferences.h",
+    "Includepath": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/Preferences/src"
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/ellabox/build-ellabox/sketch/ellabox.ino.cpp",
+    "Include": "VL53L0X.h",
+    "Includepath": "/home/dejiguru/Arduino/libraries/VL53L0X"
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/ellabox/build-ellabox/sketch/ellabox.ino.cpp",
+    "Include": "opus.h",
+    "Includepath": "/home/dejiguru/Arduino/libraries/libopus/src"
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/ellabox/build-ellabox/sketch/ellabox.ino.cpp",
+    "Include": "PubSubClient.h",
+    "Includepath": "/home/dejiguru/Arduino/libraries/PubSubClient/src"
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/ellabox/build-ellabox/sketch/ellabox.ino.cpp",
+    "Include": "XPT2046_Touchscreen.h",
+    "Includepath": "/home/dejiguru/Arduino/libraries/XPT2046_Touchscreen"
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/ellabox/build-ellabox/sketch/ellabox.ino.cpp",
+    "Include": "Adafruit_SSD1306.h",
+    "Includepath": "/home/dejiguru/Arduino/libraries/Adafruit_SSD1306"
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/ellabox/build-ellabox/sketch/ellabox.ino.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/WiFi/src/AP.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/WiFi/src/STA.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/WiFi/src/WiFi.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/WiFi/src/WiFiAP.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/WiFi/src/WiFiGeneric.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/WiFi/src/WiFiMulti.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/WiFi/src/WiFiSTA.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/WiFi/src/WiFiScan.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/Network/src/NetworkClient.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/Network/src/NetworkEvents.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/Network/src/NetworkInterface.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/Network/src/NetworkManager.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/Network/src/NetworkServer.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/Network/src/NetworkUdp.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/ArduinoOTA/src/ArduinoOTA.cpp",
+    "Include": "ESPmDNS.h",
+    "Includepath": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/ESPmDNS/src"
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/ArduinoOTA/src/ArduinoOTA.cpp",
+    "Include": "SHA2Builder.h",
+    "Includepath": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/Hash/src"
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/ArduinoOTA/src/ArduinoOTA.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/Update/src/HttpsOTAUpdate.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/Update/src/Updater.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/Update/src/Updater_Signing.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/HTTPClient/src/HTTPClient.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/NetworkClientSecure/src/NetworkClientSecure.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/NetworkClientSecure/src/ssl_client.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/ESP32-audioI2S-master/src/Audio.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/ESP32-audioI2S-master/src/aac_decoder/aac_decoder.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/ESP32-audioI2S-master/src/aac_decoder/libfaad/neaacdec.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/ESP32-audioI2S-master/src/flac_decoder/flac_decoder.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/ESP32-audioI2S-master/src/mp3_decoder/mp3_decoder.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/ESP32-audioI2S-master/src/opus_decoder/celt.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/ESP32-audioI2S-master/src/opus_decoder/opus_decoder.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/ESP32-audioI2S-master/src/opus_decoder/range_decoder.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/ESP32-audioI2S-master/src/opus_decoder/silk.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/ESP32-audioI2S-master/src/vorbis_decoder/vorbis_decoder.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/ESP32-audioI2S-master/src/wav_decoder/wav_decoder.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/FFat/src/FFat.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/FS/src/FS.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/FS/src/vfs_api.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/SD/src/SD.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/SD/src/sd_diskio.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/SD/src/sd_diskio_crc.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/SPI/src/SPI.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/SD_MMC/src/SD_MMC.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/ESP_I2S/src/ESP_I2S.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/SPIFFS/src/SPIFFS.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Adafruit_GFX_Library/Adafruit_GFX.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Adafruit_GFX_Library/Adafruit_GrayOLED.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Adafruit_GFX_Library/Adafruit_SPITFT.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Adafruit_GFX_Library/glcdfont.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Adafruit_BusIO/Adafruit_BusIO_Register.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Adafruit_BusIO/Adafruit_GenericDevice.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Adafruit_BusIO/Adafruit_I2CDevice.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Adafruit_BusIO/Adafruit_SPIDevice.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/Wire/src/Wire.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Adafruit_ILI9341/Adafruit_ILI9341.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Adafruit_AHTX0/Adafruit_AHTX0.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Adafruit_Unified_Sensor/Adafruit_Sensor.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/SparkFun_MAX3010x_Pulse_and_Proximity_Sensor_Library/src/MAX30105.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/SparkFun_MAX3010x_Pulse_and_Proximity_Sensor_Library/src/heartRate.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/SparkFun_MAX3010x_Pulse_and_Proximity_Sensor_Library/src/spo2_algorithm.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/U8g2lib.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/U8x8lib.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/mui.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/mui_u8g2.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8g2_arc.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8g2_bitmap.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8g2_box.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8g2_buffer.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8g2_button.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8g2_circle.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8g2_cleardisplay.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8g2_d_memory.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8g2_d_setup.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8g2_font.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8g2_fonts.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8g2_hvline.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8g2_input_value.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8g2_intersection.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8g2_kerning.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8g2_line.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8g2_ll_hvline.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8g2_message.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8g2_polygon.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8g2_selection_list.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8g2_setup.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8log.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8log_u8g2.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8log_u8x8.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_8x8.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_byte.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_cad.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_capture.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_a2printer.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_ch1120.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_gp1247ai.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_gp1287ai.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_gp1294ai.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_gu800.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_hd44102.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_il3820_296x128.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_ist3020.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_ist3088.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_ist7920.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_ks0108.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_lc7981.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_ld7032_60x32.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_ls013b7dh03.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_max7219.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_pcd8544_84x48.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_pcf8812.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_pcf8814_hx1230.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_s1d15300.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_s1d15721.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_s1d15e06.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_sbn1661.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_sed1330.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_sh1106_64x32.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_sh1106_72x40.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_sh1107.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_sh1108.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_sh1122.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_ssd1305.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_ssd1306_128x32.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_ssd1306_128x64_noname.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_ssd1306_2040x16.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_ssd1306_48x64.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_ssd1306_64x32.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_ssd1306_64x48.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_ssd1306_72x40.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_ssd1306_96x16.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_ssd1306_96x40.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_ssd1309.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_ssd1312.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_ssd1316.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_ssd1317.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_ssd1318.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_ssd1320.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_ssd1322.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_ssd1325.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_ssd1326.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_ssd1327.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_ssd1329.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_ssd1362.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_ssd1363.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_ssd1606_172x72.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_ssd1607_200x200.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_st7301.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_st7302.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_st7511.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_st75160.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_st75161.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_st75256.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_st7528.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_st75320.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_st7539.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_st7565.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_st7567.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_st7571.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_st7586s_erc240160.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_st7586s_jlx320160.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_st7586s_jlx384160.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_st7586s_md240128.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_st7586s_s028hn118a.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_st7586s_ymc240160.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_st7588.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_st7920.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_t6963.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_uc1601.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_uc1604.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_uc1608.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_uc1609.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_uc1610.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_uc1611.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_uc1617.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_uc1628.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_uc1638.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_uc1701_dogs102.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_d_uc1701_mini12864.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_debounce.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_display.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_fonts.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_gpio.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_input_value.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_message.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_selection_list.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_setup.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_string.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_u16toa.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/U8g2/src/clib/u8x8_u8toa.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/Firebase.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/aes_big_cbcdec.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/aes_big_cbcenc.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/aes_big_ctr.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/aes_big_ctrcbc.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/aes_big_dec.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/aes_big_enc.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/aes_common.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/aes_ct.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/aes_ct64.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/aes_ct64_cbcdec.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/aes_ct64_cbcenc.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/aes_ct64_ctr.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/aes_ct64_ctrcbc.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/aes_ct64_dec.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/aes_ct64_enc.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/aes_ct_cbcdec.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/aes_ct_cbcenc.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/aes_ct_ctr.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/aes_ct_ctrcbc.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/aes_ct_dec.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/aes_ct_enc.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/aes_pwr8.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/aes_pwr8_cbcdec.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/aes_pwr8_cbcenc.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/aes_pwr8_ctr.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/aes_pwr8_ctrcbc.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/aes_small_cbcdec.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/aes_small_cbcenc.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/aes_small_ctr.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/aes_small_ctrcbc.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/aes_small_dec.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/aes_small_enc.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/aes_x86ni.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/aes_x86ni_cbcdec.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/aes_x86ni_cbcenc.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/aes_x86ni_ctr.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/aes_x86ni_ctrcbc.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/aesctr_drbg.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/asn1enc.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ccm.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ccopy.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/chacha20_ct.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/chacha20_sse2.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/dec16be.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/dec16le.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/dec32be.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/dec32le.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/dec64be.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/dec64le.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/des_ct.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/des_ct_cbcdec.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/des_ct_cbcenc.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/des_support.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/des_tab.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/des_tab_cbcdec.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/des_tab_cbcenc.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/dig_oid.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/dig_size.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/eax.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ec_all_m15.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ec_all_m31.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ec_c25519_i15.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ec_c25519_i31.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ec_c25519_m15.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ec_c25519_m31.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ec_c25519_m62.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ec_c25519_m64.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ec_curve25519.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ec_default.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ec_keygen.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ec_p256_m15.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ec_p256_m31.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ec_p256_m62.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ec_p256_m64.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ec_prime_i15.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ec_prime_i31.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ec_pubkey.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ec_secp256r1.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ec_secp384r1.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ec_secp521r1.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ecdsa_atr.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ecdsa_default_sign_asn1.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ecdsa_default_sign_raw.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ecdsa_default_vrfy_asn1.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ecdsa_default_vrfy_raw.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ecdsa_i15_bits.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ecdsa_i15_sign_asn1.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ecdsa_i15_sign_raw.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ecdsa_i15_vrfy_asn1.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ecdsa_i15_vrfy_raw.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ecdsa_i31_bits.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ecdsa_i31_sign_asn1.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ecdsa_i31_sign_raw.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ecdsa_i31_vrfy_asn1.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ecdsa_i31_vrfy_raw.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ecdsa_rta.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/enc16be.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/enc16le.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/enc32be.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/enc32le.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/enc64be.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/enc64le.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/encode_ec_pk8der.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/encode_ec_rawder.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/encode_rsa_pk8der.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/encode_rsa_rawder.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/gcm.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ghash_ctmul.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ghash_ctmul32.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ghash_ctmul64.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ghash_pclmul.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ghash_pwr8.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/hkdf.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/hmac.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/hmac_ct.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/hmac_drbg.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/i15_add.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/i15_bitlen.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/i15_decmod.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/i15_decode.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/i15_decred.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/i15_encode.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/i15_fmont.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/i15_iszero.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/i15_moddiv.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/i15_modpow.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/i15_modpow2.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/i15_montmul.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/i15_mulacc.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/i15_muladd.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/i15_ninv15.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/i15_reduce.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/i15_rshift.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/i15_sub.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/i15_tmont.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/i31_add.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/i31_bitlen.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/i31_decmod.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/i31_decode.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/i31_decred.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/i31_encode.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/i31_fmont.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/i31_iszero.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/i31_moddiv.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/i31_modpow.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/i31_modpow2.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/i31_montmul.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/i31_mulacc.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/i31_muladd.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/i31_ninv31.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/i31_reduce.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/i31_rshift.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/i31_sub.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/i31_tmont.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/i32_add.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/i32_bitlen.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/i32_decmod.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/i32_decode.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/i32_decred.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/i32_div32.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/i32_encode.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/i32_fmont.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/i32_iszero.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/i32_modpow.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/i32_montmul.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/i32_mulacc.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/i32_muladd.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/i32_ninv32.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/i32_reduce.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/i32_sub.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/i32_tmont.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/i62_modpow2.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/md5.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/md5sha1.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/mgf1.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/multihash.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/pemdec.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/pemenc.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/pkey_decoder.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/poly1305_ctmul.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/poly1305_ctmul32.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/poly1305_ctmulq.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/poly1305_i15.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/prf.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/prf_md5sha1.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/prf_sha256.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/prf_sha384.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_default_keygen.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_default_modulus.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_default_oaep_decrypt.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_default_oaep_encrypt.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_default_pkcs1_sign.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_default_pkcs1_vrfy.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_default_priv.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_default_privexp.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_default_pss_sign.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_default_pss_vrfy.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_default_pub.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_default_pubexp.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_i15_keygen.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_i15_modulus.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_i15_oaep_decrypt.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_i15_oaep_encrypt.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_i15_pkcs1_sign.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_i15_pkcs1_vrfy.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_i15_priv.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_i15_privexp.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_i15_pss_sign.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_i15_pss_vrfy.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_i15_pub.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_i15_pubexp.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_i31_keygen.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_i31_keygen_inner.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_i31_modulus.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_i31_oaep_decrypt.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_i31_oaep_encrypt.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_i31_pkcs1_sign.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_i31_pkcs1_vrfy.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_i31_priv.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_i31_privexp.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_i31_pss_sign.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_i31_pss_vrfy.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_i31_pub.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_i31_pubexp.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_i32_oaep_decrypt.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_i32_oaep_encrypt.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_i32_pkcs1_sign.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_i32_pkcs1_vrfy.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_i32_priv.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_i32_pss_sign.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_i32_pss_vrfy.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_i32_pub.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_i62_keygen.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_i62_oaep_decrypt.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_i62_oaep_encrypt.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_i62_pkcs1_sign.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_i62_pkcs1_vrfy.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_i62_priv.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_i62_pss_sign.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_i62_pss_vrfy.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_i62_pub.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_oaep_pad.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_oaep_unpad.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_pkcs1_sig_pad.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_pkcs1_sig_unpad.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_pss_sig_pad.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_pss_sig_unpad.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/rsa_ssl_decrypt.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/settings.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/sha1.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/sha2big.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/sha2small.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/shake.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/skey_decoder.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ssl_ccert_single_ec.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ssl_ccert_single_rsa.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ssl_client.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ssl_client_default_rsapub.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ssl_client_full.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ssl_engine.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ssl_engine_default_aescbc.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ssl_engine_default_aesccm.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ssl_engine_default_aesgcm.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ssl_engine_default_chapol.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ssl_engine_default_descbc.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ssl_engine_default_ec.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ssl_engine_default_ecdsa.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ssl_engine_default_rsavrfy.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ssl_hashes.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ssl_hs_client.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ssl_hs_server.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ssl_io.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ssl_keyexport.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ssl_lru.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ssl_rec_cbc.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ssl_rec_ccm.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ssl_rec_chapol.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ssl_rec_gcm.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ssl_scert_single_ec.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ssl_scert_single_rsa.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ssl_server.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ssl_server_full_ec.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ssl_server_full_rsa.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ssl_server_mine2c.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ssl_server_mine2g.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ssl_server_minf2c.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ssl_server_minf2g.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ssl_server_minr2g.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ssl_server_minu2g.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/ssl_server_minv2g.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/sysrng.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/x509_decoder.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/x509_knownkey.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/x509_minimal.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/bssl/x509_minimal_full.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/client/BSSL_CertStore.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/client/BSSL_Helper.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/client/BSSL_SSL_Client.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/client/BSSL_TCP_Client.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/client/SSLClient/client/stm32_time_fix.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/core/FirebaseCore.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/firestore/FB_Firestore.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/functions/FB_Functions.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/functions/FunctionsConfig.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/functions/PocicyBuilder.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/gcs/GCS.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/json/FirebaseJson.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/json/MB_JSON/MB_JSON.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/json/extras/print/fb_json_print.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/message/FCM.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/rtdb/FB_RTDB.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/rtdb/QueryFilter.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/rtdb/QueueInfo.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/rtdb/QueueManager.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/rtdb/stream/FB_MP_Stream.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/rtdb/stream/FB_Stream.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/session/FB_Session.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src/storage/FCS.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/LittleFS/src/LittleFS.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/Preferences/src/Preferences.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/VL53L0X/VL53L0X.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/libogg-1.3.5/src/bitwise.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/libogg-1.3.5/src/framing.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/liboggz-1.1.1/src/liboggz/dirac.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/liboggz-1.1.1/src/liboggz/metric_internal.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/liboggz-1.1.1/src/liboggz/oggz.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/liboggz-1.1.1/src/liboggz/oggz_auto.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/liboggz-1.1.1/src/liboggz/oggz_comments.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/liboggz-1.1.1/src/liboggz/oggz_dlist.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/liboggz-1.1.1/src/liboggz/oggz_io.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/liboggz-1.1.1/src/liboggz/oggz_read.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/liboggz-1.1.1/src/liboggz/oggz_seek.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/liboggz-1.1.1/src/liboggz/oggz_stream.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/liboggz-1.1.1/src/liboggz/oggz_table.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/liboggz-1.1.1/src/liboggz/oggz_vector.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/liboggz-1.1.1/src/liboggz/oggz_write.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/celt/bands.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/celt/celt.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/celt/celt_decoder.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/celt/celt_encoder.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/celt/celt_lpc.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/celt/cwrs.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/celt/entcode.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/celt/entdec.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/celt/entenc.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/celt/kiss_fft.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/celt/laplace.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/celt/mathops.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/celt/mdct.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/celt/modes.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/celt/pitch.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/celt/quant_bands.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/celt/rate.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/celt/vq.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/A2NLSF.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/CNG.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/HP_variable_cutoff.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/LPC_analysis_filter.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/LPC_fit.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/LPC_inv_pred_gain.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/LP_variable_cutoff.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/NLSF2A.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/NLSF_VQ.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/NLSF_VQ_weights_laroia.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/NLSF_decode.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/NLSF_del_dec_quant.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/NLSF_encode.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/NLSF_stabilize.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/NLSF_unpack.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/NSQ.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/NSQ_del_dec.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/PLC.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/VAD.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/VQ_WMat_EC.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/ana_filt_bank_1.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/biquad_alt.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/bwexpander.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/bwexpander_32.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/check_control_input.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/code_signs.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/control_SNR.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/control_audio_bandwidth.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/control_codec.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/debug.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/dec_API.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/decode_core.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/decode_frame.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/decode_indices.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/decode_parameters.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/decode_pitch.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/decode_pulses.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/decoder_set_fs.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/enc_API.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/encode_indices.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/encode_pulses.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/fixed/LTP_analysis_filter_FIX.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/fixed/LTP_scale_ctrl_FIX.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/fixed/apply_sine_window_FIX.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/fixed/autocorr_FIX.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/fixed/burg_modified_FIX.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/fixed/corrMatrix_FIX.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/fixed/encode_frame_FIX.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/fixed/find_LPC_FIX.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/fixed/find_LTP_FIX.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/fixed/find_pitch_lags_FIX.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/fixed/find_pred_coefs_FIX.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/fixed/k2a_FIX.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/fixed/k2a_Q16_FIX.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/fixed/noise_shape_analysis_FIX.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/fixed/pitch_analysis_core_FIX.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/fixed/process_gains_FIX.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/fixed/regularize_correlations_FIX.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/fixed/residual_energy16_FIX.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/fixed/residual_energy_FIX.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/fixed/schur64_FIX.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/fixed/schur_FIX.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/fixed/vector_ops_FIX.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/fixed/warped_autocorrelation_FIX.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/float/LPC_analysis_filter_FLP.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/float/LPC_inv_pred_gain_FLP.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/float/LTP_analysis_filter_FLP.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/float/LTP_scale_ctrl_FLP.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/float/apply_sine_window_FLP.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/float/autocorrelation_FLP.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/float/burg_modified_FLP.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/float/bwexpander_FLP.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/float/corrMatrix_FLP.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/float/encode_frame_FLP.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/float/energy_FLP.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/float/find_LPC_FLP.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/float/find_LTP_FLP.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/float/find_pitch_lags_FLP.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/float/find_pred_coefs_FLP.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/float/inner_product_FLP.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/float/k2a_FLP.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/float/noise_shape_analysis_FLP.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/float/pitch_analysis_core_FLP.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/float/process_gains_FLP.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/float/regularize_correlations_FLP.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/float/residual_energy_FLP.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/float/scale_copy_vector_FLP.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/float/scale_vector_FLP.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/float/schur_FLP.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/float/sort_FLP.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/float/warped_autocorrelation_FLP.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/float/wrappers_FLP.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/gain_quant.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/init_decoder.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/init_encoder.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/inner_prod_aligned.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/interpolate.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/lin2log.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/log2lin.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/pitch_est_tables.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/process_NLSFs.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/quant_LTP_gains.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/resampler.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/resampler_down2.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/resampler_down2_3.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/resampler_private_AR2.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/resampler_private_IIR_FIR.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/resampler_private_down_FIR.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/resampler_private_up2_HQ.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/resampler_rom.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/shell_coder.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/sigm_Q15.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/sort.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/stereo_LR_to_MS.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/stereo_MS_to_LR.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/stereo_decode_pred.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/stereo_encode_pred.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/stereo_find_predictor.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/stereo_quant_pred.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/sum_sqr_shift.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/table_LSF_cos.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/tables_LTP.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/tables_NLSF_CB_NB_MB.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/tables_NLSF_CB_WB.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/tables_gain.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/tables_other.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/tables_pitch_lag.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/silk/tables_pulses_per_block.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/src/analysis.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/src/mapping_matrix.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/src/mlp.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/src/mlp_data.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/src/opus.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/src/opus_decoder.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/src/opus_encoder.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/src/opus_multistream.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/src/opus_multistream_decoder.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/src/opus_multistream_encoder.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/src/opus_projection_decoder.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/src/opus_projection_encoder.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/src/repacketizer.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/libopus/src/opus-1.3.1/src/repacketizer_demo.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/PubSubClient/src/PubSubClient.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/XPT2046_Touchscreen/XPT2046_Touchscreen.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/libraries/Adafruit_SSD1306/Adafruit_SSD1306.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/ESPmDNS/src/ESPmDNS.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/Hash/src/PBKDF2_HMACBuilder.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/Hash/src/SHA1Builder.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/Hash/src/SHA2Builder.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/Hash/src/SHA3Builder.cpp",
+    "Include": "",
+    "Includepath": null
+  }
+]

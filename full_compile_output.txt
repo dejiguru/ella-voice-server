@@ -1,0 +1,163 @@
+/home/dejiguru/Arduino/ellabox/ellabox.ino:1826:33: error: 'NetworkClientSecure' was not declared in this scope; did you mean 'NetworkClientSecure_h'?
+ 1826 | static bool sendWsFrameToClient(NetworkClientSecure* client, uint8_t opcode, const uint8_t* payload, size_t length) {
+      |                                 ^~~~~~~~~~~~~~~~~~~
+      |                                 NetworkClientSecure_h
+/home/dejiguru/Arduino/ellabox/ellabox.ino:1826:54: error: 'client' was not declared in this scope; did you mean 'Client'?
+ 1826 | static bool sendWsFrameToClient(NetworkClientSecure* client, uint8_t opcode, const uint8_t* payload, size_t length) {
+      |                                                      ^~~~~~
+      |                                                      Client
+/home/dejiguru/Arduino/ellabox/ellabox.ino:1826:70: error: expected primary-expression before 'opcode'
+ 1826 | static bool sendWsFrameToClient(NetworkClientSecure* client, uint8_t opcode, const uint8_t* payload, size_t length) {
+      |                                                                      ^~~~~~
+/home/dejiguru/Arduino/ellabox/ellabox.ino:1826:78: error: expected primary-expression before 'const'
+ 1826 | static bool sendWsFrameToClient(NetworkClientSecure* client, uint8_t opcode, const uint8_t* payload, size_t length) {
+      |                                                                              ^~~~~
+/home/dejiguru/Arduino/ellabox/ellabox.ino:1826:109: error: expected primary-expression before 'length'
+ 1826 | static bool sendWsFrameToClient(NetworkClientSecure* client, uint8_t opcode, const uint8_t* payload, size_t length) {
+      |                                                                                                             ^~~~~~
+/home/dejiguru/Arduino/ellabox/ellabox.ino:1826:115: error: expression list treated as compound expression in initializer [-fpermissive]
+ 1826 | static bool sendWsFrameToClient(NetworkClientSecure* client, uint8_t opcode, const uint8_t* payload, size_t length) {
+      |                                                                                                                   ^
+/home/dejiguru/Arduino/ellabox/ellabox.ino:1866:32: error: 'NetworkClientSecure' was not declared in this scope; did you mean 'NetworkClientSecure_h'?
+ 1866 | static bool sendWsTextToClient(NetworkClientSecure* client, const String& text) {
+      |                                ^~~~~~~~~~~~~~~~~~~
+      |                                NetworkClientSecure_h
+/home/dejiguru/Arduino/ellabox/ellabox.ino:1866:53: error: 'client' was not declared in this scope; did you mean 'Client'?
+ 1866 | static bool sendWsTextToClient(NetworkClientSecure* client, const String& text) {
+      |                                                     ^~~~~~
+      |                                                     Client
+/home/dejiguru/Arduino/ellabox/ellabox.ino:1866:61: error: expected primary-expression before 'const'
+ 1866 | static bool sendWsTextToClient(NetworkClientSecure* client, const String& text) {
+      |                                                             ^~~~~
+/home/dejiguru/Arduino/ellabox/ellabox.ino:1866:79: error: expression list treated as compound expression in initializer [-fpermissive]
+ 1866 | static bool sendWsTextToClient(NetworkClientSecure* client, const String& text) {
+      |                                                                               ^
+/home/dejiguru/Arduino/ellabox/ellabox.ino:1870:35: error: 'NetworkClientSecure' was not declared in this scope; did you mean 'NetworkClientSecure_h'?
+ 1870 | static bool readWsFrameFromClient(NetworkClientSecure* client, uint8_t& opcode, uint8_t* payload, size_t payloadCapacity, size_t& payloadLen, unsigned long timeoutMs) {
+      |                                   ^~~~~~~~~~~~~~~~~~~
+      |                                   NetworkClientSecure_h
+/home/dejiguru/Arduino/ellabox/ellabox.ino:1870:56: error: 'client' was not declared in this scope; did you mean 'Client'?
+ 1870 | static bool readWsFrameFromClient(NetworkClientSecure* client, uint8_t& opcode, uint8_t* payload, size_t payloadCapacity, size_t& payloadLen, unsigned long timeoutMs) {
+      |                                                        ^~~~~~
+      |                                                        Client
+/home/dejiguru/Arduino/ellabox/ellabox.ino:1870:71: error: expected primary-expression before '&' token
+ 1870 | static bool readWsFrameFromClient(NetworkClientSecure* client, uint8_t& opcode, uint8_t* payload, size_t payloadCapacity, size_t& payloadLen, unsigned long timeoutMs) {
+      |                                                                       ^
+/home/dejiguru/Arduino/ellabox/ellabox.ino:1870:73: error: 'opcode' was not declared in this scope
+ 1870 | static bool readWsFrameFromClient(NetworkClientSecure* client, uint8_t& opcode, uint8_t* payload, size_t payloadCapacity, size_t& payloadLen, unsigned long timeoutMs) {
+      |                                                                         ^~~~~~
+/home/dejiguru/Arduino/ellabox/ellabox.ino:1870:88: error: expected primary-expression before '*' token
+ 1870 | static bool readWsFrameFromClient(NetworkClientSecure* client, uint8_t& opcode, uint8_t* payload, size_t payloadCapacity, size_t& payloadLen, unsigned long timeoutMs) {
+      |                                                                                        ^
+/home/dejiguru/Arduino/ellabox/ellabox.ino:1870:90: error: 'payload' was not declared in this scope
+ 1870 | static bool readWsFrameFromClient(NetworkClientSecure* client, uint8_t& opcode, uint8_t* payload, size_t payloadCapacity, size_t& payloadLen, unsigned long timeoutMs) {
+      |                                                                                          ^~~~~~~
+/home/dejiguru/Arduino/ellabox/ellabox.ino:1870:106: error: expected primary-expression before 'payloadCapacity'
+ 1870 | static bool readWsFrameFromClient(NetworkClientSecure* client, uint8_t& opcode, uint8_t* payload, size_t payloadCapacity, size_t& payloadLen, unsigned long timeoutMs) {
+      |                                                                                                          ^~~~~~~~~~~~~~~
+/home/dejiguru/Arduino/ellabox/ellabox.ino:1870:129: error: expected primary-expression before '&' token
+ 1870 | static bool readWsFrameFromClient(NetworkClientSecure* client, uint8_t& opcode, uint8_t* payload, size_t payloadCapacity, size_t& payloadLen, unsigned long timeoutMs) {
+      |                                                                                                                                 ^
+/home/dejiguru/Arduino/ellabox/ellabox.ino:1870:131: error: 'payloadLen' was not declared in this scope
+ 1870 | static bool readWsFrameFromClient(NetworkClientSecure* client, uint8_t& opcode, uint8_t* payload, size_t payloadCapacity, size_t& payloadLen, unsigned long timeoutMs) {
+      |                                                                                                                                   ^~~~~~~~~~
+/home/dejiguru/Arduino/ellabox/ellabox.ino:1870:143: error: expected primary-expression before 'unsigned'
+ 1870 | static bool readWsFrameFromClient(NetworkClientSecure* client, uint8_t& opcode, uint8_t* payload, size_t payloadCapacity, size_t& payloadLen, unsigned long timeoutMs) {
+      |                                                                                                                                               ^~~~~~~~
+/home/dejiguru/Arduino/ellabox/ellabox.ino:1870:166: error: expression list treated as compound expression in initializer [-fpermissive]
+ 1870 | static bool readWsFrameFromClient(NetworkClientSecure* client, uint8_t& opcode, uint8_t* payload, size_t payloadCapacity, size_t& payloadLen, unsigned long timeoutMs) {
+      |                                                                                                                                                                      ^
+/home/dejiguru/Arduino/ellabox/ellabox.ino:1826:115: error: 'bool sendWsFrameToClient(NetworkClientSecure*, uint8_t, const uint8_t*, size_t)' redeclared as different kind of entity
+ 1826 | static bool sendWsFrameToClient(NetworkClientSecure* client, uint8_t opcode, const uint8_t* payload, size_t length) {
+      |                                                                                                                   ^
+/home/dejiguru/Arduino/ellabox/ellabox.ino:1826:13: note: previous declaration 'bool sendWsFrameToClient'
+ 1826 | static bool sendWsFrameToClient(NetworkClientSecure* client, uint8_t opcode, const uint8_t* payload, size_t length) {
+      |             ^~~~~~~~~~~~~~~~~~~
+/home/dejiguru/Arduino/ellabox/ellabox.ino:1866:79: error: 'bool sendWsTextToClient(NetworkClientSecure*, const String&)' redeclared as different kind of entity
+ 1866 | static bool sendWsTextToClient(NetworkClientSecure* client, const String& text) {
+      |                                                                               ^
+/home/dejiguru/Arduino/ellabox/ellabox.ino:1866:13: note: previous declaration 'bool sendWsTextToClient'
+ 1866 | static bool sendWsTextToClient(NetworkClientSecure* client, const String& text) {
+      |             ^~~~~~~~~~~~~~~~~~
+/home/dejiguru/Arduino/ellabox/ellabox.ino: In function 'bool sendWsTextToClient(NetworkClientSecure*, const String&)':
+/home/dejiguru/Arduino/ellabox/ellabox.ino:1867:29: error: 'sendWsFrameToClient' cannot be used as a function
+ 1867 |   return sendWsFrameToClient(client, 0x1, (const uint8_t*)text.c_str(), text.length());
+      |          ~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/dejiguru/Arduino/ellabox/ellabox.ino: At global scope:
+/home/dejiguru/Arduino/ellabox/ellabox.ino:1870:166: error: 'bool readWsFrameFromClient(NetworkClientSecure*, uint8_t&, uint8_t*, size_t, size_t&, long unsigned int)' redeclared as different kind of entity
+ 1870 | static bool readWsFrameFromClient(NetworkClientSecure* client, uint8_t& opcode, uint8_t* payload, size_t payloadCapacity, size_t& payloadLen, unsigned long timeoutMs) {
+      |                                                                                                                                                                      ^
+/home/dejiguru/Arduino/ellabox/ellabox.ino:1870:13: note: previous declaration 'bool readWsFrameFromClient'
+ 1870 | static bool readWsFrameFromClient(NetworkClientSecure* client, uint8_t& opcode, uint8_t* payload, size_t payloadCapacity, size_t& payloadLen, unsigned long timeoutMs) {
+      |             ^~~~~~~~~~~~~~~~~~~~~
+/home/dejiguru/Arduino/ellabox/ellabox.ino: In function 'void disconnectLlmWebSocket(long unsigned int)':
+/home/dejiguru/Arduino/ellabox/ellabox.ino:1935:24: error: 'sendWsFrameToClient' cannot be used as a function
+ 1935 |     sendWsFrameToClient(llmWsClient, 0x8, nullptr, 0);
+      |     ~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/dejiguru/Arduino/ellabox/ellabox.ino: In function 'bool ensureLlmWebSocketSession(const String&)':
+/home/dejiguru/Arduino/ellabox/ellabox.ino:2014:26: error: 'sendWsTextToClient' cannot be used as a function
+ 2014 |   if (!sendWsTextToClient(llmWsClient, payload)) {
+      |        ~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~
+/home/dejiguru/Arduino/ellabox/ellabox.ino: In function 'void serviceLlmWebSocketKeepAlive()':
+/home/dejiguru/Arduino/ellabox/ellabox.ino:2026:27: error: 'sendWsFrameToClient' cannot be used as a function
+ 2026 |   if (!sendWsFrameToClient(llmWsClient, 0x9, nullptr, 0)) {
+      |        ~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/dejiguru/Arduino/ellabox/ellabox.ino: In function 'String getLlmWebSocketResponse(const String&, const String&)':
+/home/dejiguru/Arduino/ellabox/ellabox.ino:2047:26: error: 'sendWsTextToClient' cannot be used as a function
+ 2047 |   if (!sendWsTextToClient(llmWsClient, itemPayload)) {
+      |        ~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/dejiguru/Arduino/ellabox/ellabox.ino:2059:26: error: 'sendWsTextToClient' cannot be used as a function
+ 2059 |   if (!sendWsTextToClient(llmWsClient, responsePayload)) {
+      |        ~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/dejiguru/Arduino/ellabox/ellabox.ino:2081:31: error: 'readWsFrameFromClient' cannot be used as a function
+ 2081 |     if (!readWsFrameFromClient(llmWsClient, op, frame, sizeof(frame), n, 2500)) {
+      |          ~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/dejiguru/Arduino/ellabox/ellabox.ino:2090:26: error: 'sendWsFrameToClient' cannot be used as a function
+ 2090 |       sendWsFrameToClient(llmWsClient, 0xA, nullptr, 0);
+      |       ~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Multiple libraries were found for "Audio.h"
+  Used: /home/dejiguru/Arduino/libraries/ESP32-audioI2S-master
+  Not used: /home/dejiguru/Arduino/libraries/DAZI-AI
+Multiple libraries were found for "SD.h"
+  Used: /home/dejiguru/Arduino/hardware/espressif/esp32/libraries/SD
+  Not used: /home/dejiguru/Arduino/libraries/SD
+
+[92mUsed library[0m                                          [92mVersion[0m [90mPath[0m
+[93mWiFi[0m                                                  3.3.7   [90m/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/WiFi[0m
+[93mNetworking[0m                                            3.3.7   [90m/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/Network[0m
+[93mArduinoOTA[0m                                            3.3.7   [90m/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/ArduinoOTA[0m
+[93mUpdate[0m                                                3.3.7   [90m/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/Update[0m
+[93mHTTPClient[0m                                            3.3.7   [90m/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/HTTPClient[0m
+[93mNetworkClientSecure[0m                                   3.3.7   [90m/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/NetworkClientSecure[0m
+[93mArduinoJson[0m                                           7.4.3   [90m/home/dejiguru/Arduino/libraries/ArduinoJson[0m
+[93mESP32-audioI2S-master[0m                                 3.4.5   [90m/home/dejiguru/Arduino/libraries/ESP32-audioI2S-master[0m
+[93mFFat[0m                                                  3.3.7   [90m/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/FFat[0m
+[93mFS[0m                                                    3.3.7   [90m/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/FS[0m
+[93mSD[0m                                                    3.3.7   [90m/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/SD[0m
+[93mSPI[0m                                                   3.3.7   [90m/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/SPI[0m
+[93mSD_MMC[0m                                                3.3.7   [90m/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/SD_MMC[0m
+[93mESP_I2S[0m                                               3.3.7   [90m/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/ESP_I2S[0m
+[93mSPIFFS[0m                                                3.3.7   [90m/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/SPIFFS[0m
+[93mAdafruit GFX Library[0m                                  1.12.6  [90m/home/dejiguru/Arduino/libraries/Adafruit_GFX_Library[0m
+[93mAdafruit BusIO[0m                                        1.17.4  [90m/home/dejiguru/Arduino/libraries/Adafruit_BusIO[0m
+[93mWire[0m                                                  3.3.7   [90m/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/Wire[0m
+[93mAdafruit ILI9341[0m                                      1.6.3   [90m/home/dejiguru/Arduino/libraries/Adafruit_ILI9341[0m
+[93mAdafruit AHTX0[0m                                        2.0.6   [90m/home/dejiguru/Arduino/libraries/Adafruit_AHTX0[0m
+[93mAdafruit Unified Sensor[0m                               1.1.15  [90m/home/dejiguru/Arduino/libraries/Adafruit_Unified_Sensor[0m
+[93mScioSense_ENS16x[0m                                      2.0.5   [90m/home/dejiguru/Arduino/libraries/ScioSense_ENS16x[0m
+[93mSparkFun MAX3010x Pulse and Proximity Sensor Library[0m  1.1.2   [90m/home/dejiguru/Arduino/libraries/SparkFun_MAX3010x_Pulse_and_Proximity_Sensor_Library[0m
+[93mU8g2[0m                                                  2.35.30 [90m/home/dejiguru/Arduino/libraries/U8g2[0m
+[93mFirebase Arduino Client Library for ESP8266 and ESP32[0m 4.4.17  [90m/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32[0m
+[93mLittleFS[0m                                              3.3.7   [90m/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/LittleFS[0m
+[93mPreferences[0m                                           3.3.7   [90m/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/Preferences[0m
+[93mVL53L0X[0m                                               1.3.1   [90m/home/dejiguru/Arduino/libraries/VL53L0X[0m
+[93mlibopus[0m                                               1.3.2   [90m/home/dejiguru/Arduino/libraries/libopus[0m
+[93mPubSubClient[0m                                          2.8     [90m/home/dejiguru/Arduino/libraries/PubSubClient[0m
+[93mXPT2046_Touchscreen[0m                                   1.4     [90m/home/dejiguru/Arduino/libraries/XPT2046_Touchscreen[0m
+[93mAdafruit SSD1306[0m                                      2.5.16  [90m/home/dejiguru/Arduino/libraries/Adafruit_SSD1306[0m
+[93mESPmDNS[0m                                               3.3.7   [90m/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/ESPmDNS[0m
+[93mHash[0m                                                  3.3.7   [90m/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/Hash[0m
+
+[92mUsed platform[0m   [92mVersion[0m [90mPath[0m
+[93mespressif:esp32[0m 3.3.7   [90m/home/dejiguru/Arduino/hardware/espressif/esp32[0m
+Error during build: exit status 1
