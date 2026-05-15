@@ -2658,8 +2658,33 @@
             return fbSet(fbRef(fbDB, path), null);
         }
 
-        function sendCommand(key, value, opts = {}) { return setFirebasePath('commands/' + key, value, opts); }
-        function removeCommand(key, opts = {}) { return removeFirebasePath('commands/' + key, opts); }
+        function mirrorCommandToMqtt(key, value) {
+            return mqttPublish('ella/commands/' + key, value).catch(err => {
+                console.warn('[MQTT] Command mirror failed:', key, err.message);
+            });
+        }
+
+        function sendCommand(key, value, opts = {}) {
+            const firebaseWrite = setFirebasePath('commands/' + key, value, opts).catch(err => {
+                console.warn('[Firebase] Command write failed:', key, err.message);
+                throw err;
+            });
+            const mqttWrite = mirrorCommandToMqtt(key, value);
+
+            return Promise.allSettled([firebaseWrite, mqttWrite]).then(results => {
+                if (results.some(r => r.status === 'fulfilled')) return;
+                throw results[0].reason || new Error('Command send failed');
+            });
+        }
+
+        function removeCommand(key, opts = {}) {
+            const firebaseRemove = removeFirebasePath('commands/' + key, opts);
+            const mqttRemove = mirrorCommandToMqtt(key, false);
+            return Promise.allSettled([firebaseRemove, mqttRemove]).then(results => {
+                if (results.some(r => r.status === 'fulfilled')) return;
+                throw results[0].reason || new Error('Command remove failed');
+            });
+        }
 
         window.addEventListener('firebaseReady', () => {
             console.log('[Firebase] Starting background sync...');

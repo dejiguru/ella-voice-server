@@ -3270,8 +3270,7 @@ void connectNodeServer() {
     nodeSecureClient.setInsecure();
     nodeSecureClient.setNoDelay(true);
     nodeSecureClient.setTimeout(6);
-    // Move SSL buffers to a smaller size to save internal RAM
-    nodeSecureClient.setBufferSizes(1024, 1024);
+    // nodeSecureClient.setBufferSizes(1024, 1024); // Not supported in ESP32 Core 3.x
     nodeClientPtr = &nodeSecureClient;
   } else {
     nodeBasicClient.setNoDelay(true);
@@ -6255,7 +6254,8 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
             motorSpeed = msg.toInt();
             Serial.printf("[Speed] set to %d\n", motorSpeed);
         } else if (key == "aiInputMode") {
-            setAIInputMode(true, true);
+            msg.toUpperCase();
+            setAIInputMode(msg != "WEB", true);
         } else if (key == "aiChat") {
             if (msg.length() > 0) queueWebAIChat(msg);
         } else if (key == "checkup") {
@@ -6269,6 +6269,30 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
         } else if (key == "reminders") {
             cloudRemindersJson = msg;
             Serial.println("[MQTT] Reminders updated from cloud bridge");
+        } else if (key == "wifiConfig") {
+            if (msg.startsWith("{")) {
+                StaticJsonDocument<384> doc;
+                if (deserializeJson(doc, msg) == DeserializationError::Ok) {
+                    String newSsid = doc["ssid"] | "";
+                    String newPass = doc["password"] | "";
+                    newSsid.trim();
+                    if (newSsid.length() > 0) {
+                        prefs.putString("ssid", newSsid);
+                        prefs.putString("pass", newPass);
+                        Serial.println("[MQTT] WiFi config saved; restarting");
+                        delay(250);
+                        ESP.restart();
+                    }
+                }
+            }
+        } else if (key == "wifiReset") {
+            if (!mqttFalsy(msg)) {
+                prefs.remove("ssid");
+                prefs.remove("pass");
+                Serial.println("[MQTT] WiFi config cleared; restarting");
+                delay(250);
+                ESP.restart();
+            }
         } else if (key == "userProfile") {
             // Parse name from JSON or raw string
             if (msg.startsWith("{")) {
@@ -6276,9 +6300,25 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
                 deserializeJson(doc, msg);
                 if (doc["name"]) {
                     user_name = doc["name"].as<String>();
+                    prefs.putString("userName", user_name);
+                }
+                if (doc["telegramBotToken"]) {
+                    cloudBotToken = doc["telegramBotToken"].as<String>();
+                    cloudBotToken.trim();
+                    prefs.putString("botToken", cloudBotToken);
+                }
+                if (doc["telegramChatId"]) {
+                    cloudChatId = doc["telegramChatId"].as<String>();
+                    cloudChatId.trim();
+                    prefs.putString("chatId", cloudChatId);
+                }
+                if (doc["emergencyContact"]) {
+                    user_emergency_contact = doc["emergencyContact"].as<String>();
+                    prefs.putString("emergency", user_emergency_contact);
                 }
             } else {
                 user_name = msg;
+                prefs.putString("userName", user_name);
             }
             Serial.println("[MQTT] User name updated: " + user_name);
         } else {
@@ -7210,7 +7250,7 @@ void switchToNormalMode() {
 }
 
 const char* getAIInputModeName() {
-  return "MIC";
+  return aiInputUsesMic ? "MIC" : "WEB";
 }
 
 #if 0
@@ -7416,8 +7456,10 @@ void setAIInputMode(bool useMicInput, bool force) {
   aiInputUsesMic = useMicInput;
   Serial.printf("[AI] Input mode set to %s\n", getAIInputModeName());
 
-  if (currentMode == MODE_AI) {
+  if (currentMode == MODE_AI && useMicInput) {
     enableMicAIInput();
+  } else if (currentMode == MODE_AI) {
+    disableMicAIInput();
   }
 
   publishRobotAssistStatus(true);
@@ -9493,18 +9535,11 @@ bool isFirebaseCommandInactive(const String& val) {
 void checkRemoteCommands() {
   if (!FIREBASE_ENABLED || offlineModeLocked) return;
   if (!firebaseReady || !networkAvailable()) return;
+  if (currentMode == MODE_AI) return;
 
   unsigned long now = millis();
   unsigned long interval = 250; // Normal polling interval
-
-  // If in AI mode, we poll MUCH slower (every 2 seconds) 
-  // and we ONLY check for the "Switch back to Normal" or "Stop" commands.
-  if (currentMode == MODE_AI) {
-    interval = 2000; 
-  } else {
-    // Standard Normal Mode conditions
-    if (networkIsQuiet() || isSpeaking || isProcessingAI) return;
-  }
+  if (networkIsQuiet() || isSpeaking || isProcessingAI) return;
 
   if (millis() < commandPollBackoffUntil) return;
   if (now - lastCommandJsonFetchMs < interval) return;
