@@ -1605,8 +1605,13 @@ wss.on('connection', (ws, request) => {
                 if (data.text.includes("Mode: AI")) currentRobotMode = "AI";
                 else if (data.text.includes("Mode: NORMAL")) currentRobotMode = "NORMAL";
                 console.log(`[Context Update] Mode: ${currentRobotMode}`);
-            } else if (data.type === "telegram_response") {
-                if (data.text) sendTelegramMessage(data.text, 'Markdown', data.chatId);
+            } else if (data.type === "telegram_response" || data.type === "telegram_reply") {
+                // Use TELEGRAM_CHAT_ID — do NOT pass data.chatId (undefined from ESP32).
+                // Also avoid parse_mode:'Markdown' with emojis as it causes silent failures.
+                if (data.text) {
+                    console.log(`[Telegram] Forwarding ESP32 reply: ${data.text.substring(0, 80)}...`);
+                    sendTelegramMessage(data.text);
+                }
             } else if (data.type === "telegram_alert") {
                 if (data.text) sendTelegramMessage(data.text, null, data.chatId);
             } else if (data.type === "telegram_init") {
