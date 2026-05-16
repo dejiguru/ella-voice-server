@@ -326,6 +326,34 @@ const ELLA_PERSONA = process.env.ELLA_PERSONA || [
 ].join("\n");
 
 const audioCache = new Map();
+
+app.use(express.json());
+
+// Fast low-latency motor control endpoint bypassing MQTT
+app.options('/api/motor', (req, res) => {
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Content-Type");
+    res.sendStatus(200);
+});
+
+app.post('/api/motor', (req, res) => {
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Headers", "Content-Type");
+    
+    const { command } = req.body;
+    if (!command) {
+        return res.status(400).json({ error: "Missing command" });
+    }
+    
+    if (esp32Connection && esp32Connection.readyState === WebSocket.OPEN) {
+        esp32Connection.send(JSON.stringify({ type: 'motor', command }));
+        res.json({ success: true, method: 'websocket' });
+    } else {
+        res.status(503).json({ error: "ESP32 Offline (WebSocket disconnected)" });
+    }
+});
+
 app.get(["/audio/:id", "/audio/:id.mp3"], (req, res) => {
     const audio = audioCache.get(req.params.id);
     if (audio) {
