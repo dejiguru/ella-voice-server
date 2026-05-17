@@ -414,6 +414,18 @@ const ELLA_PERSONA = process.env.ELLA_PERSONA || [
     "dont overthink thinking litle and drop output strict it a must, dont htink tahn two three setences"
 ].join("\n");
 
+app.get("/diagnostic", (req, res) => {
+    res.json({
+        online: isEllaOnline(),
+        lastSeenAgeMs: Date.now() - ellaLastSeenMs,
+        lastSeenMs: ellaLastSeenMs,
+        mqttConnected: mqttClient && mqttClient.connected,
+        telegramInitialized: !!telegramBot,
+        telegramChatId: TELEGRAM_CHAT_ID,
+        statusCache: ellaStatusCache
+    });
+});
+
 const audioCache = new Map();
 
 app.use(express.json());
