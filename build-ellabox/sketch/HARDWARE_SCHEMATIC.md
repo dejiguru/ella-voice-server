@@ -29,7 +29,7 @@
 #### Speaker (I2S DAC - MAX98357A)
 | MAX98357A Pin | ESP32-S3 Pin | Description |
 |---------------|--------------|-------------|
-| BCLK          | GPIO 48      | Bit Clock |
+| BCLK          | GPIO 7       | Bit Clock (Moved from 48 to avoid LED noise) |
 | LRC (LRCLK)   | GPIO 21      | Left-Right Clock |
 | DIN (DOUT)    | GPIO 18      | Data Input |
 | GAIN          | GND          | Gain setting (9dB) |
@@ -78,14 +78,14 @@
 **I2C Address:** 0x70  
 **Clock Speed:** 400kHz
 
-#### Channel Assignments
-| Channel | Device | Description |
-|---------|--------|-------------|
-| 0       | SSD1306 | Left Eye OLED (128x64) |
-| 1       | SSD1306 | Right Eye OLED (128x64) |
-| 2       | AHT20 + ENS160 | Shared environmental sensor branch |
-| 4       | MAX30102 | Heart Rate & SpO2 Sensor |
-| 5       | VL53L0X / MPU6050 | ToF sensor active; IMU planned on same branch |
+#### I2C Bus Assignments (Mirror Mode - No Mux)
+| Device | ESP32-S3 Pins | I2C Address | Description |
+|--------|---------------|-------------|-------------|
+| SSD1306 (Left & Right) | GPIO 8, 9 | 0x3C | Mirrored Eyes (Shared Bus) |
+| AHT20 | GPIO 8, 9 | 0x38 | Temperature & Humidity |
+| ENS160 | GPIO 8, 9 | 0x53 | Air Quality |
+| MAX30102 | GPIO 8, 9 | 0x57 | Heart Rate & SpO2 |
+| VL53L0X | GPIO 8, 9 | 0x29 | Time-of-Flight Sensor |
 
 #### Additional I2C Sensor Addresses
 | Sensor | I2C Address | Description |
@@ -111,6 +111,7 @@
 **Range:** 2cm - 400cm  
 **Accuracy:** ±3mm  
 **Measurement Angle:** 15°  
+
 **Purpose:** Room mapping, obstacle detection, person detection in front  
 **Mounting:** Fixed on chest, always faces forward regardless of neck position
 

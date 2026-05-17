@@ -1,0 +1,1391 @@
+--- /home/dejiguru/Arduino/ellabox/ellabox.ino.todays_work.bak	2026-05-16 06:57:15.621376944 +0100
++++ /home/dejiguru/Arduino/ellabox/ellabox.ino	2026-05-16 07:01:15.858618913 +0100
+@@ -57,9 +57,6 @@
+ void streamMicToVoiceAgent();
+ void pumpVoiceAgentSocket();
+ void sendVoiceAgentKeepAlive();
+-void resetI2CBus();
+-void scanI2CBus(TwoWire &bus, const char* busName);
+-void sendTelegramAlert(String message);
+ 
+ // ============================================================
+ // CREDENTIALS — all secrets live in secrets.h (add to .gitignore)
+@@ -193,9 +190,6 @@
+ String user_name = ""; // Added for Profile Sync
+ String user_emergency_contact = ""; // Added for Emergency Alert
+ String cloudRemindersJson = "[]";
+-// Pending AI-set reminder (lightweight global to avoid stack overflow in askAI)
+-// Reminder variables moved to global section near line 926
+-bool pendingReminderNeedsSync = false;
+ 
+ 
+ // ============================================================
+@@ -224,13 +218,14 @@
+ #define TOUCH_IRQ 14 // Moved from 13 (MISO Conflict) 
+ 
+ // Motors & Servo
+-#define MOTOR1_IN1 16 // Left Motor Forward (Moved to 16 to fix boot glitch)
++#define MOTOR1_IN1 16 // Left Motor Forward
+ #define MOTOR1_IN2 17 // Left Motor Backward
+ #define MOTOR2_IN1 5  // Right Motor Forward
+ #define MOTOR2_IN2 6  // Right Motor Backward
+ #define SERVO_PIN  1  // Neck Movement
+ 
+-#define ULTRASONIC_TRIG_PIN 3 // Moved to 3 to free up 15 for motor
++// Ultrasonic Sensor (HC-SR04) - Chest Mounted (Fixed Forward)
++#define ULTRASONIC_TRIG_PIN 15  // Moved from strapping pin 3
+ #define ULTRASONIC_ECHO_PIN 38  // Moved from JTAG pin 41
+ 
+ // Multiplexer
+@@ -239,7 +234,7 @@
+ #define CH_EYE_RIGHT 1
+ #define CH_AHT       2
+ #define CH_ENS       2
+-#define CH_MAX       0
++#define CH_MAX       4
+ #define CH_IMU       5
+ #define CH_TOF       CH_IMU
+ 
+@@ -418,7 +413,6 @@
+ #define SCREEN_HEIGHT 64 
+ // Reset pin = -1 (not used)
+ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
+-Adafruit_SSD1306 displayRight(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire1, -1); // NEW: Right Eye directly on Wire1
+ 
+ // GFXcanvas16 medSprite(220, 100); // REMOVED to save 44KB RAM
+ // GFXcanvas16 ecgSprite(240, 80); // REMOVED to save 38KB RAM
+@@ -891,7 +885,6 @@
+   return millis() - lastTouchActionMs < TOUCH_NETWORK_QUIET_MS;
+ }
+ 
+-
+ bool lastButtonState = HIGH;
+ bool buttonState = HIGH;
+ unsigned long lastDebounceTime = 0;
+@@ -1973,12 +1966,13 @@
+ // ============================================================
+ 
+ // ============================================================
+-// MULTIPLEXER (REMOVED)
++// MULTIPLEXER
+ // ============================================================
+ void tcaselect(uint8_t i) {
+-  // MUX is removed. Doing nothing allows all native I2C sensors
+-  // on Pins 8/9 to receive their commands directly without multiplexing.
+-  return;
++  if (i > 7) return;
++  Wire.beginTransmission(TCA_ADDR);
++  Wire.write(1 << i);
++  Wire.endTransmission();
+ }
+ 
+ // Additional forward declarations used below.
+@@ -1987,7 +1981,7 @@
+ void syncUserProfileFromFirebase();
+ void syncRemindersFromFirebase();
+ void syncWithFirebase();
+-void sendTelegramAlert(String msg);
++bool sendTelegramAlert(String msg);
+ void handleTelegramCommand(String command);
+ void checkTimeBasedCheckUp();
+ void maybeProactiveAIPrompt();
+@@ -3543,12 +3537,6 @@
+         currentRobotActivity = ROBOT_ACTIVITY_THINKING;
+         aiRequestStatus = "Thinking...";
+         drawAIScreen(true);
+-      } else if (strcmp(type, "motor") == 0) {
+-        // Direct motor command via WebSocket (faster than MQTT)
+-        const char* command = doc["command"];
+-        if (command && strlen(command) > 0) {
+-          applyManualMotorCommand(String(command));
+-        }
+       } else if (strcmp(type, "telegram_command") == 0) {
+         // Handle incoming Telegram command from server
+         const char* command = doc["command"];
+@@ -4304,56 +4292,43 @@
+           scheduleDeferredAiAction(DEFERRED_AI_CHECKUP);
+         } else if (cmd == "EMERGENCY") {
+           scheduleDeferredAiAction(DEFERRED_AI_EMERGENCY);
+-  } else if (cmd == "REMINDER") {
+-    // Parse "[REMINDER: Title | Time | Type]"
+-    String title = "New Reminder";
+-    String timeStr = "Anytime";
+-    String typeStr = "chat";
+-
+-    int sep1 = param.indexOf('|');
+-    if (sep1 > 0) {
+-        title = param.substring(0, sep1);
+-        title.trim();
+-        int sep2 = param.indexOf('|', sep1 + 1);
+-        if (sep2 > 0) {
+-            timeStr = param.substring(sep1 + 1, sep2);
+-            timeStr.trim();
+-            typeStr = param.substring(sep2 + 1);
+-            typeStr.trim();
+-        } else {
+-            timeStr = param.substring(sep1 + 1);
+-            timeStr.trim();
+-        }
+-    } else if (param.length() > 0) {
+-        title = param;
+-    }
+-
+-    // Convert relative times
+-    String tsLower = timeStr;
+-    tsLower.toLowerCase();
+-    if (tsLower.indexOf("minute") >= 0 || tsLower.indexOf("hour") >= 0) {
+-        struct tm ti;
+-        if (getLocalTime(&ti)) {
+-            int addMin = 0;
+-            // Simple digit parser
+-            String digits = "";
+-            for (char c : timeStr) if (isDigit(c)) digits += c;
+-            addMin = (digits.length() > 0) ? digits.toInt() : 1;
+-            if (tsLower.indexOf("hour") >= 0) addMin *= 60;
+-
+-            int totalMin = ti.tm_hour * 60 + ti.tm_min + addMin;
+-            int newH = (totalMin / 60) % 24;
+-            int newM = totalMin % 60;
+-            int h12 = newH % 12; if (h12 == 0) h12 = 12;
+-            char absBuf[12];
+-            sprintf(absBuf, "%d:%02d %s", h12, newM, (newH < 12) ? "AM" : "PM");
+-            timeStr = String(absBuf);
+-        }
+-    }
+-
+-    stagePendingReminder(title, timeStr, typeStr, true);
+-    speakText(("Got it. I've set a reminder to " + title + " at " + timeStr + ".").c_str());
+-    isProcessingAI = false; return;
++        } else if (cmd == "REMINDER") {
++          String title = "New Reminder";
++          String timeStr = "Anytime";
++          String typeStr = "chat";
++          int sep1 = param.indexOf('|');
++          if (sep1 > 0) {
++              title = param.substring(0, sep1); title.trim();
++              int sep2 = param.indexOf('|', sep1 + 1);
++              if (sep2 > 0) {
++                  timeStr = param.substring(sep1 + 1, sep2); timeStr.trim();
++                  typeStr = param.substring(sep2 + 1); typeStr.trim();
++              } else {
++                  timeStr = param.substring(sep1 + 1); timeStr.trim();
++              }
++          } else if (param.length() > 0) title = param;
++          
++          String tsLower = timeStr;
++          tsLower.toLowerCase();
++          if (tsLower.indexOf("minute") >= 0 || tsLower.indexOf("hour") >= 0) {
++              struct tm ti;
++              if (getLocalTime(&ti)) {
++                  int addMin = 0;
++                  for (int i = 0; i < (int)timeStr.length(); i++) {
++                      if (isDigit(timeStr[i])) { addMin = timeStr.substring(i).toInt(); break; }
++                  }
++                  if (addMin == 0) addMin = 1;
++                  if (tsLower.indexOf("hour") >= 0) addMin *= 60;
++                  int totalMin = ti.tm_hour * 60 + ti.tm_min + addMin;
++                  int newH = (totalMin / 60) % 24;
++                  int newM = totalMin % 60;
++                  int h12 = newH % 12; if (h12 == 0) h12 = 12;
++                  char absBuf[12];
++                  sprintf(absBuf, "%d:%02d %s", h12, newM, (newH < 12) ? "AM" : "PM");
++                  timeStr = String(absBuf);
++              }
++          }
++          stagePendingReminder(title, timeStr, typeStr, true);
+         } else if (cmd == "FORGET") {
+           clearAllMemory();
+         }
+@@ -5182,7 +5157,7 @@
+ void startManualMotorMotion(int leftSpeed, int rightSpeed, bool holdStraight) {
+   driveTargetLeft = leftSpeed;
+   driveTargetRight = rightSpeed;
+-  driveHoldStraight = holdStraight && imuReady; 
++  driveHoldStraight = holdStraight && imuReady;
+   driveControlActive = true;
+   turnControlActive = false;
+   imuGyroZFiltered = 0.0f;
+@@ -5578,14 +5553,16 @@
+     return true;
+   }
+ 
+-  // Fast neck movements - no stop needed
+   if (cmd == "LOOK_UP") {
++    stopMotorMotion(true);
+     moveNeck(130);
+     return true;
+   } else if (cmd == "LOOK_DOWN") {
++    stopMotorMotion(true);
+     moveNeck(50);
+     return true;
+   } else if (cmd == "CENTER") {
++    stopMotorMotion(true);
+     moveNeck(90);
+     return true;
+   }
+@@ -6162,11 +6139,8 @@
+ 
+     Serial.printf("[MQTT] Topic: %s | Msg: %s\n", topic, msg.c_str());
+ 
+-    // Telegram commands from server
+-    if (sTopic == "ella/telegram/in") {
+-        handleTelegramCommand(msg);
+-        return;
+-    } 
++    // Telegram commands now handled via direct polling (pollTelegramDirect)
++    if (sTopic == "ella/telegram/in") return; 
+ 
+     if (sTopic.startsWith("ella/commands/")) {
+         String key = sTopic.substring(14);
+@@ -6245,7 +6219,7 @@
+ 
+ 
+   if (!mqtt.connected()) {
+-    if (millis() - lastMqttRetryMs > 2000) {
++    if (millis() - lastMqttRetryMs > 10000) {
+       lastMqttRetryMs = millis();
+       
+       // Diagnostic Logging
+@@ -6260,7 +6234,6 @@
+         Serial.println("[MQTT] connected");
+         mqtt.subscribe("ella/commands/#");
+         mqtt.subscribe("ella/settings/#");
+-        mqtt.subscribe("ella/telegram/in");
+         publishStatusSnapshot(true);
+         publishRobotAssistStatus(true);
+       } else {
+@@ -6277,38 +6250,6 @@
+ 
+   Serial.begin(115200);
+ 
+-  // Initialize Motors and Servo Pins immediately to prevent roll on boot
+-  pinMode(MOTOR1_IN1, OUTPUT);
+-  pinMode(MOTOR1_IN2, OUTPUT);
+-  pinMode(MOTOR2_IN1, OUTPUT);
+-  pinMode(MOTOR2_IN2, OUTPUT);
+-  
+-  // Hard-pull LOW before any system init (PSRAM/WiFi/etc)
+-  digitalWrite(MOTOR1_IN1, LOW);
+-  digitalWrite(MOTOR1_IN2, LOW);
+-  digitalWrite(MOTOR2_IN1, LOW);
+-  digitalWrite(MOTOR2_IN2, LOW);
+-  
+-  pinMode(SERVO_PIN, OUTPUT);
+-  
+-  // Attach Core v3 PWM
+-  ledcAttach(MOTOR1_IN1, 10000, 8); // 10KHz (High Torque), 8-bit resolution
+-  ledcAttach(MOTOR1_IN2, 10000, 8);
+-  ledcAttach(MOTOR2_IN1, 10000, 8);
+-  ledcAttach(MOTOR2_IN2, 10000, 8);
+-  ledcAttach(SERVO_PIN, 50, 14);   // 50Hz, 14-bit resolution (0-16383 limit)
+-  
+-  // Start stopped & centered
+-  setMotorL(0);
+-  setMotorR(0);
+-  moveNeck(90);
+-  
+-  // Initialize Ultrasonic Sensor (HC-SR04) - Chest Mounted
+-  pinMode(ULTRASONIC_TRIG_PIN, OUTPUT);
+-  pinMode(ULTRASONIC_ECHO_PIN, INPUT);
+-  digitalWrite(ULTRASONIC_TRIG_PIN, LOW);
+-  Serial.println("[Ultrasonic] HC-SR04 initialized (Chest)");
+-
+   // Allocate PSRAM buffers for OPUS
+   opusPcmBuffer = (int16_t*)heap_caps_malloc(OPUS_FRAME_SIZE * sizeof(int16_t), MALLOC_CAP_SPIRAM);
+   opusPacketBuffer = (uint8_t*)heap_caps_malloc(OPUS_MAX_PACKET_SIZE, MALLOC_CAP_SPIRAM);
+@@ -6351,6 +6292,7 @@
+   // HPF filter removed.
+   // pinMode(INTERRUPT_PIN, INPUT_PULLUP); // Disabled
+   pinMode(TACTILE_SWITCH_PIN, INPUT_PULLUP);
++  pinMode(TOUCH_IRQ, INPUT_PULLUP); // Fix for phantom touches
+   delay(1000);
+   Serial.println("\n=== EllaBox - AI Health Companion ===");
+ 
+@@ -6384,6 +6326,30 @@
+     Serial.println("[Buzzer] LEDC attach failed");
+   }
+ 
++  // Initialize Motors and Servo Pins
++  pinMode(MOTOR1_IN1, OUTPUT);
++  pinMode(MOTOR1_IN2, OUTPUT);
++  pinMode(MOTOR2_IN1, OUTPUT);
++  pinMode(MOTOR2_IN2, OUTPUT);
++  pinMode(SERVO_PIN, OUTPUT);
++  
++  // Initialize Ultrasonic Sensor (HC-SR04) - Chest Mounted
++  pinMode(ULTRASONIC_TRIG_PIN, OUTPUT);
++  pinMode(ULTRASONIC_ECHO_PIN, INPUT);
++  digitalWrite(ULTRASONIC_TRIG_PIN, LOW);
++  Serial.println("[Ultrasonic] HC-SR04 initialized (Chest)");
++  
++  // Attach Core v3 PWM
++  ledcAttach(MOTOR1_IN1, 1000, 8); // 1KHz, 8-bit resolution (0-255 limit)
++  ledcAttach(MOTOR1_IN2, 1000, 8);
++  ledcAttach(MOTOR2_IN1, 1000, 8);
++  ledcAttach(MOTOR2_IN2, 1000, 8);
++  ledcAttach(SERVO_PIN, 50, 14);   // 50Hz, 14-bit resolution (0-16383 limit)
++  
++  // Start stopped & centered
++  setMotorL(0);
++  setMotorR(0);
++  moveNeck(90);
+ 
+   // PSRAM check (allocation done later with null-check)
+   if (psramFound()) {
+@@ -6404,24 +6370,15 @@
+   // I2C
+   Wire.begin(I2C_SDA_PIN, I2C_SCL_PIN);
+   Wire.setClock(100000); // Lower speed during startup for better reliability
+-  
+-  // Right Eye Dedicated I2C Bus (Bypassing MUX)
+-  // GPIO 39 is INPUT-ONLY, cannot be used for I2C SDA. Using GPIO 3 instead.
+-  Wire1.begin(3, 7); // SDA=3, SCL=7
+-  Wire1.setClock(100000);
+-
+-  // MUX is physically removed from the box, sensors wired in parallel.
+-  Serial.println("\n[I2C] Dual buses active (8/9 and 3/7)");
+-  
+-  // Scan both buses to verify devices
+-  scanI2CBus(Wire, "Wire (GPIO 8/9)");
+-  scanI2CBus(Wire1, "Wire1 (GPIO 3/7)");
+ 
+   // Front ToF / head sensors live on the same mux branch as the IMU.
+   initToF();
+ 
+-  // OLED Eyes (Dual I2C Buses)
++
++
++  // OLED Eyes (via Multiplexer)
+   // Init Left Eye
++  tcaselect(CH_EYE_LEFT);
+   if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
+     Serial.println("Left Eye Failed");
+   } else {
+@@ -6431,12 +6388,13 @@
+   }
+   
+   // Init Right Eye
+-  if(!displayRight.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
++  tcaselect(CH_EYE_RIGHT);
++  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
+     Serial.println("Right Eye Failed");
+   } else {
+     Serial.println("Right Eye OK");
+-    displayRight.clearDisplay();
+-    displayRight.display();
++    display.clearDisplay();
++    display.display();
+   }
+ 
+   // PREFERENCES (Load Saved Settings)
+@@ -6468,16 +6426,14 @@
+   if (cloudBotToken.length() > 0) Serial.println("[Prefs] Loaded Bot Token");
+   
+   // Sensors
+-  // SPI was already initialized at the top of setup(). 
+-  // XPT2046 will use the existing VSPI bus.
++  // Initialize SPI FIRST before touch (XPT2046 needs MISO=13 for data)
++  SPI.begin(TFT_SCLK, TFT_MISO, TFT_MOSI);
+   ts.begin();
+-  SPI.begin(TFT_SCLK, TFT_MISO, TFT_MOSI); // CRITICAL: ts.begin() resets SPI pins to defaults. Must restore them!
+-  pinMode(TOUCH_IRQ, INPUT_PULLUP); // CRITICAL: Must be AFTER ts.begin() to prevent library from overwriting pullup
+   ts.setRotation(1);
+   Serial.println("[Touch] XPT2046 Initialized on CS=47 IRQ=14 MISO=13");
+ 
+   // Initialize Sensors
+-  resetI2CBus(); // Ensure bus is clean for startup
++  // Initialize AHT20 on Channel 2
+   tcaselect(CH_AHT);
+   if (!aht.begin()) Serial.println("AHT20 not found!");
+   else Serial.println("AHT20 OK");
+@@ -6512,38 +6468,26 @@
+       Serial.println("[MAX30102] NOT DETECTED on any MUX channel. Check power/wiring.");
+   }
+ 
+-  // Match the working diagnostic sketch: standard bus speed for stability
+-  if (particleSensor.begin(Wire, I2C_SPEED_STANDARD)) {
++  // Match the working diagnostic sketch: faster bus plus clean FIFO start
++  if (particleSensor.begin(Wire, I2C_SPEED_FAST)) {
+     Serial.println("MAX30102 OK");
+     
+-    // Setup for continuous monitoring with LED always on
+-    // ledBrightness=0x1F (medium power for continuous on), sampleAverage=4, ledMode=2 (Red+IR ONLY),
+-    // sampleRate=100, pulseWidth=411, adcRange=16384
+-    particleSensor.setup(0x1F, 4, 2, 100, 411, 16384);
+-    particleSensor.setPulseAmplitudeRed(0x1F);  // Medium power for always-on detection
+-    particleSensor.setPulseAmplitudeIR(0x1F);
+-    
+-    // Clear FIFO to ensure clean state
++    // Exactly matches SparkFun Example8_SPO2 for correct algorithm operation
++    // ledBrightness=0xFF (Max Power for better penetration), sampleAverage=4, ledMode=2 (Red+IR ONLY),
++    // sampleRate=100, pulseWidth=411, adcRange=4096
++    // NOTE: ledMode MUST be 2 (not 3). With 3 LEDs, the FIFO interleaves
++    // 3 channels and getIR()/getRed() return wrong data, breaking the algorithm.
++    // Use 0x7F power and 16384 ADC range — the "sweet spot" to avoid saturation while staying above 50k threshold
++    particleSensor.setup(0x7F, 4, 2, 100, 411, 16384);
++    particleSensor.setPulseAmplitudeRed(0x7F);
++    particleSensor.setPulseAmplitudeIR(0x7F);
+     particleSensor.clearFIFO();
+-    
+-    // CRITICAL: Start sampling immediately to keep LED on
+-    // The sensor needs active polling to keep the LED lit
+-    for (int i = 0; i < 10; i++) {
+-      particleSensor.check();
+-      delay(10);
+-    }
+-    
+-    Serial.println("[MAX30102] LED should now be ON for continuous finger detection");
+   } else {
+       Serial.println("MAX30102 Failed at begin()");
+   }
+ 
+   // Finalize I2C speed for runtime
+-  // Keep Wire at 100kHz for MAX30102 stability (it's sensitive to fast I2C)
+-  Wire.setClock(100000);
+-  Wire1.setClock(400000); // Speed up Wire1 for right eye only
+-  Serial.println("[I2C] Wire=100kHz (for MAX30102), Wire1=400kHz");
+-  
++  Wire.setClock(400000);
+   if (initIMU()) {
+     calibrateIMUGyro();
+   } else {
+@@ -6607,12 +6551,6 @@
+   playStartupSound();
+   // drawNormalScreen(true); // Replaced by startupSequence()
+   startupSequence(); 
+-  
+-  // CRITICAL FIX: The MAX30102 has been filling its 32-sample FIFO during the ~8 seconds
+-  // of WiFi and Network initialization. If we don't clear the FIFO right before entering the main loop,
+-  // the sensor hits an overflow condition, locks up, and shuts off its LED!
+-  particleSensor.clearFIFO();
+-  
+   Serial.println("Setup Complete (Online Mode Ready)!");
+ }
+ 
+@@ -6955,8 +6893,8 @@
+ 
+   TS_Point p = ts.getPoint();
+ 
+-  // Filter out phantom touches (low raw values typically < 100 on noise, or 8191 on bad reads)
+-  if (p.x < 150 || p.y < 150 || p.x > 8000 || p.y > 8000) return;
++  // Filter out phantom touches (low raw values typically < 100 on noise)
++  if (p.x < 150 || p.y < 150) return;
+ 
+ 
+   // Map raw XPT2046 coordinates to screen pixels (240x320)
+@@ -6964,9 +6902,6 @@
+   int screenY = map(p.y, 200, 3800, 0, 320);
+   Serial.printf("[Touch] Raw(%d,%d) -> Screen(%d,%d)\n", p.x, p.y, screenX, screenY);
+ 
+-  // Debug visual touch indicator so user can verify touch mapping
+-  tft.fillCircle(screenX, screenY, 6, ILI9341_GREEN);
+-
+   // ── Navigation Bar (bottom 80px for reliable touch) ────────────────────
+   if (screenY > 240) {
+     if (currentMode == MODE_AI) {
+@@ -7127,12 +7062,12 @@
+     msg += "\nCheck on the user immediately!";
+ 
+     // 3. Send Telegram
+-    sendTelegramAlert(msg);
++    bool success = sendTelegramAlert(msg);
+     
+-    if (nodeWsConnected) {
++    if (success) {
+         speakText("Emergency alert sent.");
+     } else {
+-        speakText("Emergency alert queued.");
++        speakText("Emergency alert failed to send.");
+     }
+     
+     delay(2000);
+@@ -7828,16 +7763,6 @@
+ void switchToAIMode() {
+   if (currentMode == MODE_AI) return;
+   Serial.println("[Mode] Switching to AI");
+-  
+-  // CRITICAL: Disconnect MQTT FIRST before any network operations
+-  if (mqtt.connected()) {
+-      mqtt.disconnect();
+-      delay(50);
+-      Serial.println("[MQTT] Disconnected for AI session stability");
+-  }
+-  mqttClientNet->stop();
+-  delay(300); // Give MQTT time to fully release network resources
+-  
+   stopActiveAudioPlayback(true);
+   setAutoAvoidMode(false);
+   setGuardMode(false);
+@@ -7847,7 +7772,11 @@
+     Serial.println("[AI] Entry context refreshed: profile, sensors, reminders");
+   }
+   enterNetworkQuiet();
+-  
++  if (mqtt.connected()) {
++      mqtt.disconnect();
++      Serial.println("[MQTT] Disconnected for AI session stability");
++  }
++  mqttClientNet->stop();
+   currentMode = MODE_AI;
+   currentMedState = MED_IDLE;
+   lastInteractionTime = millis(); // Reset sleep timer
+@@ -7879,7 +7808,6 @@
+ }
+ 
+ void read_aht20() {
+-  tcaselect(CH_AHT);
+   sensors_event_t humidity, temp;
+   if (aht.getEvent(&humidity, &temp)) {
+     temp_aht = temp.temperature;
+@@ -9115,161 +9043,162 @@
+ 
+   // Draw for both eyes (Left ch 0, Right ch 1)
+   for (int i = 0; i < 2; i++) {
+-    Adafruit_SSD1306* targetDisp = (i == 0) ? &display : &displayRight;
+-    targetDisp->clearDisplay();
++    tcaselect(i == 0 ? CH_EYE_LEFT : CH_EYE_RIGHT);
++    display.clearDisplay();
+ 
+     if (isBlinking) {
+        // Blink Locked
+-       targetDisp->drawLine(32, 32, 96, 32, SSD1306_WHITE);
++       display.drawLine(32, 32, 96, 32, SSD1306_WHITE);
+     } else {
+        // Draw Expression
+        if (currentEyeExpression == "HAPPY") {
+          // Arching UP (Bottom of circle visible) -> ^ ^
+          // Smoother Arch: Removed flat rect cut at top
+-         targetDisp->fillCircle(64, 40, 30, SSD1306_WHITE); // Outer larger
+-         targetDisp->fillCircle(64, 48, 25, SSD1306_BLACK); // Inner cuts bottom-center
++         display.fillCircle(64, 40, 30, SSD1306_WHITE); // Outer larger
++         display.fillCircle(64, 48, 25, SSD1306_BLACK); // Inner cuts bottom-center
+          // No top rect - let the arch curve naturally
+        } 
+        else if (currentEyeExpression == "SAD") {
+          // Heavy downcast look with a visible tear. This should read as "sad"
+          // even on a small OLED, not just "sleepy".
+-         targetDisp->fillCircle(64, 37, 24, SSD1306_WHITE);
+-         targetDisp->fillCircle(64, 44, 7, SSD1306_BLACK);
+-         targetDisp->fillCircle(68, 40, 2, SSD1306_WHITE);
+-         targetDisp->fillRect(0, 0, 128, 15, SSD1306_BLACK);
+-         targetDisp->fillRect(0, 50, 128, 14, SSD1306_BLACK);
++         display.fillCircle(64, 37, 24, SSD1306_WHITE);
++         display.fillCircle(64, 44, 7, SSD1306_BLACK);
++         display.fillCircle(68, 40, 2, SSD1306_WHITE);
++         display.fillRect(0, 0, 128, 15, SSD1306_BLACK);
++         display.fillRect(0, 50, 128, 14, SSD1306_BLACK);
+          if (i == 0) {
+-           targetDisp->fillTriangle(0, 15, 56, 8, 0, 32, SSD1306_BLACK);
+-           targetDisp->fillCircle(86, 52, 3, SSD1306_WHITE);
+-           targetDisp->fillTriangle(83, 48, 89, 48, 86, 60, SSD1306_WHITE);
++           display.fillTriangle(0, 15, 56, 8, 0, 32, SSD1306_BLACK);
++           display.fillCircle(86, 52, 3, SSD1306_WHITE);
++           display.fillTriangle(83, 48, 89, 48, 86, 60, SSD1306_WHITE);
+          } else {
+-           targetDisp->fillTriangle(127, 15, 72, 8, 127, 32, SSD1306_BLACK);
+-           targetDisp->fillCircle(42, 52, 3, SSD1306_WHITE);
+-           targetDisp->fillTriangle(39, 48, 45, 48, 42, 60, SSD1306_WHITE);
++           display.fillTriangle(127, 15, 72, 8, 127, 32, SSD1306_BLACK);
++           display.fillCircle(42, 52, 3, SSD1306_WHITE);
++           display.fillTriangle(39, 48, 45, 48, 42, 60, SSD1306_WHITE);
+          }
+        }
+        else if (currentEyeExpression == "FRUSTRATED") {
+          // Tight, annoyed look. Distinct from SAD so it feels more alive.
+-         targetDisp->fillCircle(64, 33, 24, SSD1306_WHITE);
+-         targetDisp->fillCircle(60, 35, 8, SSD1306_BLACK);  // slight side glance
+-         targetDisp->fillCircle(70, 29, 2, SSD1306_WHITE);  // tiny glint
+-         targetDisp->fillRect(0, 0, 128, 10, SSD1306_BLACK);
+-         targetDisp->fillRect(0, 49, 128, 15, SSD1306_BLACK);
++         display.fillCircle(64, 33, 24, SSD1306_WHITE);
++         display.fillCircle(60, 35, 8, SSD1306_BLACK);  // slight side glance
++         display.fillCircle(70, 29, 2, SSD1306_WHITE);  // tiny glint
++         display.fillRect(0, 0, 128, 10, SSD1306_BLACK);
++         display.fillRect(0, 49, 128, 15, SSD1306_BLACK);
+          if (i == 0) {
+-           targetDisp->fillTriangle(0, 10, 54, 18, 0, 28, SSD1306_BLACK);
++           display.fillTriangle(0, 10, 54, 18, 0, 28, SSD1306_BLACK);
+          } else {
+-           targetDisp->fillTriangle(127, 10, 74, 18, 127, 28, SSD1306_BLACK);
++           display.fillTriangle(127, 10, 74, 18, 127, 28, SSD1306_BLACK);
+          }
+        } 
+        else if (currentEyeExpression == "WORRIED") {
+          // Uneasy, uncertain look. Softer than FRUSTRATED, more alert than SAD.
+-         targetDisp->fillCircle(64, 34, 23, SSD1306_WHITE);
+-         targetDisp->fillCircle(60, 38, 7, SSD1306_BLACK);
+-         targetDisp->fillCircle(69, 28, 2, SSD1306_WHITE);
+-         targetDisp->fillRect(0, 0, 128, 12, SSD1306_BLACK);
+-         targetDisp->fillRect(0, 51, 128, 12, SSD1306_BLACK);
++         display.fillCircle(64, 34, 23, SSD1306_WHITE);
++         display.fillCircle(60, 38, 7, SSD1306_BLACK);
++         display.fillCircle(69, 28, 2, SSD1306_WHITE);
++         display.fillRect(0, 0, 128, 12, SSD1306_BLACK);
++         display.fillRect(0, 51, 128, 12, SSD1306_BLACK);
+          if (i == 0) {
+-           targetDisp->fillTriangle(0, 12, 58, 10, 0, 26, SSD1306_BLACK);
+-           targetDisp->fillTriangle(54, 8, 76, 14, 60, 18, SSD1306_BLACK);
+-           targetDisp->fillCircle(83, 49, 2, SSD1306_WHITE);
+-           targetDisp->fillTriangle(81, 46, 85, 46, 83, 57, SSD1306_WHITE);
++           display.fillTriangle(0, 12, 58, 10, 0, 26, SSD1306_BLACK);
++           display.fillTriangle(54, 8, 76, 14, 60, 18, SSD1306_BLACK);
++           display.fillCircle(83, 49, 2, SSD1306_WHITE);
++           display.fillTriangle(81, 46, 85, 46, 83, 57, SSD1306_WHITE);
+          } else {
+-           targetDisp->fillTriangle(127, 12, 69, 10, 127, 26, SSD1306_BLACK);
+-           targetDisp->fillTriangle(52, 14, 68, 8, 74, 18, SSD1306_BLACK);
+-           targetDisp->fillCircle(44, 49, 2, SSD1306_WHITE);
+-           targetDisp->fillTriangle(42, 46, 46, 46, 44, 57, SSD1306_WHITE);
++           display.fillTriangle(127, 12, 69, 10, 127, 26, SSD1306_BLACK);
++           display.fillTriangle(52, 14, 68, 8, 74, 18, SSD1306_BLACK);
++           display.fillCircle(44, 49, 2, SSD1306_WHITE);
++           display.fillTriangle(42, 46, 46, 46, 44, 57, SSD1306_WHITE);
+          }
+        }
+        else if (currentEyeExpression == "THINKING") {
+          // Looking UP-RIGHT with a slight brow
+-         targetDisp->fillCircle(64, 32, 25, SSD1306_WHITE);
+-         targetDisp->fillCircle(80, 22, 10, SSD1306_BLACK); 
+-         targetDisp->fillRect(0, 0, 128, 18, SSD1306_BLACK); 
++         display.fillCircle(64, 32, 25, SSD1306_WHITE);
++         display.fillCircle(80, 22, 10, SSD1306_BLACK); 
++         display.fillRect(0, 0, 128, 18, SSD1306_BLACK); 
+        }
+        else if (currentEyeExpression == "ANGRY") {
+          // Full eye with sharp angled brow cut to look mean
+-         targetDisp->fillCircle(64, 32, 26, SSD1306_WHITE);  // Eye
+-         targetDisp->fillCircle(64, 34, 10, SSD1306_BLACK);  // Pupil
+-         targetDisp->fillCircle(70, 28, 3, SSD1306_WHITE);   // Glint
++         display.fillCircle(64, 32, 26, SSD1306_WHITE);  // Eye
++         display.fillCircle(64, 34, 10, SSD1306_BLACK);  // Pupil
++         display.fillCircle(70, 28, 3, SSD1306_WHITE);   // Glint
+          // Angry V-brow: triangle cuts from outer top to inner mid
+-         targetDisp->fillTriangle(0, 0, 128, 0, 0, 22, SSD1306_BLACK);  // Outer corner low brow
+-         targetDisp->fillTriangle(64, 18, 128, 0, 128, 18, SSD1306_BLACK); // Inner corner stays
++         display.fillTriangle(0, 0, 128, 0, 0, 22, SSD1306_BLACK);  // Outer corner low brow
++         display.fillTriangle(64, 18, 128, 0, 128, 18, SSD1306_BLACK); // Inner corner stays
+        }
+        else if (currentEyeExpression == "SURPRISED") {
+          // Wide open, small pupil
+-         targetDisp->fillCircle(64, 32, 28, SSD1306_WHITE);
+-         targetDisp->fillCircle(64, 32, 8, SSD1306_BLACK);
++         display.fillCircle(64, 32, 28, SSD1306_WHITE);
++         display.fillCircle(64, 32, 8, SSD1306_BLACK);
+        }
+        else if (currentEyeExpression == "SLEEPY") {
+          // Half closed
+-         targetDisp->fillCircle(64, 32, 25, SSD1306_WHITE);
+-         targetDisp->fillRect(0, 0, 128, 32, SSD1306_BLACK); // Top half blocked
+-         targetDisp->fillCircle(64, 38, 8, SSD1306_BLACK); // Pupil low
++         display.fillCircle(64, 32, 25, SSD1306_WHITE);
++         display.fillRect(0, 0, 128, 32, SSD1306_BLACK); // Top half blocked
++         display.fillCircle(64, 38, 8, SSD1306_BLACK); // Pupil low
+        }
+        else if (currentEyeExpression == "CONFUSED") {
+          // Questioning look (Raised brow)
+-         targetDisp->fillCircle(64, 32, 25, SSD1306_WHITE);
+-         targetDisp->fillCircle(70, 28, 8, SSD1306_BLACK); // Pupil side
+-         targetDisp->fillTriangle(0, 0, 64, 20, 0, 20, SSD1306_BLACK); // Asymmetrical cut
++         display.fillCircle(64, 32, 25, SSD1306_WHITE);
++         display.fillCircle(70, 28, 8, SSD1306_BLACK); // Pupil side
++         display.fillTriangle(0, 0, 64, 20, 0, 20, SSD1306_BLACK); // Asymmetrical cut
+        }
+        else if (currentEyeExpression == "LOVE") {
+          // Heart Shape
+          // Two circles + Triangle at bottom
+-         targetDisp->fillCircle(64-15, 30, 15, SSD1306_WHITE); // Left hump
+-         targetDisp->fillCircle(64+15, 30, 15, SSD1306_WHITE); // Right hump
+-         targetDisp->fillTriangle(64-28, 35, 64+28, 35, 64, 60, SSD1306_WHITE); // Bottom V
++         display.fillCircle(64-15, 30, 15, SSD1306_WHITE); // Left hump
++         display.fillCircle(64+15, 30, 15, SSD1306_WHITE); // Right hump
++         display.fillTriangle(64-28, 35, 64+28, 35, 64, 60, SSD1306_WHITE); // Bottom V
+        }
+        else if (currentEyeExpression == "WINK") {
+          // Left Eye Normal, Right Eye Closed (or vice versa based on 'i')
+          if (i == 0) { // Left: Open
+-            targetDisp->fillCircle(64, 32, 26, SSD1306_WHITE); 
+-            targetDisp->fillCircle(64, 32, 10, SSD1306_BLACK); 
+-            targetDisp->fillCircle(70, 26, 3, SSD1306_WHITE); 
++            display.fillCircle(64, 32, 26, SSD1306_WHITE); 
++            display.fillCircle(64, 32, 10, SSD1306_BLACK); 
++            display.fillCircle(70, 26, 3, SSD1306_WHITE); 
+          } else { // Right: Closed line
+-            targetDisp->fillRect(32, 30, 64, 4, SSD1306_WHITE);
++            display.fillRect(32, 30, 64, 4, SSD1306_WHITE);
+          }
+        }
+        else if (currentEyeExpression == "DEAD" || currentEyeExpression == "X_X") {
+          // X Shape
+-         targetDisp->drawLine(44, 12, 84, 52, SSD1306_WHITE);
+-         targetDisp->drawLine(44, 52, 84, 12, SSD1306_WHITE);
++         display.drawLine(44, 12, 84, 52, SSD1306_WHITE);
++         display.drawLine(44, 52, 84, 12, SSD1306_WHITE);
+          // Thicken
+-         targetDisp->drawLine(43, 12, 83, 52, SSD1306_WHITE);
+-         targetDisp->drawLine(45, 12, 85, 52, SSD1306_WHITE);
+-         targetDisp->drawLine(43, 52, 83, 12, SSD1306_WHITE);
+-         targetDisp->drawLine(45, 52, 85, 12, SSD1306_WHITE);
++         display.drawLine(43, 12, 83, 52, SSD1306_WHITE);
++         display.drawLine(45, 12, 85, 52, SSD1306_WHITE);
++         display.drawLine(43, 52, 83, 12, SSD1306_WHITE);
++         display.drawLine(45, 52, 85, 12, SSD1306_WHITE);
+        }
+        else if (currentEyeExpression == "SUSPICIOUS") {
+          // Squint
+-         targetDisp->fillCircle(64, 32, 26, SSD1306_WHITE); 
+-         targetDisp->fillCircle(54, 32, 8, SSD1306_BLACK); // Pupil side-eye
+-         targetDisp->fillRect(0, 0, 128, 22, SSD1306_BLACK); // Top heavy lid
+-         targetDisp->fillRect(0, 42, 128, 22, SSD1306_BLACK); // Bottom squeeze
++         display.fillCircle(64, 32, 26, SSD1306_WHITE); 
++         display.fillCircle(54, 32, 8, SSD1306_BLACK); // Pupil side-eye
++         display.fillRect(0, 0, 128, 22, SSD1306_BLACK); // Top heavy lid
++         display.fillRect(0, 42, 128, 22, SSD1306_BLACK); // Bottom squeeze
+        }
+        else if (currentEyeExpression == "EXCITED") {
+          // Big Sparkle Eyes
+-         targetDisp->fillCircle(64, 32, 30, SSD1306_WHITE); 
+-         targetDisp->fillCircle(64, 32, 25, SSD1306_BLACK); // Big Pupil
++         display.fillCircle(64, 32, 30, SSD1306_WHITE); 
++         display.fillCircle(64, 32, 25, SSD1306_BLACK); // Big Pupil
+          // Glints
+-         targetDisp->fillCircle(75, 20, 8, SSD1306_WHITE);  
+-         targetDisp->fillCircle(55, 45, 4, SSD1306_WHITE);
+-         targetDisp->fillCircle(80, 40, 3, SSD1306_WHITE);
++         display.fillCircle(75, 20, 8, SSD1306_WHITE);  
++         display.fillCircle(55, 45, 4, SSD1306_WHITE);
++         display.fillCircle(80, 40, 3, SSD1306_WHITE);
+        }
+        else if (currentEyeExpression == "BORED") {
+          // Flat, unamused look (squished horizontally and half closed)
+-         targetDisp->fillCircle(64, 32, 22, SSD1306_WHITE); 
+-         targetDisp->fillCircle(64, 32, 8, SSD1306_BLACK); // Pupil center
+-         targetDisp->fillRect(0, 0, 128, 26, SSD1306_BLACK); // Top lid completely flat and low
+-         targetDisp->fillRect(0, 48, 128, 16, SSD1306_BLACK); // Bottom lid flat and high
++         display.fillCircle(64, 32, 22, SSD1306_WHITE); 
++         display.fillCircle(64, 32, 8, SSD1306_BLACK); // Pupil center
++         display.fillRect(0, 0, 128, 26, SSD1306_BLACK); // Top lid completely flat and low
++         display.fillRect(0, 48, 128, 16, SSD1306_BLACK); // Bottom lid flat and high
+        }
+        else {
+          // NORMAL
+-         targetDisp->fillCircle(64, 32, 26, SSD1306_WHITE); 
+-         targetDisp->fillCircle(64, 32, 10, SSD1306_BLACK); 
+-         targetDisp->fillCircle(70, 26, 3, SSD1306_WHITE);  
++         display.fillCircle(64, 32, 26, SSD1306_WHITE); 
++         display.fillCircle(64, 32, 10, SSD1306_BLACK); 
++         display.fillCircle(70, 26, 3, SSD1306_WHITE);  
+        }
+-       targetDisp->display();
+     }
++    
++    display.display();
+   }
+ }
+ 
+@@ -9430,7 +9359,313 @@
+ }
+ 
+ 
+-// checkRemoteCommands() DELETED to eliminate lag - Using MQTT exclusively
++
++void checkRemoteCommands() {
++  if (!FIREBASE_ENABLED || offlineModeLocked) return;
++  if (!firebaseReady || !networkAvailable()) return;
++
++    unsigned long now = millis();
++    if (now < commandPollBackoffUntil) return;
++
++    static unsigned long lastCmdCheck = 0;
++    unsigned long minCmdInterval = (currentMode == MODE_AI) ? COMMAND_POLL_INTERVAL_AI_MS : COMMAND_POLL_INTERVAL_NORMAL_MS;
++    if (now - lastCmdCheck < minCmdInterval) return;
++    lastCmdCheck = now;
++
++    // BATCHED: Single read of entire /commands node (was 6 separate calls)
++    if (!Firebase.RTDB.getJSON(&fbdoCmd, "/commands")) {
++      if (commandReadFailStreak < 10) commandReadFailStreak++;
++
++      uint8_t shift = (commandReadFailStreak > 5) ? 5 : (commandReadFailStreak - 1);
++      unsigned long backoffMs = COMMAND_ERROR_BACKOFF_BASE_MS << shift;
++      commandPollBackoffUntil = now + backoffMs;
++
++      if (commandReadFailStreak == 1 || commandReadFailStreak == 3 || commandReadFailStreak >= COMMAND_ERROR_REINIT_THRESHOLD) {
++        Serial.printf("[Firebase] /commands read failed x%u: %s (backoff %lu ms)\n",
++                      commandReadFailStreak,
++                      fbdoCmd.errorReason().c_str(),
++                      backoffMs);
++      }
++
++      if (commandReadFailStreak >= COMMAND_ERROR_REINIT_THRESHOLD) {
++        firebaseReady = false;
++        nextFirebaseRetryMs = now + FIREBASE_RETRY_MS;
++        commandPollBackoffUntil = nextFirebaseRetryMs;
++        Serial.println("[Firebase] Command channel unhealthy, scheduling reconnect");
++      }
++      return;
++    }
++
++    if (commandReadFailStreak > 0) {
++      Serial.printf("[Firebase] /commands recovered after %u failures\n", commandReadFailStreak);
++    }
++    commandReadFailStreak = 0;
++    commandPollBackoffUntil = 0;
++    lastCommandJsonFetchMs = now;
++    
++    FirebaseJson *json = fbdoCmd.jsonObjectPtr();
++    if (!json) return;
++    
++    // 1. Emergency
++    FirebaseJsonData valEmergency;
++    json->get(valEmergency, "emergency");
++    if (valEmergency.success && valEmergency.to<bool>()) {
++        Serial.println("[Command] Emergency Triggered from Web!");
++        sendEmergencyAlert("Web App Panic Button");
++        Firebase.RTDB.setBool(&fbdo, "/commands/emergency", false);
++    }
++
++    // 2. WiFi Config (only if wifiConfig is actually an object with a real ssid)
++    FirebaseJsonData valWifi;
++    json->get(valWifi, "wifiConfig/ssid");
++    String newSSID = valWifi.success ? valWifi.to<String>() : "";
++    newSSID.trim();
++    // Guard: Firebase returns "false"/"null" when the node doesn't exist as expected
++    if (valWifi.success && newSSID.length() > 2 && newSSID != "false" && newSSID != "null" && newSSID != "true") {
++        String newPass = "";
++        FirebaseJsonData valPass;
++        json->get(valPass, "wifiConfig/password");
++        if (valPass.success) newPass = valPass.to<String>();
++        
++        Serial.println("[Command] New WiFi Config: " + newSSID);
++        prefs.begin("ella", false);
++        prefs.putString("ssid", newSSID);
++        prefs.putString("pass", newPass);
++        prefs.end();
++        Firebase.RTDB.deleteNode(&fbdo, "/commands/wifiConfig");
++        speakText("New Wi-Fi saved. Restarting.");
++        delay(2000);
++        ESP.restart();
++    }
++
++      // 2b. Forget Wi-Fi credentials and fall back to hardcoded network
++      FirebaseJsonData valWifiReset;
++      json->get(valWifiReset, "wifiReset");
++      if (valWifiReset.success && valWifiReset.to<bool>()) {
++        Serial.println("[Command] WiFi reset requested from Web App!");
++        prefs.begin("ella", false);
++        prefs.remove("ssid");
++        prefs.remove("pass");
++        prefs.end();
++        wifiSSID = "";
++        wifiPass = "";
++        Firebase.RTDB.deleteNode(&fbdo, "/commands/wifiConfig");
++        Firebase.RTDB.setBool(&fbdo, "/commands/wifiReset", false);
++
++        if (WiFi.status() == WL_CONNECTED) {
++          WiFi.disconnect(true);
++        }
++
++        resetWiFiStationForRetry();
++        WiFi.begin(ssid, password);
++        Serial.println("[WiFi] Cleared saved credentials, reconnecting with hardcoded fallback...");
++      }
++
++    // 3. AI Chat
++    FirebaseJsonData valChat;
++    json->get(valChat, "aiChat");
++    if (valChat.success) {
++        String msg = valChat.to<String>();
++        msg.trim();
++        if (msg.length() > 1 && msg != "null" && msg != "false" && msg != "true") {
++            Serial.println("[Command] AI Chat from Web: " + msg);
++            Firebase.RTDB.deleteNode(&fbdo, "/commands/aiChat");
++            setAIInputMode(false);
++            queueWebAIChat(msg);
++        }
++    }
++
++    // 3b. AI Input Mode
++    FirebaseJsonData valAiInputMode;
++    json->get(valAiInputMode, "aiInputMode");
++    if (valAiInputMode.success) {
++        String inputMode = valAiInputMode.to<String>();
++        inputMode.trim();
++        inputMode.toUpperCase();
++        if (inputMode == "WEB") {
++            setAIInputMode(false);
++            Firebase.RTDB.deleteNode(&fbdo, "/commands/aiInputMode");
++        } else if (inputMode == "MIC") {
++            setAIInputMode(true);
++            Firebase.RTDB.deleteNode(&fbdo, "/commands/aiInputMode");
++        }
++    }
++
++    // 4. Remote Speak
++    FirebaseJsonData valSpeak;
++    json->get(valSpeak, "speak");
++    if (valSpeak.success) {
++        String msg = valSpeak.to<String>();
++        msg.trim();
++        if (msg.length() > 1 && msg != "null" && msg != "false" && msg != "true") {
++            Serial.println("[Command] Remote Speak: " + msg);
++            Firebase.RTDB.deleteNode(&fbdo, "/commands/speak");
++            speakText(msg.c_str());
++        }
++    }
++
++    // DIRECT CHECKUP command (bypasses AI pipeline for instant response)
++    FirebaseJsonData valCheckup;
++    json->get(valCheckup, "checkup");
++    if (valCheckup.success && valCheckup.to<bool>()) {
++        Serial.println("[Command] Direct Checkup from Web App!");
++        Firebase.RTDB.setBool(&fbdo, "/commands/checkup", false);
++        // Only start if not already in progress
++        if (currentMedState != MED_PLACE_FINGER && currentMedState != MED_MEASURING && currentMedState != MED_WAIT_FINGER) {
++            ai_requested_checkup = true;
++            if (currentMode != MODE_NORMAL) switchToNormalMode();
++            currentMedState = MED_IDLE;
++            medStateTimer = millis();
++            drawNormalScreen(true);
++            speakText("Starting medical checkup. Please place your finger on the sensor.");
++            return;
++        } else {
++            speakText("Checkup already in progress.");
++            return;
++        }
++    }
++
++    // DIRECT MEDITATE command (bypasses AI - triggers startMeditation directly)
++    FirebaseJsonData valMeditate;
++    json->get(valMeditate, "meditate");
++    if (valMeditate.success) {
++        String preset = valMeditate.to<String>();
++        preset.trim();
++        if (preset.length() > 1 && preset != "null" && preset != "false") {
++            Serial.println("[Command] Direct Meditate: " + preset);
++            Firebase.RTDB.deleteNode(&fbdo, "/commands/meditate");
++            startMeditation(preset);
++        }
++    }
++
++    // DIRECT BREATHE command
++    FirebaseJsonData valBreathe;
++    json->get(valBreathe, "breathe");
++    if (valBreathe.success && valBreathe.to<bool>()) {
++        Serial.println("[Command] Direct Breathe from Web App!");
++        Firebase.RTDB.setBool(&fbdo, "/commands/breathe", false);
++        if (currentMode != MODE_NORMAL) switchToNormalMode();
++        currentMedState = MED_BREATHING;
++        medStateTimer = millis();
++        drawNormalScreen(true);
++        speakText("Starting breathing exercise. Breathe in... and breathe out.");
++    }
++
++    // 5. Mode Switch
++    FirebaseJsonData valMode;
++    json->get(valMode, "systemMode");
++    if (valMode.success) {
++        String modeCmd = valMode.to<String>();
++        modeCmd.trim();
++        if (modeCmd == "AI" && currentMode != MODE_AI) {
++            // Prevent the web app from forcing AI mode if a checkup was just initiated
++            if (currentMedState != MED_IDLE) {
++                Serial.println("[Firebase] Ignored Switch to AI Mode (Medical Checkup Active)");
++                Firebase.RTDB.setString(&fbdo, "/commands/systemMode", "");
++            } else {
++                Serial.println("[Firebase] Switch to AI Mode");
++                switchToAIMode();
++                Firebase.RTDB.setString(&fbdo, "/commands/systemMode", "");
++            }
++        } else if (modeCmd == "NORMAL" && currentMode != MODE_NORMAL) {
++            Serial.println("[Firebase] Switch to Normal Mode");
++            switchToNormalMode();
++            Firebase.RTDB.setString(&fbdo, "/commands/systemMode", "");
++        } else if (modeCmd == "OFF") {
++          Serial.println("[Firebase] OFF command -> stop + NORMAL standby");
++          handleUniversalStopAudioCommand();
++          Firebase.RTDB.setString(&fbdo, "/commands/systemMode", "");
++        } else if (modeCmd == "AI" || modeCmd == "NORMAL") {
++            // Clear stale mode commands so local button presses do not bounce back.
++            Firebase.RTDB.setString(&fbdo, "/commands/systemMode", "");
++        } else if (modeCmd.length() > 0) {
++          Firebase.RTDB.setString(&fbdo, "/commands/systemMode", "");
++        }
++    }
++
++    // 6. Stop Audio
++    FirebaseJsonData valStop;
++    json->get(valStop, "stopAudio");
++    if (valStop.success && valStop.to<bool>()) {
++      handleUniversalStopAudioCommand();
++        Firebase.RTDB.setBool(&fbdo, "/commands/stopAudio", false);
++    }
++
++    // 7. Autonomous ToF Avoid / Guard Standby
++    FirebaseJsonData valGuard;
++    json->get(valGuard, "guard");
++    if (valGuard.success) {
++        bool active = valGuard.to<bool>();
++        setGuardMode(active);
++    }
++
++    FirebaseJsonData valAutoAvoid;
++    json->get(valAutoAvoid, "autoAvoid");
++    if (valAutoAvoid.success) {
++        bool active = valAutoAvoid.to<bool>();
++        setAutoAvoidMode(active);
++    }
++
++    FirebaseJsonData valFocusMode;
++    json->get(valFocusMode, "focusMode");
++    if (valFocusMode.success) {
++      bool active = valFocusMode.to<bool>();
++      if (active && !focusModeActive) {
++        focusModeActive = true;
++        Serial.println("[Focus] Focus Mode Activated from Web App!");
++        playMusic("ambient");
++        Firebase.RTDB.setBool(&fbdoFocus, "/status/focusMode", true);
++      } else if (!active && focusModeActive) {
++        focusModeActive = false;
++        Serial.println("[Focus] Focus Mode Deactivated.");
++        clearTtsChunkQueue();
++        if (audio.isRunning()) audio.stopSong();
++        enterAudioTransitionQuiet();
++        isSpeaking = false;
++        Firebase.RTDB.setBool(&fbdoFocus, "/status/focusMode", false);
++      }
++    }
++
++    // 7b. IMU Recalibration (Web button)
++    FirebaseJsonData valImuReset;
++    json->get(valImuReset, "imuReset");
++    if (valImuReset.success && valImuReset.to<bool>()) {
++        Serial.println("[Command] IMU recalibration requested");
++        Firebase.RTDB.setBool(&fbdo, "/commands/imuReset", false);
++        lastInteractionTime = millis();
++        recalibrateNavigationHeading();
++    }
++
++    // 8. Motor Commands (Joysticks)
++    FirebaseJsonData valMotor;
++    json->get(valMotor, "motor");
++    if (valMotor.success) {
++        String motorCmd = valMotor.to<String>();
++        motorCmd.trim();
++        motorCmd.toUpperCase();
++        if (motorCmd.length() > 2 && motorCmd != "NULL" && motorCmd != "FALSE") {
++            Serial.println("[Command] Motor: " + motorCmd);
++
++            // The web UI already sends DRV8833-friendly commands, so pass them straight through.
++            if (!applyManualMotorCommand(motorCmd)) {
++                Serial.println("[Command] Ignored motor command: " + motorCmd);
++            }
++            Firebase.RTDB.deleteNode(&fbdo, "/commands/motor");
++        }
++    }
++
++    // 9. Motor Speed
++    FirebaseJsonData valSpd;
++    json->get(valSpd, "speed");
++    if (valSpd.success) {
++        int spd = valSpd.to<int>();
++        if (spd >= 0 && spd <= 255) {
++            motorSpeed = spd;
++            Serial.printf("[Command] Motor Speed set to: %d\n", motorSpeed);
++            Firebase.RTDB.deleteNode(&fbdo, "/commands/speed");
++        }
++    }
++}
+ void pushSensorDataToFirebase() {
+   if (offlineModeLocked || (!mqtt.connected() && !firebaseReady)) {
+      return;
+@@ -9472,8 +9707,14 @@
+   json.set("guardAlarm", guardAlarmActive);
+   json.set("timestamp", ntpTimeValid ? time(nullptr) : (long)(millis() / 1000UL));
+ 
+-  // Firebase Telemetry Pushes DISABLED to prevent blocking the loop
+-  // Use MQTT for real-time sensor data
++  if (FIREBASE_ENABLED && firebaseReady) {
++    String path = "/readings";
++    if (Firebase.RTDB.pushJSON(&fbdo, path.c_str(), &json)) {
++      Serial.println("[Firebase] Sensor data pushed to web app");
++    } else {
++      Serial.printf("[Firebase] Push failed: %s\n", fbdo.errorReason().c_str());
++    }
++  }
+ 
+   pushSensorDataToMQTT(json);
+ 
+@@ -9481,50 +9722,7 @@
+ }
+ 
+ 
+-void sendTelegramAlert(String message) {
+-  if (cloudBotToken.length() < 10) return; // Not configured
+-
+-  String payload = "{\"type\":\"telegram_alert\",\"message\":\"" + message + "\"}";
+-  if (nodeWsSendText(payload.c_str())) {
+-    Serial.println("[Telegram] Alert relayed via Node Proxy");
+-  } else {
+-    Serial.println("[Telegram] Node Proxy not connected, alert dropped");
+-  }
+-}
+-
+-void resetI2CBus() {
+-  Serial.println("[I2C] Resetting Bus...");
+-  Wire.end();
+-  pinMode(I2C_SDA_PIN, OUTPUT);
+-  pinMode(I2C_SCL_PIN, OUTPUT);
+-  for (int i = 0; i < 9; i++) {
+-    digitalWrite(I2C_SCL_PIN, LOW); delayMicroseconds(5);
+-    digitalWrite(I2C_SCL_PIN, HIGH); delayMicroseconds(5);
+-  }
+-  digitalWrite(I2C_SDA_PIN, HIGH);
+-  Wire.begin(I2C_SDA_PIN, I2C_SCL_PIN);
+-  Serial.println("[I2C] Bus Reset Complete");
+-}
+-
+-// I2C Scanner for Debugging
+-void scanI2CBus(TwoWire &bus, const char* busName) {
+-  Serial.printf("\n[I2C] Scanning %s...\n", busName);
+-  uint8_t found = 0;
+-  for (uint8_t addr = 1; addr < 127; addr++) {
+-    bus.beginTransmission(addr);
+-    if (bus.endTransmission() == 0) {
+-      Serial.printf("  Device found at 0x%02X\n", addr);
+-      found++;
+-    }
+-  }
+-  if (found == 0) {
+-    Serial.printf("  No devices found on %s\n", busName);
+-  } else {
+-    Serial.printf("  Total: %d device(s) on %s\n", found, busName);
+-  }
+-}
+-
+-void setupEnvironmentSensors() {
++void checkEnvironmentalAlerts() {
+     // Thresholds: Temp > 40C, AQI >= 5 (Poor)
+     bool highTemp = (temp_aht > 40.0);
+     bool poorAir = (aqi_val >= 5);
+@@ -9741,7 +9939,9 @@
+         speakText("The air quality in here is dropping. Fresh air would be nice!");
+         return; // Only one alert per loop
+     }
+-if (!isnan(humidity_aht) && humidity_aht > 70.0 && (now - lastHumidityAlert > CONTEXT_COOLDOWN)) {
++
++    // 2. Humidity / Stuffy Alert (Humidity > 70%)
++    if (!isnan(humidity_aht) && humidity_aht > 70.0 && (now - lastHumidityAlert > CONTEXT_COOLDOWN)) {
+         lastHumidityAlert = now;
+         Serial.println("[Context] High humidity detected.");
+         setEyeExpression("FRUSTRATED");
+@@ -9787,7 +9987,34 @@
+ // TELEGRAM BOT - SERVER-SIDE FUNCTIONS
+ // ============================================================
+ // Send alert via server (no SSL on ESP32!)
+-
++bool sendTelegramAlert(String msg) {
++  if (cloudBotToken.length() < 10) return false;
++  
++  WiFiClientSecure client;
++  client.setInsecure();
++  HTTPClient https;
++  
++  String url = "https://api.telegram.org/bot" + cloudBotToken + "/sendMessage";
++  
++  StaticJsonDocument<1024> doc;
++  doc["chat_id"] = cloudChatId;
++  doc["text"] = msg;
++  doc["parse_mode"] = "Markdown";
++  
++  String payload;
++  serializeJson(doc, payload);
++  
++  if (https.begin(client, url)) {
++    https.addHeader("Content-Type", "application/json");
++    int httpCode = https.POST(payload);
++    https.end();
++    
++    bool success = (httpCode == HTTP_CODE_OK);
++    Serial.printf("[Telegram] Direct alert: %s (Status: %d)\n", msg.substring(0, 50).c_str(), httpCode);
++    return success;
++  }
++  return false;
++}
+ 
+ // Handle incoming Telegram commands from server
+ void handleTelegramCommand(String command) {
+@@ -9849,7 +10076,75 @@
+   }
+ }
+ 
+-
++// New background polling function for direct Telegram
++void pollTelegramDirect() {
++  if (cloudBotToken.length() < 10) return;
++  if (isSpeaking || isProcessingAI || !networkAvailable()) return;
++  
++  static unsigned long lastPoll = 0;
++  if (millis() - lastPoll < 5000) return; // Poll every 5s
++  lastPoll = millis();
++  
++  Serial.println("[Telegram] Polling direct API...");
++  
++  WiFiClientSecure client;
++  client.setInsecure();
++  client.setBufferSizes(1024, 512);
++  HTTPClient https;
++  
++  String url = "https://api.telegram.org/bot" + cloudBotToken + "/getUpdates?offset=" + String(lastTelegramUpdateId + 1) + "&limit=5&timeout=0";
++  
++  if (https.begin(client, url)) {
++    int httpCode = https.GET();
++    if (httpCode == HTTP_CODE_OK) {
++      String payload = https.getString();
++      StaticJsonDocument<4096> doc;
++      DeserializationError error = deserializeJson(doc, payload);
++      
++      if (error) {
++        Serial.print("[Telegram] JSON Error: ");
++        Serial.println(error.c_str());
++      } else if (!doc["ok"]) {
++        Serial.print("[Telegram] API Error: ");
++        Serial.println(doc["description"] | "unknown");
++        // If "offset is too old", reset it
++        String desc = doc["description"] | "";
++        if (desc.indexOf("offset") >= 0) lastTelegramUpdateId = 0;
++      } else {
++        JsonArray updates = doc["result"].as<JsonArray>();
++        if (updates.size() > 0) {
++          Serial.printf("[Telegram] Received %d updates\n", updates.size());
++        }
++        for (JsonObject update : updates) {
++          lastTelegramUpdateId = update["update_id"];
++          if (update.containsKey("message")) {
++            String text = update["message"]["text"].as<String>();
++            String chatId = String(update["message"]["chat"]["id"].as<long>());
++            
++            // Auto-capture chat ID if missing
++            if (cloudChatId == "" || cloudChatId == "null" || cloudChatId == "0") {
++              cloudChatId = chatId;
++              Preferences prefs;
++              prefs.begin("ella", false);
++              prefs.putString("chatId", cloudChatId);
++              prefs.end();
++              Serial.println("[Telegram] Auto-captured Chat ID: " + cloudChatId);
++            }
++            
++            if (chatId == cloudChatId) {
++              handleIncomingTelegramCommand(text, chatId);
++            }
++          }
++        }
++      }
++    } else {
++      Serial.printf("[Telegram] Poll failed, HTTP Code: %d\n", httpCode);
++    }
++    https.end();
++  } else {
++    Serial.println("[Telegram] Connection failed");
++  }
++}
+ 
+ // ============================================================
+ // DAILY HEALTH SUMMARY (EVENING ROUTINE)
+@@ -12951,7 +13246,27 @@
+   if (currentMode != MODE_NORMAL) switchToNormalMode();
+ }
+ 
++bool checkRemoteStopCommand() {
++  if (!firebaseReady) return false;
++  if (millis() < commandPollBackoffUntil) return false;
++  if (millis() - lastCommandJsonFetchMs < 180) return false;
++
++  static unsigned long lastStopPoll = 0;
++  if (millis() - lastStopPoll < 700) return false;
++  lastStopPoll = millis();
+ 
++  if (!Firebase.RTDB.getBool(&fbdoCmd, "/commands/stopAudio")) {
++    return false;
++  }
++
++  if (fbdoCmd.boolData()) {
++    handleUniversalStopAudioCommand();
++    Firebase.RTDB.setBool(&fbdo, "/commands/stopAudio", false);
++    return true;
++  }
++
++  return false;
++}
+ 
+ void stopActiveAudioPlayback(bool scheduleMicRestart) {
+   bool hadPlayback = audio.isRunning() || isSpeaking || activeTtsText.length() > 0;
+@@ -13902,22 +14217,17 @@
+ // MAIN LOOP MOVED TO BOTTOM FOR SCOPING
+ // ============================================================
+ void loop() {
+-  // ── PRIORITY 1: COMMUNICATIONS & COMMANDS ──────────────────────────────────
+   if (currentMode != MODE_AI) {
+     reconnectMQTT();
+   } else if (mqtt.connected()) {
+     mqtt.disconnect();
+     mqttClientNet->stop();
++    Serial.println("[MQTT] Disconnected during AI mode");
+   }
+ 
+   if (currentMode != MODE_AI && mqtt.connected()) {
+     mqtt.loop();
+   }
+-  
+-  // ── PRIORITY 2: MOTOR CONTROL (Process immediately after MQTT) ──────────────
+-  processMovementQueue();
+-  
+-  // ── PRIORITY 3: SYSTEM SERVICE ─────────────────────────────────────────────
+   if (currentMode == MODE_AI) {
+     serviceLlmWebSocketKeepAlive();
+   } else if (llmWsConnected) {
+@@ -13928,7 +14238,9 @@
+     ArduinoOTA.handle();
+   }
+   
+-  // Telegram now handled by server bridge - no blocking polling!
++  if (networkAvailable()) {
++    pollTelegramDirect(); 
++  }
+ 
+ 
+   audio.loop();
+@@ -13940,7 +14252,7 @@
+   flushPendingModeStatus();
+   maybeExpressiveSpeechMotion();
+   updateRobotAssistModes();
+-  // processMovementQueue(); // Moved to top of loop for zero-latency control
++  processMovementQueue();
+   
+   // AUTONOMOUS MODE: Update navigation
+   if (currentMode == MODE_AUTONOMOUS && autoModeActive) {
+@@ -13967,7 +14279,7 @@
+                             currentMedState == MED_MEASURING ||
+                             currentMedState == MED_RESULT;
+ 
+-
++  checkRemoteStopCommand();
+   serviceMicAIReconnect(checkupNetworkQuiet);
+ 
+   if (isSpeaking && ttsStartupPending && !currentlySpeaking && ttsSpeechStartMs > 0) {
+@@ -14056,7 +14368,7 @@
+   if (guardModeEnabled || guardAlarmActive) {
+     static unsigned long lastGuardRemotePoll = 0;
+     if (!touchUiHot && millis() - lastGuardRemotePoll > 2000) {
+-
++      checkRemoteCommands();
+       lastGuardRemotePoll = millis();
+     }
+     updateEyes();
+@@ -14284,7 +14596,7 @@
+ 
+   // MODE-SPECIFIC LOGIC
+   if (networkAvailable() && !touchUiHot && !checkupNetworkQuiet && !networkIsQuiet()) {
+-
++    checkRemoteCommands();
+     processQueuedAIChat();
+   } else if (!touchUiHot && !checkupNetworkQuiet) {
+     processQueuedAIChat();

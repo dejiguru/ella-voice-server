@@ -39,33 +39,7 @@
     <script
         src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
 
-    <!-- Firebase SDK (v10 Modular) -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getDatabase, ref, onValue, push, set, limitToLast, query, onChildAdded } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-        const firebaseConfig = {
-            databaseURL: "https://ellacloudai-default-rtdb.firebaseio.com",
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
-
-        // Expose to window for existing script to use
-        window.fbDB = db;
-        window.fbRef = ref;
-        window.fbSet = set;
-        window.fbPush = push;
-        window.fbOnValue = onValue;
-        window.fbQuery = query;
-        window.fbLimitToLast = limitToLast;
-        window.fbOnChildAdded = onChildAdded;
-
-        console.log('[Firebase] Initialized SDK v10');
-
-        // Signal that Firebase is ready
-        window.dispatchEvent(new CustomEvent('firebaseReady'));
-    </script>
 
     <style>
         :root {
@@ -2536,11 +2510,10 @@
             clean: true,
         };
 
-        const MQTT_ENABLED = false;
-        const mqttClient = MQTT_ENABLED
-            ? mqtt.connect(MQTT_URL, MQTT_OPTIONS)
-            : { on() { }, subscribe() { }, publish() { } };
+        const MQTT_ENABLED = true;
+        const mqttClient = mqtt.connect(MQTT_URL, MQTT_OPTIONS);
         let mqttConnected = false;
+
         let lastVitalsMessageAt = 0;
         let pendingVisibilityReload = false;
 
@@ -2639,100 +2612,33 @@
             return Promise.resolve();
         }
 
-        function setFirebasePath(path, value, opts = {}) {
-            if (!window.fbDB) return Promise.reject(new Error('Firebase not ready'));
-            return fbSet(fbRef(fbDB, path), value)
-                .catch(err => {
-                    console.error('[Firebase] Set error:', err);
-                    throw err;
-                });
-        }
 
-        function pushFirebasePath(path, value) {
-            if (window.fbDB) { return fbPush(fbRef(fbDB, path), value); }
-            return Promise.reject('Firebase not ready');
-        }
-
-        function removeFirebasePath(path, opts = {}) {
-            if (!window.fbDB) return Promise.reject(new Error('Firebase not ready'));
-            return fbSet(fbRef(fbDB, path), null);
-        }
-
-        function mirrorCommandToMqtt(key, value) {
-            return mqttPublish('ella/commands/' + key, value).catch(err => {
-                console.warn('[MQTT] Command mirror failed:', key, err.message);
-            });
-        }
 
         function sendCommand(key, value, opts = {}) {
-            const firebaseWrite = setFirebasePath('commands/' + key, value, opts).catch(err => {
-                console.warn('[Firebase] Command write failed:', key, err.message);
+            if (key === 'motor') {
+                const url = 'https://ella-voice-server.onrender.com/api/motor';
+                return fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ command: value })
+                }).catch(err => console.error('[Motor API] Error:', err));
+            }
+            return mqttPublish('ella/commands/' + key, value).catch(err => {
+                console.warn('[MQTT] Command failed:', key, err.message);
                 throw err;
-            });
-            const mqttWrite = mirrorCommandToMqtt(key, value);
-
-            return Promise.allSettled([firebaseWrite, mqttWrite]).then(results => {
-                if (results.some(r => r.status === 'fulfilled')) return;
-                throw results[0].reason || new Error('Command send failed');
             });
         }
 
         function removeCommand(key, opts = {}) {
-            const firebaseRemove = removeFirebasePath('commands/' + key, opts);
-            const mqttRemove = mirrorCommandToMqtt(key, false);
-            return Promise.allSettled([firebaseRemove, mqttRemove]).then(results => {
-                if (results.some(r => r.status === 'fulfilled')) return;
-                throw results[0].reason || new Error('Command remove failed');
-            });
+            return mqttPublish('ella/commands/' + key, false);
         }
 
-        window.addEventListener('firebaseReady', () => {
-            console.log('[Firebase] Starting background sync...');
-            const moodRef = fbQuery(fbRef(fbDB, 'moodLog'), fbLimitToLast(20));
-            fbOnValue(moodRef, (snapshot) => {
-                const data = snapshot.val();
-                if (data) {
-                    localMoodHistory.length = 0;
-                    Object.values(data).sort((a, b) => a.timestamp - b.timestamp).forEach(m => localMoodHistory.push(m));
-                    if (window.updateMoodTimeline) window.updateMoodTimeline();
-                }
-            });
-            fbOnValue(fbRef(fbDB, 'sleepLog'), (snapshot) => {
-                const data = snapshot.val();
-                if (data) {
-                    Object.assign(localSleepLog, data);
-                    if (window.updateSleepChart) window.updateSleepChart();
-                }
-            });
-            const vitalsRef = fbQuery(fbRef(fbDB, 'healthLog/vitals'), fbLimitToLast(10));
-            fbOnValue(vitalsRef, (snapshot) => {
-                const data = snapshot.val();
-                if (data) {
-                    Object.assign(localVitalsLog, data);
-                    if (window.renderVitalsHistory) window.renderVitalsHistory();
-                }
-            });
-            fbOnValue(fbRef(fbDB, 'status/snapshot'), (snapshot) => {
-                const data = snapshot.val();
-                if (data) handleStatusUpdate(data);
-            });
-            fbOnValue(fbRef(fbDB, 'status/vitals'), (snapshot) => {
-                const data = snapshot.val();
-                if (data) handleVitalsUpdate(data);
-            });
-            fbOnValue(fbRef(fbDB, 'reminders'), (snapshot) => {
-                const data = snapshot.val();
-                if (data) {
-                    state.reminders = Array.isArray(data) ? data : Object.values(data);
-                    renderReminders();
-                    localStorage.setItem('ellaReminders', JSON.stringify(state.reminders));
-                }
-            });
-            fbOnValue(fbRef(fbDB, 'settings/alertThresholds'), (snapshot) => {
-                const data = snapshot.val();
-                if (data) handleThresholdUpdate(data);
-            });
+
+        window.addEventListener('load', () => {
+            console.log('[System] Initializing MQTT-only mode...');
+            renderReminders();
         });
+
 
         // Init devices on load
         initDevices();

@@ -17,9 +17,9 @@ Successfully created ESP32-S3 image.
 /usr/bin/env bash -c "cp -f \"/home/dejiguru/Arduino/hardware/espressif/esp32/tools/esp32-arduino-libs/esp32s3\"/sdkconfig \"/home/dejiguru/Arduino/ellabox/build-ellabox\"/sdkconfig"
 Detecting libraries used...
 /home/dejiguru/Arduino/hardware/espressif/esp32/tools/xtensa-esp-elf/bin/xtensa-esp32s3-elf-g++ -c @/home/dejiguru/Arduino/hardware/espressif/esp32/tools/esp32-arduino-libs/esp32s3/flags/cpp_flags -w -Os -Werror=return-type -w -x c++ -E -CC -DF_CPU=240000000L -DARDUINO=10607 -DARDUINO_ESP32S3_DEV -DARDUINO_ARCH_ESP32 -DARDUINO_BOARD="ESP32S3_DEV" -DARDUINO_VARIANT="esp32s3" -DARDUINO_PARTITION_default_8MB -DARDUINO_HOST_OS="linux" -DARDUINO_FQBN="espressif:esp32:esp32s3:PSRAM=opi,FlashSize=8M,PartitionScheme=default_8MB,UploadSpeed=921600,USBMode=hwcdc,CDCOnBoot=default" -DESP32=ESP32 -DCORE_DEBUG_LEVEL=0 -DARDUINO_RUNNING_CORE=1 -DARDUINO_EVENT_RUNNING_CORE=1 -DBOARD_HAS_PSRAM -DARDUINO_USB_MODE=1 -DARDUINO_USB_CDC_ON_BOOT=0 -DARDUINO_USB_MSC_ON_BOOT=0 -DARDUINO_USB_DFU_ON_BOOT=0 @/home/dejiguru/Arduino/hardware/espressif/esp32/tools/esp32-arduino-libs/esp32s3/flags/defines -I/home/dejiguru/Arduino/ellabox -iprefix /home/dejiguru/Arduino/hardware/espressif/esp32/tools/esp32-arduino-libs/esp32s3/include/ @/home/dejiguru/Arduino/hardware/espressif/esp32/tools/esp32-arduino-libs/esp32s3/flags/includes -I/home/dejiguru/Arduino/hardware/espressif/esp32/tools/esp32-arduino-libs/esp32s3/qio_opi/include -I/home/dejiguru/Arduino/hardware/espressif/esp32/cores/esp32 -I/home/dejiguru/Arduino/hardware/espressif/esp32/variants/esp32s3 @/home/dejiguru/Arduino/ellabox/build-ellabox/build_opt.h @/home/dejiguru/Arduino/ellabox/build-ellabox/file_opts /home/dejiguru/Arduino/ellabox/build-ellabox/sketch/ellabox.ino.cpp -o /dev/null
-Alternatives for WiFi.h: [WiFiNINA_-_Adafruit_Fork@1.6.1 WiFi@1.2.7 WiFi@3.3.7]
+Alternatives for WiFi.h: [WiFi@1.2.7 WiFiNINA_-_Adafruit_Fork@1.6.1 WiFi@3.3.7]
 ResolveLibrary(WiFi.h)
-  -> candidates: [WiFiNINA_-_Adafruit_Fork@1.6.1 WiFi@1.2.7 WiFi@3.3.7]
+  -> candidates: [WiFi@1.2.7 WiFiNINA_-_Adafruit_Fork@1.6.1 WiFi@3.3.7]
 /home/dejiguru/Arduino/hardware/espressif/esp32/tools/xtensa-esp-elf/bin/xtensa-esp32s3-elf-g++ -c @/home/dejiguru/Arduino/hardware/espressif/esp32/tools/esp32-arduino-libs/esp32s3/flags/cpp_flags -w -Os -Werror=return-type -w -x c++ -E -CC -DF_CPU=240000000L -DARDUINO=10607 -DARDUINO_ESP32S3_DEV -DARDUINO_ARCH_ESP32 -DARDUINO_BOARD="ESP32S3_DEV" -DARDUINO_VARIANT="esp32s3" -DARDUINO_PARTITION_default_8MB -DARDUINO_HOST_OS="linux" -DARDUINO_FQBN="espressif:esp32:esp32s3:PSRAM=opi,FlashSize=8M,PartitionScheme=default_8MB,UploadSpeed=921600,USBMode=hwcdc,CDCOnBoot=default" -DESP32=ESP32 -DCORE_DEBUG_LEVEL=0 -DARDUINO_RUNNING_CORE=1 -DARDUINO_EVENT_RUNNING_CORE=1 -DBOARD_HAS_PSRAM -DARDUINO_USB_MODE=1 -DARDUINO_USB_CDC_ON_BOOT=0 -DARDUINO_USB_MSC_ON_BOOT=0 -DARDUINO_USB_DFU_ON_BOOT=0 @/home/dejiguru/Arduino/hardware/espressif/esp32/tools/esp32-arduino-libs/esp32s3/flags/defines -I/home/dejiguru/Arduino/ellabox -iprefix /home/dejiguru/Arduino/hardware/espressif/esp32/tools/esp32-arduino-libs/esp32s3/include/ @/home/dejiguru/Arduino/hardware/espressif/esp32/tools/esp32-arduino-libs/esp32s3/flags/includes -I/home/dejiguru/Arduino/hardware/espressif/esp32/tools/esp32-arduino-libs/esp32s3/qio_opi/include -I/home/dejiguru/Arduino/hardware/espressif/esp32/cores/esp32 -I/home/dejiguru/Arduino/hardware/espressif/esp32/variants/esp32s3 -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/WiFi/src @/home/dejiguru/Arduino/ellabox/build-ellabox/build_opt.h @/home/dejiguru/Arduino/ellabox/build-ellabox/file_opts /home/dejiguru/Arduino/ellabox/build-ellabox/sketch/ellabox.ino.cpp -o /dev/null
 Alternatives for Network.h: [Networking@3.3.7]
 ResolveLibrary(Network.h)
@@ -45,9 +45,9 @@ Alternatives for ArduinoJson.h: [ArduinoJson@7.4.3]
 ResolveLibrary(ArduinoJson.h)
   -> candidates: [ArduinoJson@7.4.3]
 /home/dejiguru/Arduino/hardware/espressif/esp32/tools/xtensa-esp-elf/bin/xtensa-esp32s3-elf-g++ -c @/home/dejiguru/Arduino/hardware/espressif/esp32/tools/esp32-arduino-libs/esp32s3/flags/cpp_flags -w -Os -Werror=return-type -w -x c++ -E -CC -DF_CPU=240000000L -DARDUINO=10607 -DARDUINO_ESP32S3_DEV -DARDUINO_ARCH_ESP32 -DARDUINO_BOARD="ESP32S3_DEV" -DARDUINO_VARIANT="esp32s3" -DARDUINO_PARTITION_default_8MB -DARDUINO_HOST_OS="linux" -DARDUINO_FQBN="espressif:esp32:esp32s3:PSRAM=opi,FlashSize=8M,PartitionScheme=default_8MB,UploadSpeed=921600,USBMode=hwcdc,CDCOnBoot=default" -DESP32=ESP32 -DCORE_DEBUG_LEVEL=0 -DARDUINO_RUNNING_CORE=1 -DARDUINO_EVENT_RUNNING_CORE=1 -DBOARD_HAS_PSRAM -DARDUINO_USB_MODE=1 -DARDUINO_USB_CDC_ON_BOOT=0 -DARDUINO_USB_MSC_ON_BOOT=0 -DARDUINO_USB_DFU_ON_BOOT=0 @/home/dejiguru/Arduino/hardware/espressif/esp32/tools/esp32-arduino-libs/esp32s3/flags/defines -I/home/dejiguru/Arduino/ellabox -iprefix /home/dejiguru/Arduino/hardware/espressif/esp32/tools/esp32-arduino-libs/esp32s3/include/ @/home/dejiguru/Arduino/hardware/espressif/esp32/tools/esp32-arduino-libs/esp32s3/flags/includes -I/home/dejiguru/Arduino/hardware/espressif/esp32/tools/esp32-arduino-libs/esp32s3/qio_opi/include -I/home/dejiguru/Arduino/hardware/espressif/esp32/cores/esp32 -I/home/dejiguru/Arduino/hardware/espressif/esp32/variants/esp32s3 -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/WiFi/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/Network/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/ArduinoOTA/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/Update/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/HTTPClient/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/NetworkClientSecure/src -I/home/dejiguru/Arduino/libraries/ArduinoJson/src @/home/dejiguru/Arduino/ellabox/build-ellabox/build_opt.h @/home/dejiguru/Arduino/ellabox/build-ellabox/file_opts /home/dejiguru/Arduino/ellabox/build-ellabox/sketch/ellabox.ino.cpp -o /dev/null
-Alternatives for Audio.h: [ESP32-audioI2S-master@3.4.5 DAZI-AI@1.0.0]
+Alternatives for Audio.h: [DAZI-AI@1.0.0 ESP32-audioI2S-master@3.4.5]
 ResolveLibrary(Audio.h)
-  -> candidates: [ESP32-audioI2S-master@3.4.5 DAZI-AI@1.0.0]
+  -> candidates: [DAZI-AI@1.0.0 ESP32-audioI2S-master@3.4.5]
 /home/dejiguru/Arduino/hardware/espressif/esp32/tools/xtensa-esp-elf/bin/xtensa-esp32s3-elf-g++ -c @/home/dejiguru/Arduino/hardware/espressif/esp32/tools/esp32-arduino-libs/esp32s3/flags/cpp_flags -w -Os -Werror=return-type -w -x c++ -E -CC -DF_CPU=240000000L -DARDUINO=10607 -DARDUINO_ESP32S3_DEV -DARDUINO_ARCH_ESP32 -DARDUINO_BOARD="ESP32S3_DEV" -DARDUINO_VARIANT="esp32s3" -DARDUINO_PARTITION_default_8MB -DARDUINO_HOST_OS="linux" -DARDUINO_FQBN="espressif:esp32:esp32s3:PSRAM=opi,FlashSize=8M,PartitionScheme=default_8MB,UploadSpeed=921600,USBMode=hwcdc,CDCOnBoot=default" -DESP32=ESP32 -DCORE_DEBUG_LEVEL=0 -DARDUINO_RUNNING_CORE=1 -DARDUINO_EVENT_RUNNING_CORE=1 -DBOARD_HAS_PSRAM -DARDUINO_USB_MODE=1 -DARDUINO_USB_CDC_ON_BOOT=0 -DARDUINO_USB_MSC_ON_BOOT=0 -DARDUINO_USB_DFU_ON_BOOT=0 @/home/dejiguru/Arduino/hardware/espressif/esp32/tools/esp32-arduino-libs/esp32s3/flags/defines -I/home/dejiguru/Arduino/ellabox -iprefix /home/dejiguru/Arduino/hardware/espressif/esp32/tools/esp32-arduino-libs/esp32s3/include/ @/home/dejiguru/Arduino/hardware/espressif/esp32/tools/esp32-arduino-libs/esp32s3/flags/includes -I/home/dejiguru/Arduino/hardware/espressif/esp32/tools/esp32-arduino-libs/esp32s3/qio_opi/include -I/home/dejiguru/Arduino/hardware/espressif/esp32/cores/esp32 -I/home/dejiguru/Arduino/hardware/espressif/esp32/variants/esp32s3 -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/WiFi/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/Network/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/ArduinoOTA/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/Update/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/HTTPClient/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/NetworkClientSecure/src -I/home/dejiguru/Arduino/libraries/ArduinoJson/src -I/home/dejiguru/Arduino/libraries/ESP32-audioI2S-master/src @/home/dejiguru/Arduino/ellabox/build-ellabox/build_opt.h @/home/dejiguru/Arduino/ellabox/build-ellabox/file_opts /home/dejiguru/Arduino/ellabox/build-ellabox/sketch/ellabox.ino.cpp -o /dev/null
 Alternatives for FFat.h: [FFat@3.3.7]
 ResolveLibrary(FFat.h)
@@ -133,9 +133,9 @@ Alternatives for opus.h: [libopus@1.3.2]
 ResolveLibrary(opus.h)
   -> candidates: [libopus@1.3.2]
 /home/dejiguru/Arduino/hardware/espressif/esp32/tools/xtensa-esp-elf/bin/xtensa-esp32s3-elf-g++ -c @/home/dejiguru/Arduino/hardware/espressif/esp32/tools/esp32-arduino-libs/esp32s3/flags/cpp_flags -w -Os -Werror=return-type -w -x c++ -E -CC -DF_CPU=240000000L -DARDUINO=10607 -DARDUINO_ESP32S3_DEV -DARDUINO_ARCH_ESP32 -DARDUINO_BOARD="ESP32S3_DEV" -DARDUINO_VARIANT="esp32s3" -DARDUINO_PARTITION_default_8MB -DARDUINO_HOST_OS="linux" -DARDUINO_FQBN="espressif:esp32:esp32s3:PSRAM=opi,FlashSize=8M,PartitionScheme=default_8MB,UploadSpeed=921600,USBMode=hwcdc,CDCOnBoot=default" -DESP32=ESP32 -DCORE_DEBUG_LEVEL=0 -DARDUINO_RUNNING_CORE=1 -DARDUINO_EVENT_RUNNING_CORE=1 -DBOARD_HAS_PSRAM -DARDUINO_USB_MODE=1 -DARDUINO_USB_CDC_ON_BOOT=0 -DARDUINO_USB_MSC_ON_BOOT=0 -DARDUINO_USB_DFU_ON_BOOT=0 @/home/dejiguru/Arduino/hardware/espressif/esp32/tools/esp32-arduino-libs/esp32s3/flags/defines -I/home/dejiguru/Arduino/ellabox -iprefix /home/dejiguru/Arduino/hardware/espressif/esp32/tools/esp32-arduino-libs/esp32s3/include/ @/home/dejiguru/Arduino/hardware/espressif/esp32/tools/esp32-arduino-libs/esp32s3/flags/includes -I/home/dejiguru/Arduino/hardware/espressif/esp32/tools/esp32-arduino-libs/esp32s3/qio_opi/include -I/home/dejiguru/Arduino/hardware/espressif/esp32/cores/esp32 -I/home/dejiguru/Arduino/hardware/espressif/esp32/variants/esp32s3 -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/WiFi/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/Network/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/ArduinoOTA/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/Update/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/HTTPClient/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/NetworkClientSecure/src -I/home/dejiguru/Arduino/libraries/ArduinoJson/src -I/home/dejiguru/Arduino/libraries/ESP32-audioI2S-master/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/FFat/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/FS/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/SD/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/SPI/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/SD_MMC/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/ESP_I2S/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/SPIFFS/src -I/home/dejiguru/Arduino/libraries/Adafruit_GFX_Library -I/home/dejiguru/Arduino/libraries/Adafruit_BusIO -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/Wire/src -I/home/dejiguru/Arduino/libraries/Adafruit_ILI9341 -I/home/dejiguru/Arduino/libraries/Adafruit_AHTX0 -I/home/dejiguru/Arduino/libraries/Adafruit_Unified_Sensor -I/home/dejiguru/Arduino/libraries/ScioSense_ENS16x/src -I/home/dejiguru/Arduino/libraries/SparkFun_MAX3010x_Pulse_and_Proximity_Sensor_Library/src -I/home/dejiguru/Arduino/libraries/U8g2/src -I/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/LittleFS/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/Preferences/src -I/home/dejiguru/Arduino/libraries/VL53L0X -I/home/dejiguru/Arduino/libraries/libopus/src @/home/dejiguru/Arduino/ellabox/build-ellabox/build_opt.h @/home/dejiguru/Arduino/ellabox/build-ellabox/file_opts /home/dejiguru/Arduino/ellabox/build-ellabox/sketch/ellabox.ino.cpp -o /dev/null
-Alternatives for PubSubClient.h: [ACS-M1128@2.2.1-b2 PubSubClient@2.8]
+Alternatives for PubSubClient.h: [PubSubClient@2.8 ACS-M1128@2.2.1-b2]
 ResolveLibrary(PubSubClient.h)
-  -> candidates: [ACS-M1128@2.2.1-b2 PubSubClient@2.8]
+  -> candidates: [PubSubClient@2.8 ACS-M1128@2.2.1-b2]
 /home/dejiguru/Arduino/hardware/espressif/esp32/tools/xtensa-esp-elf/bin/xtensa-esp32s3-elf-g++ -c @/home/dejiguru/Arduino/hardware/espressif/esp32/tools/esp32-arduino-libs/esp32s3/flags/cpp_flags -w -Os -Werror=return-type -w -x c++ -E -CC -DF_CPU=240000000L -DARDUINO=10607 -DARDUINO_ESP32S3_DEV -DARDUINO_ARCH_ESP32 -DARDUINO_BOARD="ESP32S3_DEV" -DARDUINO_VARIANT="esp32s3" -DARDUINO_PARTITION_default_8MB -DARDUINO_HOST_OS="linux" -DARDUINO_FQBN="espressif:esp32:esp32s3:PSRAM=opi,FlashSize=8M,PartitionScheme=default_8MB,UploadSpeed=921600,USBMode=hwcdc,CDCOnBoot=default" -DESP32=ESP32 -DCORE_DEBUG_LEVEL=0 -DARDUINO_RUNNING_CORE=1 -DARDUINO_EVENT_RUNNING_CORE=1 -DBOARD_HAS_PSRAM -DARDUINO_USB_MODE=1 -DARDUINO_USB_CDC_ON_BOOT=0 -DARDUINO_USB_MSC_ON_BOOT=0 -DARDUINO_USB_DFU_ON_BOOT=0 @/home/dejiguru/Arduino/hardware/espressif/esp32/tools/esp32-arduino-libs/esp32s3/flags/defines -I/home/dejiguru/Arduino/ellabox -iprefix /home/dejiguru/Arduino/hardware/espressif/esp32/tools/esp32-arduino-libs/esp32s3/include/ @/home/dejiguru/Arduino/hardware/espressif/esp32/tools/esp32-arduino-libs/esp32s3/flags/includes -I/home/dejiguru/Arduino/hardware/espressif/esp32/tools/esp32-arduino-libs/esp32s3/qio_opi/include -I/home/dejiguru/Arduino/hardware/espressif/esp32/cores/esp32 -I/home/dejiguru/Arduino/hardware/espressif/esp32/variants/esp32s3 -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/WiFi/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/Network/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/ArduinoOTA/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/Update/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/HTTPClient/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/NetworkClientSecure/src -I/home/dejiguru/Arduino/libraries/ArduinoJson/src -I/home/dejiguru/Arduino/libraries/ESP32-audioI2S-master/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/FFat/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/FS/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/SD/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/SPI/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/SD_MMC/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/ESP_I2S/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/SPIFFS/src -I/home/dejiguru/Arduino/libraries/Adafruit_GFX_Library -I/home/dejiguru/Arduino/libraries/Adafruit_BusIO -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/Wire/src -I/home/dejiguru/Arduino/libraries/Adafruit_ILI9341 -I/home/dejiguru/Arduino/libraries/Adafruit_AHTX0 -I/home/dejiguru/Arduino/libraries/Adafruit_Unified_Sensor -I/home/dejiguru/Arduino/libraries/ScioSense_ENS16x/src -I/home/dejiguru/Arduino/libraries/SparkFun_MAX3010x_Pulse_and_Proximity_Sensor_Library/src -I/home/dejiguru/Arduino/libraries/U8g2/src -I/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/LittleFS/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/Preferences/src -I/home/dejiguru/Arduino/libraries/VL53L0X -I/home/dejiguru/Arduino/libraries/libopus/src -I/home/dejiguru/Arduino/libraries/PubSubClient/src @/home/dejiguru/Arduino/ellabox/build-ellabox/build_opt.h @/home/dejiguru/Arduino/ellabox/build-ellabox/file_opts /home/dejiguru/Arduino/ellabox/build-ellabox/sketch/ellabox.ino.cpp -o /dev/null
 Alternatives for XPT2046_Touchscreen.h: [XPT2046_Touchscreen@1.4]
 ResolveLibrary(XPT2046_Touchscreen.h)
@@ -843,27 +843,140 @@ Using cached library dependencies for file: /home/dejiguru/Arduino/hardware/espr
 Using cached library dependencies for file: /home/dejiguru/Arduino/hardware/espressif/esp32/libraries/Hash/src/SHA2Builder.cpp
 Using cached library dependencies for file: /home/dejiguru/Arduino/hardware/espressif/esp32/libraries/Hash/src/SHA3Builder.cpp
 Generating function prototypes...
-/home/dejiguru/Arduino/hardware/espressif/esp32/tools/xtensa-esp-elf/bin/xtensa-esp32s3-elf-g++ -c @/home/dejiguru/Arduino/hardware/espressif/esp32/tools/esp32-arduino-libs/esp32s3/flags/cpp_flags -w -Os -Werror=return-type -w -x c++ -E -CC -DF_CPU=240000000L -DARDUINO=10607 -DARDUINO_ESP32S3_DEV -DARDUINO_ARCH_ESP32 -DARDUINO_BOARD="ESP32S3_DEV" -DARDUINO_VARIANT="esp32s3" -DARDUINO_PARTITION_default_8MB -DARDUINO_HOST_OS="linux" -DARDUINO_FQBN="espressif:esp32:esp32s3:PSRAM=opi,FlashSize=8M,PartitionScheme=default_8MB,UploadSpeed=921600,USBMode=hwcdc,CDCOnBoot=default" -DESP32=ESP32 -DCORE_DEBUG_LEVEL=0 -DARDUINO_RUNNING_CORE=1 -DARDUINO_EVENT_RUNNING_CORE=1 -DBOARD_HAS_PSRAM -DARDUINO_USB_MODE=1 -DARDUINO_USB_CDC_ON_BOOT=0 -DARDUINO_USB_MSC_ON_BOOT=0 -DARDUINO_USB_DFU_ON_BOOT=0 @/home/dejiguru/Arduino/hardware/espressif/esp32/tools/esp32-arduino-libs/esp32s3/flags/defines -I/home/dejiguru/Arduino/ellabox -iprefix /home/dejiguru/Arduino/hardware/espressif/esp32/tools/esp32-arduino-libs/esp32s3/include/ @/home/dejiguru/Arduino/hardware/espressif/esp32/tools/esp32-arduino-libs/esp32s3/flags/includes -I/home/dejiguru/Arduino/hardware/espressif/esp32/tools/esp32-arduino-libs/esp32s3/qio_opi/include -I/home/dejiguru/Arduino/hardware/espressif/esp32/cores/esp32 -I/home/dejiguru/Arduino/hardware/espressif/esp32/variants/esp32s3 -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/WiFi/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/Network/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/ArduinoOTA/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/Update/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/HTTPClient/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/NetworkClientSecure/src -I/home/dejiguru/Arduino/libraries/ArduinoJson/src -I/home/dejiguru/Arduino/libraries/ESP32-audioI2S-master/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/FFat/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/FS/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/SD/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/SPI/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/SD_MMC/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/ESP_I2S/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/SPIFFS/src -I/home/dejiguru/Arduino/libraries/Adafruit_GFX_Library -I/home/dejiguru/Arduino/libraries/Adafruit_BusIO -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/Wire/src -I/home/dejiguru/Arduino/libraries/Adafruit_ILI9341 -I/home/dejiguru/Arduino/libraries/Adafruit_AHTX0 -I/home/dejiguru/Arduino/libraries/Adafruit_Unified_Sensor -I/home/dejiguru/Arduino/libraries/ScioSense_ENS16x/src -I/home/dejiguru/Arduino/libraries/SparkFun_MAX3010x_Pulse_and_Proximity_Sensor_Library/src -I/home/dejiguru/Arduino/libraries/U8g2/src -I/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/LittleFS/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/Preferences/src -I/home/dejiguru/Arduino/libraries/VL53L0X -I/home/dejiguru/Arduino/libraries/libopus/src -I/home/dejiguru/Arduino/libraries/PubSubClient/src -I/home/dejiguru/Arduino/libraries/XPT2046_Touchscreen -I/home/dejiguru/Arduino/libraries/Adafruit_SSD1306 -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/ESPmDNS/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/Hash/src @/home/dejiguru/Arduino/ellabox/build-ellabox/build_opt.h @/home/dejiguru/Arduino/ellabox/build-ellabox/file_opts /home/dejiguru/Arduino/ellabox/build-ellabox/sketch/ellabox.ino.cpp -o /tmp/3124623346/sketch_merged.cpp
-/home/dejiguru/.arduino15/packages/builtin/tools/ctags/5.8-arduino11/ctags -u --language-force=c++ -f - --c++-kinds=svpf --fields=KSTtzns --line-directives /tmp/3124623346/sketch_merged.cpp
+/home/dejiguru/Arduino/hardware/espressif/esp32/tools/xtensa-esp-elf/bin/xtensa-esp32s3-elf-g++ -c @/home/dejiguru/Arduino/hardware/espressif/esp32/tools/esp32-arduino-libs/esp32s3/flags/cpp_flags -w -Os -Werror=return-type -w -x c++ -E -CC -DF_CPU=240000000L -DARDUINO=10607 -DARDUINO_ESP32S3_DEV -DARDUINO_ARCH_ESP32 -DARDUINO_BOARD="ESP32S3_DEV" -DARDUINO_VARIANT="esp32s3" -DARDUINO_PARTITION_default_8MB -DARDUINO_HOST_OS="linux" -DARDUINO_FQBN="espressif:esp32:esp32s3:PSRAM=opi,FlashSize=8M,PartitionScheme=default_8MB,UploadSpeed=921600,USBMode=hwcdc,CDCOnBoot=default" -DESP32=ESP32 -DCORE_DEBUG_LEVEL=0 -DARDUINO_RUNNING_CORE=1 -DARDUINO_EVENT_RUNNING_CORE=1 -DBOARD_HAS_PSRAM -DARDUINO_USB_MODE=1 -DARDUINO_USB_CDC_ON_BOOT=0 -DARDUINO_USB_MSC_ON_BOOT=0 -DARDUINO_USB_DFU_ON_BOOT=0 @/home/dejiguru/Arduino/hardware/espressif/esp32/tools/esp32-arduino-libs/esp32s3/flags/defines -I/home/dejiguru/Arduino/ellabox -iprefix /home/dejiguru/Arduino/hardware/espressif/esp32/tools/esp32-arduino-libs/esp32s3/include/ @/home/dejiguru/Arduino/hardware/espressif/esp32/tools/esp32-arduino-libs/esp32s3/flags/includes -I/home/dejiguru/Arduino/hardware/espressif/esp32/tools/esp32-arduino-libs/esp32s3/qio_opi/include -I/home/dejiguru/Arduino/hardware/espressif/esp32/cores/esp32 -I/home/dejiguru/Arduino/hardware/espressif/esp32/variants/esp32s3 -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/WiFi/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/Network/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/ArduinoOTA/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/Update/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/HTTPClient/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/NetworkClientSecure/src -I/home/dejiguru/Arduino/libraries/ArduinoJson/src -I/home/dejiguru/Arduino/libraries/ESP32-audioI2S-master/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/FFat/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/FS/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/SD/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/SPI/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/SD_MMC/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/ESP_I2S/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/SPIFFS/src -I/home/dejiguru/Arduino/libraries/Adafruit_GFX_Library -I/home/dejiguru/Arduino/libraries/Adafruit_BusIO -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/Wire/src -I/home/dejiguru/Arduino/libraries/Adafruit_ILI9341 -I/home/dejiguru/Arduino/libraries/Adafruit_AHTX0 -I/home/dejiguru/Arduino/libraries/Adafruit_Unified_Sensor -I/home/dejiguru/Arduino/libraries/ScioSense_ENS16x/src -I/home/dejiguru/Arduino/libraries/SparkFun_MAX3010x_Pulse_and_Proximity_Sensor_Library/src -I/home/dejiguru/Arduino/libraries/U8g2/src -I/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/LittleFS/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/Preferences/src -I/home/dejiguru/Arduino/libraries/VL53L0X -I/home/dejiguru/Arduino/libraries/libopus/src -I/home/dejiguru/Arduino/libraries/PubSubClient/src -I/home/dejiguru/Arduino/libraries/XPT2046_Touchscreen -I/home/dejiguru/Arduino/libraries/Adafruit_SSD1306 -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/ESPmDNS/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/Hash/src @/home/dejiguru/Arduino/ellabox/build-ellabox/build_opt.h @/home/dejiguru/Arduino/ellabox/build-ellabox/file_opts /home/dejiguru/Arduino/ellabox/build-ellabox/sketch/ellabox.ino.cpp -o /tmp/4189151617/sketch_merged.cpp
+/home/dejiguru/.arduino15/packages/builtin/tools/ctags/5.8-arduino11/ctags -u --language-force=c++ -f - --c++-kinds=svpf --fields=KSTtzns --line-directives /tmp/4189151617/sketch_merged.cpp
 Compiling sketch...
 /home/dejiguru/Arduino/hardware/espressif/esp32/tools/xtensa-esp-elf/bin/xtensa-esp32s3-elf-g++ -MMD -c @/home/dejiguru/Arduino/hardware/espressif/esp32/tools/esp32-arduino-libs/esp32s3/flags/cpp_flags -w -Os -Werror=return-type -DF_CPU=240000000L -DARDUINO=10607 -DARDUINO_ESP32S3_DEV -DARDUINO_ARCH_ESP32 "-DARDUINO_BOARD=\"ESP32S3_DEV\"" "-DARDUINO_VARIANT=\"esp32s3\"" -DARDUINO_PARTITION_default_8MB "-DARDUINO_HOST_OS=\"linux\"" "-DARDUINO_FQBN=\"espressif:esp32:esp32s3:PSRAM=opi,FlashSize=8M,PartitionScheme=default_8MB,UploadSpeed=921600,USBMode=hwcdc,CDCOnBoot=default\"" -DESP32=ESP32 -DCORE_DEBUG_LEVEL=0 -DARDUINO_RUNNING_CORE=1 -DARDUINO_EVENT_RUNNING_CORE=1 -DBOARD_HAS_PSRAM -DARDUINO_USB_MODE=1 -DARDUINO_USB_CDC_ON_BOOT=0 -DARDUINO_USB_MSC_ON_BOOT=0 -DARDUINO_USB_DFU_ON_BOOT=0 @/home/dejiguru/Arduino/hardware/espressif/esp32/tools/esp32-arduino-libs/esp32s3/flags/defines -I/home/dejiguru/Arduino/ellabox -iprefix /home/dejiguru/Arduino/hardware/espressif/esp32/tools/esp32-arduino-libs/esp32s3/include/ @/home/dejiguru/Arduino/hardware/espressif/esp32/tools/esp32-arduino-libs/esp32s3/flags/includes -I/home/dejiguru/Arduino/hardware/espressif/esp32/tools/esp32-arduino-libs/esp32s3/qio_opi/include -I/home/dejiguru/Arduino/hardware/espressif/esp32/cores/esp32 -I/home/dejiguru/Arduino/hardware/espressif/esp32/variants/esp32s3 -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/WiFi/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/Network/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/ArduinoOTA/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/Update/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/HTTPClient/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/NetworkClientSecure/src -I/home/dejiguru/Arduino/libraries/ArduinoJson/src -I/home/dejiguru/Arduino/libraries/ESP32-audioI2S-master/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/FFat/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/FS/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/SD/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/SPI/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/SD_MMC/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/ESP_I2S/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/SPIFFS/src -I/home/dejiguru/Arduino/libraries/Adafruit_GFX_Library -I/home/dejiguru/Arduino/libraries/Adafruit_BusIO -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/Wire/src -I/home/dejiguru/Arduino/libraries/Adafruit_ILI9341 -I/home/dejiguru/Arduino/libraries/Adafruit_AHTX0 -I/home/dejiguru/Arduino/libraries/Adafruit_Unified_Sensor -I/home/dejiguru/Arduino/libraries/ScioSense_ENS16x/src -I/home/dejiguru/Arduino/libraries/SparkFun_MAX3010x_Pulse_and_Proximity_Sensor_Library/src -I/home/dejiguru/Arduino/libraries/U8g2/src -I/home/dejiguru/Arduino/libraries/Firebase_Arduino_Client_Library_for_ESP8266_and_ESP32/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/LittleFS/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/Preferences/src -I/home/dejiguru/Arduino/libraries/VL53L0X -I/home/dejiguru/Arduino/libraries/libopus/src -I/home/dejiguru/Arduino/libraries/PubSubClient/src -I/home/dejiguru/Arduino/libraries/XPT2046_Touchscreen -I/home/dejiguru/Arduino/libraries/Adafruit_SSD1306 -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/ESPmDNS/src -I/home/dejiguru/Arduino/hardware/espressif/esp32/libraries/Hash/src @/home/dejiguru/Arduino/ellabox/build-ellabox/build_opt.h @/home/dejiguru/Arduino/ellabox/build-ellabox/file_opts /home/dejiguru/Arduino/ellabox/build-ellabox/sketch/ellabox.ino.cpp -o /home/dejiguru/Arduino/ellabox/build-ellabox/sketch/ellabox.ino.cpp.o
-/home/dejiguru/Arduino/ellabox/ellabox.ino: In function 'void connectNodeServer()':
-/home/dejiguru/Arduino/ellabox/ellabox.ino:3274:22: error: 'WiFiClientSecure' {aka 'class NetworkClientSecure'} has no member named 'setBufferSizes'
- 3274 |     nodeSecureClient.setBufferSizes(1024, 1024);
-      |                      ^~~~~~~~~~~~~~
-Multiple libraries were found for "Audio.h"
-  Used: /home/dejiguru/Arduino/libraries/ESP32-audioI2S-master
-  Not used: /home/dejiguru/Arduino/libraries/DAZI-AI
+/home/dejiguru/Arduino/ellabox/ellabox.ino: In function 'void sendVoiceAgentSettings()':
+/home/dejiguru/Arduino/ellabox/ellabox.ino:3782:23: error: 'getEllaSystemPrompt' was not declared in this scope
+ 3782 |   String fullPrompt = getEllaSystemPrompt();
+      |                       ^~~~~~~~~~~~~~~~~~~
+/home/dejiguru/Arduino/ellabox/ellabox.ino:3783:17: error: 'getEllaLiveContext' was not declared in this scope
+ 3783 |   fullPrompt += getEllaLiveContext();
+      |                 ^~~~~~~~~~~~~~~~~~
+/home/dejiguru/Arduino/ellabox/ellabox.ino: In function 'void setup()':
+/home/dejiguru/Arduino/ellabox/ellabox.ino:6449:62: error: 'ch' was not declared in this scope
+ 6449 |           Serial.printf("[MAX30102] FOUND on Channel %d!\n", ch);
+      |                                                              ^~
+/home/dejiguru/Arduino/ellabox/ellabox.ino:6453:11: error: break statement not within loop or switch
+ 6453 |           break;
+      |           ^~~~~
+/home/dejiguru/Arduino/ellabox/ellabox.ino: At global scope:
+/home/dejiguru/Arduino/ellabox/ellabox.ino:6457:3: error: expected unqualified-id before 'if'
+ 6457 |   if (!maxFound) {
+      |   ^~
+/home/dejiguru/Arduino/ellabox/ellabox.ino:6462:3: error: expected unqualified-id before 'if'
+ 6462 |   if (particleSensor.begin(Wire, I2C_SPEED_FAST)) {
+      |   ^~
+/home/dejiguru/Arduino/ellabox/ellabox.ino:6475:5: error: expected unqualified-id before 'else'
+ 6475 |   } else {
+      |     ^~~~
+/home/dejiguru/Arduino/ellabox/ellabox.ino:6480:3: error: 'Wire' does not name a type
+ 6480 |   Wire.setClock(400000);
+      |   ^~~~
+/home/dejiguru/Arduino/ellabox/ellabox.ino:6481:3: error: expected unqualified-id before 'if'
+ 6481 |   if (initIMU()) {
+      |   ^~
+/home/dejiguru/Arduino/ellabox/ellabox.ino:6483:5: error: expected unqualified-id before 'else'
+ 6483 |   } else {
+      |     ^~~~
+/home/dejiguru/Arduino/ellabox/ellabox.ino:6488:3: error: 'audio' does not name a type; did you mean 'Audio'?
+ 6488 |   audio.setPinout(SPK_BCLK, SPK_LRC, SPK_DOUT);
+      |   ^~~~~
+      |   Audio
+/home/dejiguru/Arduino/ellabox/ellabox.ino:6489:3: error: 'audio' does not name a type; did you mean 'Audio'?
+ 6489 |   audio.setAudioTaskCore(0);
+      |   ^~~~~
+      |   Audio
+/home/dejiguru/Arduino/ellabox/ellabox.ino:6490:3: error: 'audio' does not name a type; did you mean 'Audio'?
+ 6490 |   audio.setVolume(21);
+      |   ^~~~~
+      |   Audio
+/home/dejiguru/Arduino/ellabox/ellabox.ino:6491:3: error: 'audio' does not name a type; did you mean 'Audio'?
+ 6491 |   audio.forceMono(true); // Ensure single speaker gets all sound
+      |   ^~~~~
+      |   Audio
+In file included from /home/dejiguru/Arduino/hardware/espressif/esp32/cores/esp32/Arduino.h:202,
+                 from /home/dejiguru/Arduino/ellabox/build-ellabox/sketch/ellabox.ino.cpp:1:
+/home/dejiguru/Arduino/hardware/espressif/esp32/cores/esp32/HardwareSerial.h:439:16: error: 'Serial0' does not name a type; did you mean 'Serial'?
+  439 | #define Serial Serial0
+      |                ^~~~~~~
+/home/dejiguru/Arduino/ellabox/ellabox.ino:6492:3: note: in expansion of macro 'Serial'
+ 6492 |   Serial.println("Speaker OK");
+      |   ^~~~~~
+/home/dejiguru/Arduino/ellabox/ellabox.ino:6495:3: error: 'mic_i2s' does not name a type
+ 6495 |   mic_i2s.setPins(I2S_MIC_SCK, I2S_MIC_WS, -1, I2S_MIC_SD);
+      |   ^~~~~~~
+/home/dejiguru/Arduino/ellabox/ellabox.ino:6497:3: error: expected unqualified-id before 'if'
+ 6497 |   if (!mic_i2s.begin(I2S_MODE_STD, SAMPLE_RATE, I2S_DATA_BIT_WIDTH_16BIT, I2S_SLOT_MODE_MONO, I2S_STD_SLOT_LEFT)) {
+      |   ^~
+/home/dejiguru/Arduino/ellabox/ellabox.ino:6503:8: error: expected constructor, destructor, or type conversion before '(' token
+ 6503 |   delay(500);
+      |        ^
+/home/dejiguru/Arduino/ellabox/ellabox.ino:6504:3: error: expected unqualified-id before 'for'
+ 6504 |   for (int i = 0; i < 2000; i++) {
+      |   ^~~
+/home/dejiguru/Arduino/ellabox/ellabox.ino:6504:19: error: 'i' does not name a type
+ 6504 |   for (int i = 0; i < 2000; i++) {
+      |                   ^
+/home/dejiguru/Arduino/ellabox/ellabox.ino:6504:29: error: 'i' does not name a type
+ 6504 |   for (int i = 0; i < 2000; i++) {
+      |                             ^
+/home/dejiguru/Arduino/hardware/espressif/esp32/cores/esp32/HardwareSerial.h:439:16: error: 'Serial0' does not name a type; did you mean 'Serial'?
+  439 | #define Serial Serial0
+      |                ^~~~~~~
+/home/dejiguru/Arduino/ellabox/ellabox.ino:6507:3: note: in expansion of macro 'Serial'
+ 6507 |   Serial.println("Mic OK (DAZI-style LEFT slot)");
+      |   ^~~~~~
+/home/dejiguru/Arduino/ellabox/ellabox.ino:6511:3: error: 'currentMode' does not name a type
+ 6511 |   currentMode = MODE_NORMAL;
+      |   ^~~~~~~~~~~
+/home/dejiguru/Arduino/ellabox/ellabox.ino:6512:19: error: expected constructor, destructor, or type conversion before '(' token
+ 6512 |   setEyeExpression("NORMAL");
+      |                   ^
+/home/dejiguru/Arduino/ellabox/ellabox.ino:6518:3: error: expected unqualified-id before 'if'
+ 6518 |   if (psramFound()) {
+      |   ^~
+/home/dejiguru/Arduino/ellabox/ellabox.ino:6521:5: error: expected unqualified-id before 'else'
+ 6521 |   } else {
+      |     ^~~~
+/home/dejiguru/Arduino/ellabox/ellabox.ino:6525:3: error: expected unqualified-id before 'if'
+ 6525 |   if (sBuffer == nullptr) {
+      |   ^~
+/home/dejiguru/Arduino/ellabox/ellabox.ino:6528:5: error: expected unqualified-id before 'else'
+ 6528 |   } else {
+      |     ^~~~
+/home/dejiguru/Arduino/ellabox/ellabox.ino:6534:3: error: expected unqualified-id before 'if'
+ 6534 |   if (psramFound()) {
+      |   ^~
+/home/dejiguru/Arduino/ellabox/ellabox.ino:6541:21: error: expected constructor, destructor, or type conversion before ';' token
+ 6541 |   playStartupSound();
+      |                     ^
+/home/dejiguru/Arduino/ellabox/ellabox.ino:6543:20: error: expected constructor, destructor, or type conversion before ';' token
+ 6543 |   startupSequence();
+      |                    ^
+/home/dejiguru/Arduino/hardware/espressif/esp32/cores/esp32/HardwareSerial.h:439:16: error: 'Serial0' does not name a type; did you mean 'Serial'?
+  439 | #define Serial Serial0
+      |                ^~~~~~~
+/home/dejiguru/Arduino/ellabox/ellabox.ino:6544:3: note: in expansion of macro 'Serial'
+ 6544 |   Serial.println("Setup Complete (Online Mode Ready)!");
+      |   ^~~~~~
+/home/dejiguru/Arduino/ellabox/ellabox.ino:6545:1: error: expected declaration before '}' token
+ 6545 | }
+      | ^
 Multiple libraries were found for "PubSubClient.h"
   Used: /home/dejiguru/Arduino/libraries/PubSubClient
   Not used: /home/dejiguru/Arduino/libraries/ACS-M1128
+Multiple libraries were found for "WiFi.h"
+  Used: /home/dejiguru/Arduino/hardware/espressif/esp32/libraries/WiFi
+  Not used: /home/dejiguru/Arduino/libraries/WiFi
+  Not used: /home/dejiguru/Arduino/libraries/WiFiNINA_-_Adafruit_Fork
 Multiple libraries were found for "SD.h"
   Used: /home/dejiguru/Arduino/hardware/espressif/esp32/libraries/SD
   Not used: /home/dejiguru/Arduino/libraries/SD
-Multiple libraries were found for "WiFi.h"
-  Used: /home/dejiguru/Arduino/hardware/espressif/esp32/libraries/WiFi
-  Not used: /home/dejiguru/Arduino/libraries/WiFiNINA_-_Adafruit_Fork
-  Not used: /home/dejiguru/Arduino/libraries/WiFi
+Multiple libraries were found for "Audio.h"
+  Used: /home/dejiguru/Arduino/libraries/ESP32-audioI2S-master
+  Not used: /home/dejiguru/Arduino/libraries/DAZI-AI
 Using library WiFi at version 3.3.7 in folder: /home/dejiguru/Arduino/hardware/espressif/esp32/libraries/WiFi 
 Using library Networking at version 3.3.7 in folder: /home/dejiguru/Arduino/hardware/espressif/esp32/libraries/Network 
 Using library ArduinoOTA at version 3.3.7 in folder: /home/dejiguru/Arduino/hardware/espressif/esp32/libraries/ArduinoOTA 

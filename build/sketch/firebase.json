@@ -1,0 +1,17 @@
+#line 1 "/home/dejiguru/Arduino/ellabox/firebase.json"
+{
+  "hosting": {
+    "public": "dashboard",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}

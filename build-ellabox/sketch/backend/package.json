@@ -13,6 +13,9 @@
   "description": "EllaBox Voice Server - WebSocket proxy for STT/LLM/TTS + Telegram Bot",
   "dependencies": {
     "express": "^5.2.1",
+    "firebase": "^12.13.0",
+    "firebase-admin": "^13.9.0",
+    "mqtt": "^5.15.1",
     "node-fetch": "^3.3.2",
     "node-telegram-bot-api": "^0.66.0",
     "ws": "^8.20.0"

@@ -1,0 +1,89 @@
+// Quick I2C Scanner Test for ESP32-S3
+// Tests both I2C buses (Wire and Wire1)
+
+#include <Wire.h>
+
+// Pin definitions
+#define I2C_SDA_PIN 8
+#define I2C_SCL_PIN 9
+#define I2C_SDA_PIN2 3  // Right eye (was 39, but 39 is input-only)
+#define I2C_SCL_PIN2 7
+
+void setup() {
+  Serial.begin(115200);
+  delay(2000);
+  Serial.println("\n\n=== I2C Scanner Test ===");
+  
+  // Initialize Wire (Main I2C Bus - GPIO 8/9)
+  Wire.begin(I2C_SDA_PIN, I2C_SCL_PIN);
+  Wire.setClock(100000); // 100kHz for testing
+  Serial.println("[Wire] Initialized on GPIO 8/9");
+  
+  // Initialize Wire1 (Secondary I2C Bus - GPIO 3/7)
+  Wire1.begin(I2C_SDA_PIN2, I2C_SCL_PIN2);
+  Wire1.setClock(100000);
+  Serial.println("[Wire1] Initialized on GPIO 3/7");
+  
+  delay(500);
+}
+
+void loop() {
+  Serial.println("\n========================================");
+  Serial.println("Scanning I2C Buses...");
+  Serial.println("========================================");
+  
+  // Scan Wire (Main Bus)
+  scanBus(Wire, "Wire (GPIO 8/9)");
+  
+  Serial.println();
+  
+  // Scan Wire1 (Secondary Bus)
+  scanBus(Wire1, "Wire1 (GPIO 3/7)");
+  
+  Serial.println("\n========================================");
+  Serial.println("Expected devices:");
+  Serial.println("  Wire: 0x29(ToF), 0x38(AHT20), 0x3C(Left Eye),");
+  Serial.println("        0x53(ENS160), 0x57(MAX30102), 0x68/0x69(IMU)");
+  Serial.println("  Wire1: 0x3C(Right Eye)");
+  Serial.println("========================================\n");
+  
+  delay(5000); // Scan every 5 seconds
+}
+
+void scanBus(TwoWire &bus, const char* busName) {
+  Serial.printf("\n[%s] Scanning...\n", busName);
+  uint8_t found = 0;
+  
+  for (uint8_t addr = 1; addr < 127; addr++) {
+    bus.beginTransmission(addr);
+    uint8_t error = bus.endTransmission();
+    
+    if (error == 0) {
+      Serial.printf("  ✓ Device found at 0x%02X", addr);
+      
+      // Identify known devices
+      switch(addr) {
+        case 0x29: Serial.print(" (VL53L0X ToF)"); break;
+        case 0x38: Serial.print(" (AHT20 Temp/Humidity)"); break;
+        case 0x3C: Serial.print(" (SSD1306 OLED)"); break;
+        case 0x53: Serial.print(" (ENS160 Air Quality)"); break;
+        case 0x57: Serial.print(" (MAX30102 Heart Rate)"); break;
+        case 0x68: Serial.print(" (MPU6500 IMU)"); break;
+        case 0x69: Serial.print(" (MPU6500 IMU Alt)"); break;
+        default: Serial.print(" (Unknown)"); break;
+      }
+      Serial.println();
+      found++;
+    }
+    else if (error == 4) {
+      Serial.printf("  ✗ Unknown error at 0x%02X\n", addr);
+    }
+  }
+  
+  if (found == 0) {
+    Serial.printf("  ⚠ No devices found on %s\n", busName);
+    Serial.println("  Check: Power, Wiring, Pull-up resistors (4.7kΩ)");
+  } else {
+    Serial.printf("  Total: %d device(s) found\n", found);
+  }
+}

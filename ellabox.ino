@@ -110,8 +110,6 @@ const char* AAI_AUTH_HDR = "Authorization: " ASSEMBLYAI_KEY;
 
 // ── Node.js Proxy Server Settings ───────────────────────────
 #define USE_NODE_SERVER true
-// Semaphore flag: set to true at end of setup() to signal Core 0 STT task it is safe to open sockets
-bool networkInitialized = false;
 #define NODE_SERVER_HOST "ella-voice-server.onrender.com"
 #define NODE_SERVER_PORT 443
 #define NODE_SERVER_IS_SECURE true
@@ -200,7 +198,7 @@ String cloudRemindersJson = "[]";
 #define I2S_MIC_SCK 41  // Reverted from 15
 #define I2S_MIC_WS  42  // Reverted from 7
 #define I2S_MIC_SD  4   
-#define SPK_BCLK 48
+#define SPK_BCLK 7   // Moved from 48 to eliminate RGB LED interference
 #define SPK_LRC  21  
 #define SPK_DOUT 18  
 #define I2C_SDA_PIN 8
@@ -230,9 +228,15 @@ String cloudRemindersJson = "[]";
 #define ULTRASONIC_TRIG_PIN 15  // Moved from strapping pin 3
 #define ULTRASONIC_ECHO_PIN 38  // Moved from JTAG pin 41
 
-
-// TCA9548A multiplexer REMOVED - all sensors now directly on Wire (GPIO 8/9)
-// (TCA_ADDR, CH_EYE_LEFT/RIGHT, CH_AHT, CH_ENS, CH_MAX, CH_IMU, CH_TOF defines removed)
+// Multiplexer
+#define TCA_ADDR 0x70
+#define CH_EYE_LEFT  0
+#define CH_EYE_RIGHT 1
+#define CH_AHT       2
+#define CH_ENS       2
+#define CH_MAX       4
+#define CH_IMU       5
+#define CH_TOF       CH_IMU
 
 // ============================================================
 // AUDIO & UI
@@ -402,13 +406,10 @@ int8_t validSPO2; // indicator to show if the SPO2 calculation is valid
 int32_t heartRate; // heart rate value
 int8_t validHeartRate; // indicator to show if the heart rate calculation is valid
 
-// Dual OLED eyes (Both on Wire GPIO 8/9 — they mirror each other, same address 0x3C)
-// Using Adafruit_SSD1306 as verified working (128x64)
+// Dual OLED eyes on separate I2C buses (No Multiplexer)
 #include <Adafruit_SSD1306.h>
-#define SCREEN_WIDTH 128
-#define SCREEN_HEIGHT 64 
-// Reset pin = -1 (not used)
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
+Adafruit_SSD1306 displayLeft(128, 64, &Wire);
+Adafruit_SSD1306 displayRight(128, 64, &Wire); // Mirrored on same bus
 
 // GFXcanvas16 medSprite(220, 100); // REMOVED to save 44KB RAM
 // GFXcanvas16 ecgSprite(240, 80); // REMOVED to save 38KB RAM
@@ -1962,9 +1963,14 @@ void loadConversationMemoryFromPrefs() {
 // ============================================================
 
 // ============================================================
-// MULTIPLEXER (REMOVED)
+// MULTIPLEXER
 // ============================================================
-// Hardware multiplexer removed. All sensors (except right eye) are parallel on main bus.
+void tcaselect(uint8_t i) {
+  if (i > 7) return;
+  Wire.beginTransmission(TCA_ADDR);
+  Wire.write(1 << i);
+  Wire.endTransmission();
+}
 
 // Additional forward declarations used below.
 void setupFirebase();
@@ -3164,7 +3170,7 @@ static bool nodeWsSendFrame(uint8_t opcode, const uint8_t* payload, size_t lengt
   if (nodeClientPtr->write(hdr, h) != (int)h) return false;
   
   if (payload && length > 0) {
-    uint8_t* maskedPayload = (uint8_t*)(psramFound() ? ps_malloc(length) : malloc(length));
+    uint8_t* maskedPayload = (uint8_t*)malloc(length);
     if (!maskedPayload) return false;
     for (size_t i = 0; i < length; i++) {
       maskedPayload[i] = payload[i] ^ mask[i % 4];
@@ -3220,7 +3226,7 @@ static void serviceNodeWebSocketKeepAlive() {
 
 void connectNodeServer() {
   if (nodeWsConnecting || nodeWsConnected) return;
-  if (!aiInputUsesMic || millis() < nextNodeWsReconnectMs) return;
+  if (millis() < nextNodeWsReconnectMs) return;
   if (!networkAvailable()) return;
   
   nodeWsConnecting = true;
@@ -3301,7 +3307,17 @@ void connectNodeServer() {
   nodeWsConnecting = false;
   lastNodeWsKeepAliveMs = millis(); // Initialize keep-alive timer
   Serial.println("[NODE] Connected to Proxy Server!");
-  sendCurrentNodeContext();
+  if (aiInputUsesMic && currentMode == MODE_AI) {
+    sendCurrentNodeContext(); // Only send full AI context in AI mode
+  } else {
+    // In Normal mode, announce ourselves so the server registers the connection
+    DynamicJsonDocument hb(128);
+    hb["type"] = "hello";
+    hb["mode"] = "NORMAL";
+    String hbStr; serializeJson(hb, hbStr);
+    nodeWsSendText(hbStr.c_str());
+    Serial.println("[NODE] Control socket ready (Normal Mode)");
+  }
 }
 
 void streamMicToNodeServer() {
@@ -3359,8 +3375,8 @@ void streamMicToNodeServer() {
 
   int32_t rms = (int32_t)sqrt((double)rmsSum / sampleCount);
   if (millis() - lastMicLogMs >= 2000) {
-    // Serial.printf("[MIC->NODE] frames=%u RMS=%d gain=%.1fx (streaming Opus to Deepgram)\n",
-    // nodeFrameCount, rms, (double)NODE_MIC_GAIN); // logging disabled
+    Serial.printf("[MIC->NODE] frames=%u RMS=%d gain=%.1fx (streaming Opus to Deepgram)\n",
+                  nodeFrameCount, rms, (double)NODE_MIC_GAIN);
     lastMicLogMs = millis();
     nodeFrameCount = 0;
   }
@@ -3483,7 +3499,7 @@ void pumpNodeServerSocket() {
     return;
   }
 
-  uint8_t* payload = (uint8_t*)(psramFound() ? ps_malloc(payloadLen + 1) : malloc(payloadLen + 1));
+  uint8_t* payload = (uint8_t*)malloc(payloadLen + 1);
   if (!payload) {
     Serial.println("[NODE] malloc failed for text frame");
     return;
@@ -3533,12 +3549,6 @@ void pumpNodeServerSocket() {
         const char* command = doc["command"];
         if (command && strlen(command) > 0) {
           handleTelegramCommand(String(command));
-        }
-      } else if (strcmp(type, "motor") == 0) {
-        // Direct motor command via WebSocket (faster than MQTT)
-        const char* command = doc["command"];
-        if (command && strlen(command) > 0) {
-          applyManualMotorCommand(String(command));
         }
       } else if (strcmp(type, "tts_url") == 0) {
         const char* url = doc["url"];
@@ -4044,8 +4054,9 @@ void drainNodeAudio() {
   if (avail == 0 && vAgentPlayingAudio && streamDone) {
     if (drainEmptySinceMs == 0) drainEmptySinceMs = millis(); // start timer
 
-    // Only tear down after 350ms of confirmed silence — lets TCP deliver remaining frames
-    if (millis() - drainEmptySinceMs >= 350) {
+    // Only tear down after 1200ms of confirmed silence — lets TCP deliver remaining frames
+    // and prevents "popping" noises from premature I2S bus reconfiguration.
+    if (millis() - drainEmptySinceMs >= 1200) {
       portENTER_CRITICAL(&nodeAudioMux);
       nodeAudioPending = false;
       nodeAudioStreamDone = true;
@@ -4782,11 +4793,13 @@ void moveNeck(int angle) {
 }
 
 bool imuProbeAddress(uint8_t addr) {
+  tcaselect(CH_IMU);
   Wire.beginTransmission(addr);
   return Wire.endTransmission() == 0;
 }
 
 bool imuWriteReg(uint8_t reg, uint8_t value) {
+  tcaselect(CH_IMU);
   Wire.beginTransmission(imuAddress);
   Wire.write(reg);
   Wire.write(value);
@@ -4794,6 +4807,7 @@ bool imuWriteReg(uint8_t reg, uint8_t value) {
 }
 
 bool imuReadRegs(uint8_t reg, uint8_t* buffer, size_t len) {
+  tcaselect(CH_IMU);
   Wire.beginTransmission(imuAddress);
   Wire.write(reg);
   if (Wire.endTransmission(false) != 0) return false;
@@ -5025,9 +5039,7 @@ void checkIMUSafety() {
   if (millis() - lastIMUSafetyAlert < IMU_SAFETY_COOLDOWN_MS) return;
   lastIMUSafetyAlert = millis();
 
-  if (driveControlActive || isMoving || turnControlActive) {
-    stopMotorMotion(true);
-  }
+  // stopMotorMotion(true); // Disabled per user request (was blocking AI mode)
 
   FirebaseJson imuStatus;
   imuStatus.set("ready", imuReady);
@@ -5053,12 +5065,14 @@ void checkIMUSafety() {
   alert += "Pitch=" + String(imuPitchDeg, 1) + " Roll=" + String(imuRollDeg, 1) + " Accel=" + String(imuAccelMagnitudeG, 2) + "g.";
   Serial.println("[IMU] " + alert);
 
+  /* Disabled per user request to prevent blocking AI mode
   if (cloudBotToken.length() > 0 && cloudChatId.length() > 0) {
     sendTelegramAlert(String("⚠️ ") + alert);
   }
   if (currentMedState != MED_MEASURING && !isSpeaking && !isProcessingAI) {
     speakText("IMU safety alert. Please check the robot.");
   }
+  */
 }
 
 void checkAutoImuRecalibration() {
@@ -5655,6 +5669,7 @@ void processMovementQueue() {
 bool readToFDistanceMm(uint16_t &distanceMm) {
   if (!tofReady) return false;
 
+  tcaselect(CH_TOF);
   uint16_t raw = frontToF.readRangeContinuousMillimeters();
   if (frontToF.timeoutOccurred()) return false;
 
@@ -5664,6 +5679,7 @@ bool readToFDistanceMm(uint16_t &distanceMm) {
 }
 
 void initToF() {
+  tcaselect(CH_TOF);
   frontToF.setTimeout(50);
 
   if (!frontToF.init()) {
@@ -5716,14 +5732,13 @@ float readUltrasonicDistanceCm() {
 
 void startGuardBuzzer() {
   if (guardBuzzerOn) return;
-  if (buzzerReady && ledcWriteTone(BUZZER_PIN, GUARD_BEEP_FREQ) > 0) {
-    guardBuzzerOn = true;
-  }
+  // Fire a loud piercing alarm beep through the main speaker
+  playTone(GUARD_BEEP_FREQ, 400);
+  guardBuzzerOn = true;
 }
 
 void stopGuardBuzzer() {
   if (!guardBuzzerOn) return;
-  ledcWriteTone(BUZZER_PIN, 0);
   guardBuzzerOn = false;
 }
 
@@ -6094,16 +6109,19 @@ void updateRobotAssistModes() {
 void sttTask(void* parameter) {
     Serial.println("[STT Task] Started on Core 0");
     while (true) {
-        if (USE_NODE_SERVER && networkAvailable()) {
-          // SAFETY: Block network sockets until setup() completes.
-          // Concurrent UDP during NTP/configTime on Core 1 causes a TCPIP core assert crash.
-          if (!networkInitialized) { vTaskDelay(pdMS_TO_TICKS(50)); continue; }
+        if (USE_NODE_SERVER && currentMode == MODE_NORMAL && networkAvailable()) {
+          // Control-only socket in Normal Mode: keep the server informed for Telegram/WebApp
+          if (nodeMux && xSemaphoreTake(nodeMux, pdMS_TO_TICKS(100)) == pdTRUE) {
+            if (!nodeWsConnected) connectNodeServer();
+            pumpNodeServerSocket();         // Receive telegram_command / motor frames
+            serviceNodeWebSocketKeepAlive(); // Keep the TCP connection alive
+            xSemaphoreGive(nodeMux);
+          }
+        } else if (USE_NODE_SERVER && aiInputUsesMic && currentMode == MODE_AI && networkAvailable()) {
           if (nodeMux && xSemaphoreTake(nodeMux, pdMS_TO_TICKS(100)) == pdTRUE) {
             if (!nodeWsConnected) connectNodeServer();
             pumpNodeServerSocket();
-            if (aiInputUsesMic && currentMode == MODE_AI) {
-              streamMicToNodeServer();
-            }
+            streamMicToNodeServer();
             serviceNodeWebSocketKeepAlive(); 
             xSemaphoreGive(nodeMux);
           }
@@ -6136,7 +6154,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 
     Serial.printf("[MQTT] Topic: %s | Msg: %s\n", topic, msg.c_str());
 
-    // Telegram commands now handled via direct polling (pollTelegramDirect)
+    // Telegram commands now handled via MQTT Server (Node.js Proxy)
     if (sTopic == "ella/telegram/in") return; 
 
     if (sTopic.startsWith("ella/commands/")) {
@@ -6289,6 +6307,7 @@ void setup() {
   // HPF filter removed.
   // pinMode(INTERRUPT_PIN, INPUT_PULLUP); // Disabled
   pinMode(TACTILE_SWITCH_PIN, INPUT_PULLUP);
+  pinMode(TOUCH_IRQ, INPUT_PULLUP); // Fix for phantom touches
   delay(1000);
   Serial.println("\n=== EllaBox - AI Health Companion ===");
 
@@ -6312,15 +6331,8 @@ void setup() {
   drawLoadingScreen("System Init...", 5);
 
   
-  // Attach Buzzer
-  pinMode(BUZZER_PIN, OUTPUT);
-  buzzerReady = ledcAttach(BUZZER_PIN, 2000, 8);
-  if (buzzerReady) {
-    ledcWriteTone(BUZZER_PIN, 0);
-    Serial.println("[Buzzer] Ready");
-  } else {
-    Serial.println("[Buzzer] LEDC attach failed");
-  }
+  // Buzzer hardware removed (all tones now routed digitally through I2S speaker)
+  buzzerReady = false;
 
   // Initialize Motors and Servo Pins
   pinMode(MOTOR1_IN1, OUTPUT);
@@ -6342,10 +6354,18 @@ void setup() {
   ledcAttach(MOTOR2_IN2, 1000, 8);
   ledcAttach(SERVO_PIN, 50, 14);   // 50Hz, 14-bit resolution (0-16383 limit)
   
-  // Start stopped & centered
+  // Start motors stopped
   setMotorL(0);
   setMotorR(0);
+  
+  // Servo Startup Sweep (Proves hardware is working)
+  Serial.println("[Servo] Running sweep test...");
+  moveNeck(50);
+  delay(400);
+  moveNeck(130);
+  delay(400);
   moveNeck(90);
+  delay(200);
 
   // PSRAM check (allocation done later with null-check)
   if (psramFound()) {
@@ -6372,24 +6392,19 @@ void setup() {
 
 
 
-  // OLED Eyes (via Multiplexer)
-  // Init Left Eye
-  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
-    Serial.println("Left Eye Failed");
+  // OLED Eyes Initialization (Mirrored on Single Bus - NO MUX)
+  Serial.println("[Eyes] Initializing Mirrored OLEDs (Wire)...");
+  Wire.begin(8, 9, 400000); 
+  
+  if(!displayLeft.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
+    Serial.println("[Eyes] OLED failed");
   } else {
-    Serial.println("Left Eye OK");
-    display.clearDisplay();
-    display.display();
+    displayLeft.clearDisplay();
+    displayLeft.display();
   }
   
-  // Init Right Eye
-  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
-    Serial.println("Right Eye Failed");
-  } else {
-    Serial.println("Right Eye OK");
-    display.clearDisplay();
-    display.display();
-  }
+  // displayRight is on the same bus/address, so it's already initialized by the above.
+  // We keep the object for code compatibility.
 
   // PREFERENCES (Load Saved Settings)
   // NOTE: WiFi credentials are loaded in startupSequence() which runs later.
@@ -6426,12 +6441,11 @@ void setup() {
   ts.setRotation(1);
   Serial.println("[Touch] XPT2046 Initialized on CS=47 IRQ=14 MISO=13");
 
-  // Initialize Sensors
-  // Initialize AHT20 on Channel 2
+  // Initialize AHT20
   if (!aht.begin()) Serial.println("AHT20 not found!");
   else Serial.println("AHT20 OK");
 
-  // Initialize ENS160 on Channel 2 (shared with AHT)
+  // Initialize ENS160
   ens160.begin(&Wire, 0x53); // ENS160 standard I2C address
   if (!ens160.init()) {
     Serial.println("ENS160 not found!");
@@ -6440,19 +6454,13 @@ void setup() {
     Serial.println("ENS160 OK");
   }
 
-  // Initialize MAX30102 - Auto-Scan all channels
+  // Initialize MAX30102
   bool maxFound = false;
-  Serial.println("[MAX30102] Scanning all MUX channels for sensor...");
-  for (uint8_t ch = 0; ch < 8; ch++) {
-      delay(10);
-      Wire.beginTransmission(0x57);
-      if (Wire.endTransmission() == 0) {
-          Serial.printf("[MAX30102] FOUND on Channel %d!\n", ch);
-          maxFound = true;
-          // Note: If found on a different channel, we should update CH_MAX or just stay here
-          // For now, we'll continue using the found channel
-          break; 
-      }
+  if (particleSensor.begin(Wire, I2C_SPEED_FAST)) {
+      maxFound = true;
+      Serial.println("MAX30102 OK");
+  } else {
+      Serial.println("MAX30102 not found!");
   }
 
   if (!maxFound) {
@@ -6460,7 +6468,7 @@ void setup() {
   }
 
   // Match the working diagnostic sketch: faster bus plus clean FIFO start
-  if (particleSensor.begin(Wire, I2C_SPEED_STANDARD)) {
+  if (particleSensor.begin(Wire, I2C_SPEED_FAST)) {
     Serial.println("MAX30102 OK");
     
     // Exactly matches SparkFun Example8_SPO2 for correct algorithm operation
@@ -6477,8 +6485,8 @@ void setup() {
       Serial.println("MAX30102 Failed at begin()");
   }
 
-  // Finalize I2C speed for runtime
-  Wire.setClock(400000);
+  // Finalize I2C speed for runtime (100kHz used to reduce EMI noise on I2S audio)
+  Wire.setClock(100000);
   if (initIMU()) {
     calibrateIMUGyro();
   } else {
@@ -6542,23 +6550,12 @@ void setup() {
   playStartupSound();
   // drawNormalScreen(true); // Replaced by startupSequence()
   startupSequence(); 
-  
-  // CRITICAL FIX: The MAX30102 has been filling its 32-sample FIFO during the ~8 seconds
-  // of WiFi and Network initialization. If we don't clear the FIFO right before entering the main loop,
-  // the sensor hits an overflow condition, locks up, and shuts off its LED!
-  particleSensor.clearFIFO();
-  
-  // Signal to the STT Task on Core 0 that it is now safe to open network sockets.
-  // This prevents the 'Required to lock TCPIP core functionality!' crash caused by
-  // the STT task creating UDP sockets while configTime/NTP is still running on Core 1.
-  networkInitialized = true;
-  
   Serial.println("Setup Complete (Online Mode Ready)!");
 }
 
 // Global filter variables
 // dc_offset/DC_ALPHA/GAIN_BOOSTER_I2S removed.
-// networkInitialized declared near top of file (before setup/sttTask)
+bool networkInitialized = false;
 bool wifiReconnectActive = false;
 bool wifiReconnectUsingSaved = false;
 unsigned long wifiReconnectStartMs = 0;
@@ -6815,6 +6812,7 @@ void setupNetwork() {
   
   // FORCE INITIAL SENSOR READ (To ensure UI has data)
   Serial.println("[Sensors] Initializing readings...");
+  tcaselect(CH_AHT);
   if (aht.begin()) {
      read_aht20(); 
      Serial.println("[Sensors] AHT20 Read Success");
@@ -6888,20 +6886,24 @@ void processTouchScreen() {
   
   // Normal Tap
   moodArousal += 0.2; // Wakes up / pays attention
+  
+  // Haptic Feedback (Low frequency thump via speaker)
+  playTone(60, 40); 
+  
   if (moodValence < 0) moodValence += 0.1; // Cheers her up a bit
   
   lastTouch = millis();
 
   TS_Point p = ts.getPoint();
 
-  // Filter out phantom touches (low raw values typically < 100 on noise)
-  if (p.x < 150 || p.y < 150) return;
+  // Filter out phantom touches (low raw values or maxed out 8191/4095 noise)
+  if (p.x < 150 || p.y < 150 || p.x > 4000 || p.y > 4000) return;
 
 
   // Map raw XPT2046 coordinates to screen pixels (240x320)
   int screenX = map(p.x, 200, 3800, 0, 240);
   int screenY = map(p.y, 200, 3800, 0, 320);
-  // Serial.printf("[Touch] Raw(%d,%d) -> Screen(%d,%d)\n", p.x, p.y, screenX, screenY);
+  Serial.printf("[Touch] Raw(%d,%d) -> Screen(%d,%d)\n", p.x, p.y, screenX, screenY);
 
   // ── Navigation Bar (bottom 80px for reliable touch) ────────────────────
   if (screenY > 240) {
@@ -7103,7 +7105,7 @@ void switchToNormalMode() {
   
   // 1. Disconnect all AI/STT paths
   if (USE_VOICE_AGENT) disconnectVoiceAgent();
-  // disconnectNodeServer(); // Removed so Telegram and Motor streaming works in Normal Mode
+  disconnectNodeServer(); // KILL THE DEEPGRAM PROXY
 
   disableMicAIInput();
   if (micI2SActive) clearMicBuffer(); // Flush any remaining audio data
@@ -7115,6 +7117,7 @@ void switchToNormalMode() {
   Serial.println("[Mode] MQTT Client Reset & AI Memory Cleared");
   
   // Restart MAX30102 without defaulting to 400sps
+  tcaselect(CH_MAX);
   particleSensor.wakeUp();
   // Keep MAX30102 in Red+IR mode only. ledMode=3 interleaves a third channel
   // and breaks getIR()/getRed() based SpO2 calculations.
@@ -7168,6 +7171,26 @@ void publishStatusSnapshot(bool force) {
   serializeJson(doc, payload);
   if (mqtt.publish("ella/status", payload.c_str(), true)) {
     lastStatusPublishMs = millis();
+  }
+
+  // Also push to the Node control socket so Telegram /status replies instantly from cache
+  if (nodeWsConnected && currentMode == MODE_NORMAL) {
+    // Inject sensor readings into the status_update so the server cache is rich
+    StaticJsonDocument<512> nodeDoc;
+    nodeDoc["type"] = "status_update";
+    nodeDoc["mode"] = "NORMAL";
+    nodeDoc["temperature"] = isnan(temp_aht) ? 0.0f : temp_aht;
+    nodeDoc["humidity"] = isnan(humidity_aht) ? 0.0f : humidity_aht;
+    nodeDoc["aqi"] = aqi_val;
+    nodeDoc["heartRate"] = isnan(max30102_hr) ? 0.0f : max30102_hr;
+    nodeDoc["spo2"] = isnan(max30102_spo2) ? 0.0f : max30102_spo2;
+    nodeDoc["bodyTemp"] = isnan(max30102_temp) ? 0.0f : max30102_temp;
+    nodeDoc["tofDistanceCm"] = tofHasReading ? (tofFilteredMm / 10.0f) : 0.0f;
+    nodeDoc["guardMode"] = guardModeEnabled;
+    nodeDoc["isSpeaking"] = isSpeaking;
+    String nodePayload;
+    serializeJson(nodeDoc, nodePayload);
+    nodeWsSendText(nodePayload.c_str());
   }
 }
 
@@ -7801,6 +7824,7 @@ void switchToAIMode() {
 void updateSensors() {
   // REAL SENSORS
   // Switch to AHT/ENS Channel
+  tcaselect(CH_AHT); 
   read_aht20();
   read_ens160();
   lastEnvSensorReadMs = millis();
@@ -7816,6 +7840,7 @@ void read_aht20() {
 
 void read_ens160() {
   // Switch to AHT/ENS Channel (shared)
+  tcaselect(CH_AHT);
   
   // update() reads new data if available
   // Library uses typedef int8_t Result and #define RESULT_OK
@@ -7831,6 +7856,7 @@ void read_ens160() {
 // bufferIndex is declared inside read_max30102() as static local
 
 void read_max30102() {
+   tcaselect(CH_MAX);
    
    if (max30102_needs_full_read) {
        particleSensor.clearFIFO();
@@ -8842,8 +8868,15 @@ void drawAIScreen(bool force) {
     for(int i=0; i<text.length(); i++) {
       unsigned char c = (unsigned char)text[i];
       if (c >= 128) continue; // Skip UTF-8 multi-byte characters to prevent garbled "signs"
-      if (c < 32 && c != '\n' && c != '\r') continue; // Skip other control chars
+      if (c < 32 && c != '\n') continue; // Skip other control chars (but keep newlines)
       
+      if (c == '\n') {
+        y += 10; // Move down a line
+        if (y > TRANSCRIPT_Y + TRANSCRIPT_H - 10) break;
+        tft.setCursor(15, y); // Reset X to the left edge of the box
+        continue;
+      }
+
       tft.print((char)c);
       if (tft.getCursorX() > SCR_W - 25) {
         y += 10;
@@ -8876,8 +8909,15 @@ void drawAIScreen(bool force) {
     for(int i=0; i<text.length(); i++) {
       unsigned char c = (unsigned char)text[i];
       if (c >= 128) continue; // Skip UTF-8 multi-byte characters to prevent garbled "signs"
-      if (c < 32 && c != '\n' && c != '\r') continue; // Skip other control chars
+      if (c < 32 && c != '\n') continue; // Skip other control chars (but keep newlines)
       
+      if (c == '\n') {
+        y += 10; // Move down a line
+        if (y > RESPONSE_Y + RESPONSE_H - 10) break;
+        tft.setCursor(15, y); // Reset X to the left edge of the box
+        continue;
+      }
+
       tft.print((char)c);
       if (tft.getCursorX() > SCR_W - 25) {
         y += 10;
@@ -9038,13 +9078,14 @@ void updateEyes() {
     }
   }
 
-  // Draw for both eyes (Left ch 0, Right ch 1)
-  for (int i = 0; i < 2; i++) {
+  // Draw for both eyes (Mirrored on Wire)
+  for (int i = 0; i < 1; i++) { // Only need to draw once, they mirror
+    Adafruit_SSD1306& display = displayLeft; 
     display.clearDisplay();
 
     if (isBlinking) {
        // Blink Locked
-       display.drawLine(32, 32, 96, 32, SSD1306_WHITE);
+       display.fillRect(32, 30, 64, 4, SSD1306_WHITE);
     } else {
        // Draw Expression
        if (currentEyeExpression == "HAPPY") {
@@ -9202,19 +9243,43 @@ void updateEyes() {
 // BUZZER & SOUNDS
 // ============================================================
 void playTone(int freq, int duration) {
-  if (!buzzerReady) {
+  if (freq <= 0) {
     delay(duration);
     return;
   }
 
-  if (freq > 0) {
-    if (ledcWriteTone(BUZZER_PIN, freq) > 0) {
-      delay(duration);
-      ledcWriteTone(BUZZER_PIN, 0);
-    }
-  } else {
-    delay(duration);
+  // Stop main audio library if it's currently speaking to free the I2S bus
+  if (audio.isRunning()) {
+    audio.stopSong();
+    delay(10);
   }
+
+  // Initialize raw I2S for tone generation
+  micTestSpeaker_i2s.end();
+  micTestSpeaker_i2s.setPins(SPK_BCLK, SPK_LRC, SPK_DOUT);
+  if (!micTestSpeaker_i2s.begin(I2S_MODE_STD, 24000, I2S_DATA_BIT_WIDTH_16BIT, I2S_SLOT_MODE_MONO, I2S_STD_SLOT_LEFT)) {
+      delay(duration);
+      return;
+  }
+
+  int totalSamples = (24000 * duration) / 1000;
+  int16_t buffer[240]; // 10ms chunks
+  
+  int samplesGenerated = 0;
+  while (samplesGenerated < totalSamples) {
+      int toGenerate = min(240, totalSamples - samplesGenerated);
+      for (int i = 0; i < toGenerate; i++) {
+          float t = (float)(samplesGenerated + i) / 24000.0f;
+          float val = sin(2.0 * PI * freq * t);
+          buffer[i] = (int16_t)(val * 32767.0f) >> 2; // Shift by 2 (1/4 volume for loud, clean tones)
+      }
+      micTestSpeaker_i2s.write((uint8_t*)buffer, toGenerate * sizeof(int16_t));
+      samplesGenerated += toGenerate;
+  }
+  
+  // Hand I2S back to the main audio library
+  micTestSpeaker_i2s.end();
+  audio.setPinout(SPK_BCLK, SPK_LRC, SPK_DOUT);
 }
 
 void playStartupSound() {
@@ -10019,45 +10084,56 @@ void handleTelegramCommand(String command) {
   String response = "";
   
   if (command == "status") {
-    response = "🤖 ELLA Status Report\n\n";
-    response += "🌡 Temperature: " + String(temp_aht, 1) + "°C\n";
-    response += "💧 Humidity: " + String(humidity_aht, 1) + "%\n";
-    response += "🌬 Air Quality (AQI): " + String(aqi_val) + "\n";
-    response += "☁️ TVOC: " + String(tvoc_val) + " ppb\n";
-    response += "💨 eCO2: " + String(eco2_val) + " ppm\n";
-    response += "\n✅ All systems operational";
+    response = "🤖 *ELLA Status Report*\n\n";
+    response += "🌡 *Temperature:* " + String(temp_aht, 1) + "°C\n";
+    response += "💧 *Humidity:* " + String(humidity_aht, 1) + "%\n";
+    response += "🌬 *Air Quality (AQI):* " + String(aqi_val) + "\n";
+    response += "☁️ *TVOC:* " + String(tvoc_val) + " ppb\n";
+    response += "💨 *eCO2:* " + String(eco2_val) + " ppm\n";
+    response += "\n✅ _All systems operational_";
   }
   else if (command == "health") {
     if (isnan(max30102_hr) || max30102_hr < 40) {
-      response = "❌ Health Data Not Available\n\n";
-      response += "Place finger on sensor to measure heart rate and SpO2";
+      response = "❌ *Health Data Not Available*\n\n";
+      response += "_Place finger on sensor to measure heart rate and SpO2_";
     } else {
-      response = "❤️ Health Vitals\n\n";
-      response += "💓 Heart Rate: " + String((int)max30102_hr) + " BPM\n";
-      response += "🫁 SpO2: " + String((int)max30102_spo2) + "%\n";
-      response += "🌡 Body Temp: " + String(temp_aht, 1) + "°C\n";
+      response = "❤️ *Health Vitals*\n\n";
+      response += "💓 *Heart Rate:* " + String((int)max30102_hr) + " BPM\n";
+      response += "🫁 *SpO2:* " + String((int)max30102_spo2) + "%\n";
+      response += "🌡 *Body Temp:* " + String(temp_aht, 1) + "°C\n";
       
       if (max30102_spo2 < 90) {
-        response += "\n⚠️ Warning: Low oxygen level!";
+        response += "\n⚠️ *Warning:* Low oxygen level!";
       } else if (max30102_hr > 130 || max30102_hr < 50) {
-        response += "\n⚠️ Warning: Abnormal heart rate!";
+        response += "\n⚠️ *Warning:* Abnormal heart rate!";
       } else {
-        response += "\n✅ Vitals within normal range";
+        response += "\n✅ _Vitals within normal range_";
       }
     }
   }
   
-  // Send response back via Node WebSocket (Node server will forward to Telegram)
-  if (response.length() > 0 && nodeWsConnected) {
-    StaticJsonDocument<1024> replyDoc;
-    replyDoc["type"] = "telegram_reply";
-    replyDoc["text"] = response;
-    String replyPayload;
-    serializeJson(replyDoc, replyPayload);
-    nodeWsSendText(replyPayload.c_str());
-    Serial.println("[Telegram] Reply sent via Node WebSocket");
-  } else if (response.length() > 0) {
-    Serial.println("[Telegram] Cannot reply — Node WebSocket not connected");
+  // Send response back directly to Telegram
+  if (response.length() > 0 && cloudBotToken.length() > 10) {
+    WiFiClientSecure client;
+    client.setInsecure();
+    HTTPClient https;
+    
+    String url = "https://api.telegram.org/bot" + cloudBotToken + "/sendMessage";
+    
+    StaticJsonDocument<1024> doc;
+    doc["chat_id"] = cloudChatId;
+    doc["text"] = response;
+    doc["parse_mode"] = "Markdown";
+    
+    String payload;
+    serializeJson(doc, payload);
+    
+    if (https.begin(client, url)) {
+      https.addHeader("Content-Type", "application/json");
+      https.POST(payload);
+      https.end();
+      Serial.println("[Telegram] Direct response sent");
+    }
   }
 }
 
@@ -10074,7 +10150,6 @@ void pollTelegramDirect() {
   
   WiFiClientSecure client;
   client.setInsecure();
-  // client.setBufferSizes(1024, 512); // Removed: NetworkClientSecure does not have this method in ESP32 Core v3
   HTTPClient https;
   
   String url = "https://api.telegram.org/bot" + cloudBotToken + "/getUpdates?offset=" + String(lastTelegramUpdateId + 1) + "&limit=5&timeout=0";
@@ -14223,9 +14298,7 @@ void loop() {
     ArduinoOTA.handle();
   }
   
-  if (networkAvailable()) {
-    // pollTelegramDirect(); // Removed to prevent blocking 
-  }
+  // pollTelegramDirect removed - using MQTT server
 
 
   audio.loop();
@@ -14606,6 +14679,7 @@ void loop() {
     unsigned long elapsed = millis() - medStateTimer;
 
     // Switch to MAX30102 Channel for detection
+    tcaselect(CH_MAX);
     // Refresh the FIFO before reading IR so idle-mode detection uses live data.
     particleSensor.check();
     long irValue = particleSensor.getIR();
