@@ -26,8 +26,7 @@ const ELLA_ONLINE_TIMEOUT_MS = 300000; // 5 minutes buffer for idle/sleep period
 const isEllaOnline = () => {
     const wsOpen = esp32Connection && esp32Connection.readyState === WebSocket.OPEN;
     const recentlySeen = (Date.now() - ellaLastSeenMs) < ELLA_ONLINE_TIMEOUT_MS;
-    const statusOnline = ellaStatusCache && ellaStatusCache.online === true;
-    return wsOpen || (recentlySeen && statusOnline);
+    return wsOpen || recentlySeen;
 };
 
 // HiveMQ MQTT Integration to pull status snapshots & vitals while allowing Render to sleep
