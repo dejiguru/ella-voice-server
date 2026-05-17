@@ -8565,25 +8565,23 @@ void drawNormalScreen(bool force) {
       tft.setFont(&FreeSansBold9pt7b);
       tft.setTextSize(1);
       tft.setTextColor(UI_TEXT_SUB);
-      tft.setCursor(25, 65);
+      tft.setCursor(25, 58);
       tft.print("Environment");
-
-      // Icon Wrapper (Top Right, away from values)
-      tft.fillCircle(200, 70, 18, UI_BG);
-      tft.drawCircle(200, 70, 8, UI_ENV);
-      tft.fillCircle(200, 70, 3, UI_ENV);
-      tft.drawLine(200-8, 70, 200+8, 70, UI_ENV);
-      tft.drawLine(200, 70-8, 200, 70+8, UI_ENV);
-
+ 
+      // Icon Wrapper (Top Right, elegant and compact)
+      tft.fillCircle(200, 54, 12, UI_BG);
+      tft.drawCircle(200, 54, 6, UI_ENV);
+      tft.fillCircle(200, 54, 2, UI_ENV);
+ 
       // Sub-labels for Temp and Humidity
       tft.setFont();
       tft.setTextSize(1);
       tft.setTextColor(UI_TEXT_SUB);
-      tft.setCursor(25, 72);
+      tft.setCursor(25, 76);
       tft.print("Temp");
-      tft.setCursor(120, 72);
+      tft.setCursor(120, 76);
       tft.print("Humidity");
-
+ 
       // 2. Air Quality Card (Bottom Left)
       tft.fillRoundRect(10, 150, 105, 100, 16, UI_CARD_BG); 
       tft.drawRoundRect(10, 150, 105, 100, 16, UI_PRIMARY);
@@ -8592,7 +8590,7 @@ void drawNormalScreen(bool force) {
       tft.setTextColor(UI_TEXT_SUB);
       tft.setCursor(20, 175);
       tft.print("Air Quality");
-
+ 
       // 3. TVOC + eCO2 Card (Bottom Right)
       tft.fillRoundRect(125, 150, 105, 100, 16, UI_CARD_BG);
       tft.drawRoundRect(125, 150, 105, 100, 16, UI_ALERT);
@@ -8604,52 +8602,52 @@ void drawNormalScreen(bool force) {
     }
     
     if (fullRedraw) { last_temp = -999; last_humidity = -999; last_aqi = 9999; }
-
+ 
     // ── Temp Value ──
     if (isnan(temp_aht)) temp_aht = 0.0;
     if (abs(temp_aht - last_temp) > 0.1 || fullRedraw) {
         // Erase old value area with fillRect
-        tft.fillRect(20, 82, 90, 35, UI_CARD_BG);
+        tft.fillRect(20, 90, 90, 32, UI_CARD_BG);
         
         tft.setFont(&FreeSansBold18pt7b);
         tft.setTextSize(1);
         if (temp_aht > 38.0) tft.setTextColor(UI_ERROR);
         else if (temp_aht > 37.5) tft.setTextColor(UI_ALERT);
         else tft.setTextColor(UI_TEXT_MAIN);
-        tft.setCursor(25, 110);
+        tft.setCursor(25, 118);
         tft.print(temp_aht, 1);
-
+ 
         int16_t x1, y1; uint16_t w, h;
         tft.getTextBounds(String(temp_aht, 1), 0, 0, &x1, &y1, &w, &h);
         tft.setFont(&FreeSansBold9pt7b);
         tft.setTextSize(1);
         tft.setTextColor(UI_TEXT_SUB);
-        tft.setCursor(25 + w + 2, 110);
+        tft.setCursor(25 + w + 2, 118);
         tft.print("C");
-
+ 
         last_temp = temp_aht;
     }
-
+ 
     // ── Humidity Value ──
     if (abs(humidity_aht - last_humidity) > 1.0 || fullRedraw) {
         // Erase old value area with fillRect
-        tft.fillRect(115, 82, 75, 35, UI_CARD_BG);
+        tft.fillRect(115, 90, 75, 32, UI_CARD_BG);
         
         tft.setFont(&FreeSansBold18pt7b);
         tft.setTextSize(1);
         if (humidity_aht > 70 || humidity_aht < 20) tft.setTextColor(UI_ALERT);
         else tft.setTextColor(UI_TEXT_MAIN);
-        tft.setCursor(120, 110);
+        tft.setCursor(120, 118);
         tft.print(humidity_aht, 0);
-
+ 
         int16_t x1, y1; uint16_t w, h;
         tft.getTextBounds(String(humidity_aht, 0), 0, 0, &x1, &y1, &w, &h);
         tft.setFont(&FreeSansBold9pt7b);
         tft.setTextSize(1);
         tft.setTextColor(UI_TEXT_SUB);
-        tft.setCursor(120 + w + 2, 110);
+        tft.setCursor(120 + w + 2, 118);
         tft.print("%");
-
+ 
         last_humidity = humidity_aht;
     }
 
