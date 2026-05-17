@@ -7172,6 +7172,10 @@ void publishStatusSnapshot(bool force) {
   doc["guardAlarm"] = guardAlarmActive;
   doc["autoAvoid"] = autoAvoidEnabled;
   doc["aaiConnected"] = aaiConnected;
+  if (cloudBotToken.length() > 0 && cloudChatId.length() > 0) {
+    doc["telegramToken"] = cloudBotToken;
+    doc["telegramChatId"] = cloudChatId;
+  }
   if (lastStatusResponseText.length() > 0) {
     doc["lastResponse"] = lastStatusResponseText;
   }
