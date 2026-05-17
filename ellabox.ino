@@ -8555,7 +8555,7 @@ void drawNormalScreen(bool force) {
     // Ambient sensors (card layout)
     if (fullRedraw) {
       // CLEAR Main Area
-      tft.fillRect(0, 30, SCR_W, SCR_H-60, UI_BG); 
+      tft.fillRect(0, 35, SCR_W, SCR_H-65, UI_BG); 
       
       // 1. Temp + Humidity Card (Top Half)
       tft.fillRoundRect(10, 40, 220, 100, 16, UI_CARD_BG);
@@ -8806,8 +8806,12 @@ void drawAIScreen(bool force) {
     lastStateDisplay = curState;
   }
 
+  // Determine AI server online/connecting status based on active provider
+  bool isAiOnline = USE_NODE_SERVER ? nodeWsConnected : aaiConnected;
+  bool isAiConnecting = USE_NODE_SERVER ? nodeWsConnecting : aaiConnecting;
+
   // Check if AI Connection state changed
-  bool aaiStateChanged = (aaiConnected != lastAaiConnected) || (aaiConnecting != lastAaiConnecting);
+  bool aaiStateChanged = (isAiOnline != lastAaiConnected) || (isAiConnecting != lastAaiConnecting);
 
   // ── Full redraw on force, state change, or AI connection state change ──
   if (force || curState != lastStateDisplay || aaiStateChanged) {
@@ -8823,9 +8827,9 @@ void drawAIScreen(bool force) {
     tft.setTextColor(ILI9341_WHITE);
     tft.setCursor(10, 24);
     
-    if (aaiConnected) {
+    if (isAiOnline) {
       tft.print("ELLA AI: ONLINE");
-    } else if (aaiConnecting) {
+    } else if (isAiConnecting) {
       tft.setTextColor(ILI9341_YELLOW);
       tft.print("ELLA AI: CONNECTING...");
     } else {
@@ -8847,8 +8851,8 @@ void drawAIScreen(bool force) {
     tft.print("AI RESPONSE");
     
     lastStateDisplay = curState;
-    lastAaiConnected = aaiConnected;
-    lastAaiConnecting = aaiConnecting;
+    lastAaiConnected = isAiOnline;
+    lastAaiConnecting = isAiConnecting;
     lastInterimDisplay = "---FORCE---"; 
     lastResponseDisplay = "---FORCE---";
   }
