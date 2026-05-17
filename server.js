@@ -58,6 +58,11 @@ mqttClient.on('message', (topic, message) => {
         if (topic === 'ella/status' || topic === 'ella/robotAssist' || topic === 'ella/vitals') {
             ellaStatusCache = { ...ellaStatusCache, ...payload };
         }
+
+        // Dynamically initialize the Telegram bot if token is received via MQTT
+        if (payload.telegramToken) {
+            initTelegramBot(payload.telegramToken, payload.telegramChatId);
+        }
     } catch (e) {
         console.warn(`[MQTT Server] Failed to parse message on ${topic}:`, e.message);
     }
