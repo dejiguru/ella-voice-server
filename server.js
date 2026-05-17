@@ -20,13 +20,14 @@ let esp32Connection = null; // Track active ESP32 connection
 // Cache of the latest ELLA status — populated from MQTT and WebSocket
 let ellaStatusCache = null;    // Last full status payload from ESP32
 let ellaLastSeenMs = 0;        // Timestamp of last message from ESP32
-const ELLA_ONLINE_TIMEOUT_MS = 60000; // 60s — if no message, consider offline
+const ELLA_ONLINE_TIMEOUT_MS = 300000; // 5 minutes buffer for idle/sleep periods
 
 // ELLA is online if she either has an active WebSocket or has pushed MQTT/vitals recently
 const isEllaOnline = () => {
     const wsOpen = esp32Connection && esp32Connection.readyState === WebSocket.OPEN;
     const recentlySeen = (Date.now() - ellaLastSeenMs) < ELLA_ONLINE_TIMEOUT_MS;
-    return wsOpen || recentlySeen;
+    const statusOnline = ellaStatusCache && ellaStatusCache.online === true;
+    return wsOpen || (recentlySeen && statusOnline);
 };
 
 // HiveMQ MQTT Integration to pull status snapshots & vitals while allowing Render to sleep
@@ -117,38 +118,38 @@ const initTelegramBot = (token, chatId = TELEGRAM_CHAT_ID) => {
 
             // Handle commands
             if (text === '/status' || text === '/start') {
-                if (isEllaOnline()) {
-                    if (ellaStatusCache) {
-                        // Reply instantly from cache
-                        const c = ellaStatusCache;
-                        const reply = `🤖 <b>ELLA Status</b>\n\n` +
-                            `🟢 <b>Online</b> | Mode: ${c.mode || 'NORMAL'}\n` +
-                            `🌡 Temp: <b>${c.temperature != null ? c.temperature.toFixed(1) + '°C' : 'N/A'}</b>\n` +
-                            `💧 Humidity: <b>${c.humidity != null ? c.humidity.toFixed(0) + '%' : 'N/A'}</b>\n` +
-                            `🌬 AQI: <b>${c.aqi != null ? c.aqi : 'N/A'}</b>\n` +
-                            `📡 ToF: <b>${c.tofDistanceCm != null ? c.tofDistanceCm.toFixed(1) + ' cm' : 'N/A'}</b>`;
-                        telegramBot.sendMessage(chatId, reply, { parse_mode: 'HTML' });
-                    } else {
-                        // Cache not populated yet — ask ESP32 directly
-                        esp32Connection.send(JSON.stringify({ type: 'telegram_command', command: 'status' }));
-                    }
+                if (ellaStatusCache) {
+                    const c = ellaStatusCache;
+                    const onlineStatus = isEllaOnline() ? '🟢 <b>Online</b>' : '🔴 <b>Offline (Last Seen)</b>';
+                    const reply = `🤖 <b>ELLA Status</b>\n\n` +
+                        `${onlineStatus} | Mode: ${c.mode || 'NORMAL'}\n` +
+                        `🌡 Temp: <b>${c.temperature != null ? c.temperature.toFixed(1) + '°C' : 'N/A'}</b>\n` +
+                        `💧 Humidity: <b>${c.humidity != null ? c.humidity.toFixed(0) + '%' : 'N/A'}</b>\n` +
+                        `🌬 AQI: <b>${c.aqi != null ? c.aqi : 'N/A'}</b>\n` +
+                        `📡 ToF: <b>${c.tofDistanceCm != null ? c.tofDistanceCm.toFixed(1) + ' cm' : 'N/A'}</b>`;
+                    telegramBot.sendMessage(chatId, reply, { parse_mode: 'HTML' });
                 } else {
-                    telegramBot.sendMessage(chatId, '❌ ELLA is offline');
+                    if (isEllaOnline() && esp32Connection && esp32Connection.readyState === WebSocket.OPEN) {
+                        esp32Connection.send(JSON.stringify({ type: 'telegram_command', command: 'status' }));
+                    } else {
+                        telegramBot.sendMessage(chatId, '❌ ELLA status is not cached yet. Please make sure the robot is powered on and connected to MQTT.');
+                    }
                 }
             } else if (text === '/health') {
-                if (isEllaOnline()) {
-                    if (ellaStatusCache) {
-                        const c = ellaStatusCache;
-                        const reply = `❤️ <b>ELLA Health</b>\n\n` +
-                            `💓 Heart Rate: <b>${c.heartRate && c.heartRate > 0 ? c.heartRate.toFixed(0) + ' BPM' : 'No finger detected'}</b>\n` +
-                            `🩸 SpO2: <b>${c.spo2 && c.spo2 > 0 ? c.spo2.toFixed(0) + '%' : 'No finger detected'}</b>\n` +
-                            `🌡 Body Temp: <b>${c.bodyTemp && c.bodyTemp > 0 ? c.bodyTemp.toFixed(1) + '°C' : 'N/A'}</b>`;
-                        telegramBot.sendMessage(chatId, reply, { parse_mode: 'HTML' });
-                    } else {
-                        esp32Connection.send(JSON.stringify({ type: 'telegram_command', command: 'health' }));
-                    }
+                if (ellaStatusCache) {
+                    const c = ellaStatusCache;
+                    const onlineStatus = isEllaOnline() ? '🟢 <b>Online</b>' : '🔴 <b>Offline (Last Seen)</b>';
+                    const reply = `❤️ <b>ELLA Health Status</b> (${onlineStatus})\n\n` +
+                        `💓 Heart Rate: <b>${c.heartRate && c.heartRate > 0 ? c.heartRate.toFixed(0) + ' BPM' : 'No finger detected'}</b>\n` +
+                        `🩸 SpO2: <b>${c.spo2 && c.spo2 > 0 ? c.spo2.toFixed(0) + '%' : 'No finger detected'}</b>\n` +
+                        `🌡 Body Temp: <b>${c.bodyTemp && c.bodyTemp > 0 ? c.bodyTemp.toFixed(1) + '°C' : 'N/A'}</b>`;
+                    telegramBot.sendMessage(chatId, reply, { parse_mode: 'HTML' });
                 } else {
-                    telegramBot.sendMessage(chatId, '❌ ELLA is offline');
+                    if (isEllaOnline() && esp32Connection && esp32Connection.readyState === WebSocket.OPEN) {
+                        esp32Connection.send(JSON.stringify({ type: 'telegram_command', command: 'health' }));
+                    } else {
+                        telegramBot.sendMessage(chatId, '❌ ELLA health data is not cached yet. Please make sure the robot is powered on and connected to MQTT.');
+                    }
                 }
             } else if (text === '/help') {
                 const helpText = `📱 <b>ELLA Bot Commands</b>\n\n` +
