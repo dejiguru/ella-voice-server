@@ -59,7 +59,8 @@ mqttClient.on('message', (topic, message) => {
             ellaStatusCache = { ...ellaStatusCache, ...payload };
         }
 
-        // Dynamically initialize the Telegram bot if token is received via MQTT
+        // Dynamically initialize the Telegram bot if token is received via MQTT.
+        // Trigger clean cloud reboot to clear any local diagnostic conflicts.
         if (payload.telegramToken) {
             initTelegramBot(payload.telegramToken, payload.telegramChatId);
         }
