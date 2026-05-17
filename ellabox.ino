@@ -8776,6 +8776,8 @@ void drawAIScreen(bool force) {
   static int lastStateDisplay = -1;
   static String lastInterimDisplay = "";
   static String lastResponseDisplay = "";
+  static bool lastAaiConnected = false;
+  static bool lastAaiConnecting = false;
   
   // Determine current state
   int curState; // 0=Listening, 1=Thinking, 2=Speaking, 3=Idle
@@ -8799,8 +8801,18 @@ void drawAIScreen(bool force) {
   const int RESPONSE_Y = ANIM_Y + ANIM_H + 5;
   const int RESPONSE_H = CONTENT_H - TRANSCRIPT_H - ANIM_H - 5;
 
-  // ── Full redraw on force or state change ──────────────────────
-  if (force || curState != lastStateDisplay) {
+  // Detect state changes for text clearing (e.g. Thinking -> Responding)
+  if (curState != lastStateDisplay) {
+    lastInterimDisplay = "---CHANGE---";
+    lastResponseDisplay = "---CHANGE---";
+    lastStateDisplay = curState;
+  }
+
+  // Check if AI Connection state changed
+  bool aaiStateChanged = (aaiConnected != lastAaiConnected) || (aaiConnecting != lastAaiConnecting);
+
+  // ── Full redraw on force, state change, or AI connection state change ──
+  if (force || curState != lastStateDisplay || aaiStateChanged) {
     if (force) tft.fillScreen(UI_BG);
     
     // Clear only the content area to prevent flicker
@@ -8812,7 +8824,16 @@ void drawAIScreen(bool force) {
     tft.setTextSize(1);
     tft.setTextColor(ILI9341_WHITE);
     tft.setCursor(10, 24);
-    tft.print("ELLA MEDICAL AI");
+    
+    if (aaiConnected) {
+      tft.print("ELLA AI: ONLINE");
+    } else if (aaiConnecting) {
+      tft.setTextColor(ILI9341_YELLOW);
+      tft.print("ELLA AI: CONNECTING...");
+    } else {
+      tft.setTextColor(ILI9341_RED);
+      tft.print("ELLA AI: OFFLINE");
+    }
     
     drawStatusDot(online);
     drawNavigationBar();
@@ -8828,15 +8849,10 @@ void drawAIScreen(bool force) {
     tft.print("AI RESPONSE");
     
     lastStateDisplay = curState;
+    lastAaiConnected = aaiConnected;
+    lastAaiConnecting = aaiConnecting;
     lastInterimDisplay = "---FORCE---"; 
     lastResponseDisplay = "---FORCE---";
-  }
-
-  // Detect state changes for text clearing (e.g. Thinking -> Responding)
-  if (curState != lastStateDisplay) {
-    lastInterimDisplay = "---CHANGE---";
-    lastResponseDisplay = "---CHANGE---";
-    lastStateDisplay = curState;
   }
 
   // ── 1. Partial Speech (Live Transcript) ───────────────────────
@@ -8881,7 +8897,7 @@ void drawAIScreen(bool force) {
         tft.setCursor(15, y);
       }
     }
-    lastInterimDisplay = text;
+    lastInterimDisplay = currentInterimText; // Sync to raw global string to prevent constant redrawing!
   }
 
   // ── 2. AI Response ────────────────────────────────────────────
@@ -8922,7 +8938,7 @@ void drawAIScreen(bool force) {
         tft.setCursor(15, y);
       }
     }
-    lastResponseDisplay = text;
+    lastResponseDisplay = lastAiResponse; // Sync to raw global string to prevent constant redrawing!
   }
 
   // ── 3. Calm Animation (Neural Pulse) ──────────────────────────
