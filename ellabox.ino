@@ -483,6 +483,7 @@ WiFiClient*      nodeWsClient = nullptr;
 bool             nodeWsConnected = false;
 bool             nodeWsConnecting = false;
 SemaphoreHandle_t nodeMux = NULL; // Concurrency safety for Node Server
+SemaphoreHandle_t mqttMux = NULL; // Concurrency safety for MQTT
 unsigned long    nextNodeWsReconnectMs = 0;
 unsigned long    nodeAudioPendingSince = 0; // for stuck-state timeout
 unsigned long    lastNodeWsKeepAliveMs = 0; // for WebSocket ping keep-alive
@@ -3226,7 +3227,7 @@ static void serviceNodeWebSocketKeepAlive() {
 
 void connectNodeServer() {
   if (nodeWsConnecting || nodeWsConnected) return;
-  if (millis() < nextNodeWsReconnectMs) return;
+  if (!aiInputUsesMic || millis() < nextNodeWsReconnectMs) return;
   if (!networkAvailable()) return;
   
   nodeWsConnecting = true;
@@ -3307,17 +3308,7 @@ void connectNodeServer() {
   nodeWsConnecting = false;
   lastNodeWsKeepAliveMs = millis(); // Initialize keep-alive timer
   Serial.println("[NODE] Connected to Proxy Server!");
-  if (aiInputUsesMic && currentMode == MODE_AI) {
-    sendCurrentNodeContext(); // Only send full AI context in AI mode
-  } else {
-    // In Normal mode, announce ourselves so the server registers the connection
-    DynamicJsonDocument hb(128);
-    hb["type"] = "hello";
-    hb["mode"] = "NORMAL";
-    String hbStr; serializeJson(hb, hbStr);
-    nodeWsSendText(hbStr.c_str());
-    Serial.println("[NODE] Control socket ready (Normal Mode)");
-  }
+  sendCurrentNodeContext();
 }
 
 void streamMicToNodeServer() {
@@ -5771,6 +5762,8 @@ void publishRobotAssistStatus(bool force) {
 
   if (!force && millis() - lastRobotAssistPush < ROBOT_ASSIST_PUSH_INTERVAL_MS) return;
 
+  if (mqttMux && xSemaphoreTake(mqttMux, pdMS_TO_TICKS(50)) != pdTRUE) return;
+
   StaticJsonDocument<320> doc;
   doc["tofReady"] = tofReady;
   doc["tofHasReading"] = tofHasReading;
@@ -5796,6 +5789,7 @@ void publishRobotAssistStatus(bool force) {
   if (mqtt.publish("ella/robotAssist", payload.c_str(), true)) {
     lastRobotAssistPush = millis();
   }
+  xSemaphoreGive(mqttMux);
   publishStatusSnapshot(force);
 }
 
@@ -6109,15 +6103,17 @@ void updateRobotAssistModes() {
 void sttTask(void* parameter) {
     Serial.println("[STT Task] Started on Core 0");
     while (true) {
-        if (USE_NODE_SERVER && currentMode == MODE_NORMAL && networkAvailable()) {
-          // Control-only socket in Normal Mode: keep the server informed for Telegram/WebApp
-          if (nodeMux && xSemaphoreTake(nodeMux, pdMS_TO_TICKS(100)) == pdTRUE) {
-            if (!nodeWsConnected) connectNodeServer();
-            pumpNodeServerSocket();         // Receive telegram_command / motor frames
-            serviceNodeWebSocketKeepAlive(); // Keep the TCP connection alive
-            xSemaphoreGive(nodeMux);
+        // Core 0 MQTT Acceleration: Poll MQTT every 20ms in Normal Mode to ensure instant commands
+        if (currentMode == MODE_NORMAL && networkAvailable()) {
+          if (mqttMux && xSemaphoreTake(mqttMux, pdMS_TO_TICKS(10)) == pdTRUE) {
+            if (mqtt.connected()) {
+              mqtt.loop();
+            }
+            xSemaphoreGive(mqttMux);
           }
-        } else if (USE_NODE_SERVER && aiInputUsesMic && currentMode == MODE_AI && networkAvailable()) {
+        }
+
+        if (USE_NODE_SERVER && aiInputUsesMic && currentMode == MODE_AI && networkAvailable()) {
           if (nodeMux && xSemaphoreTake(nodeMux, pdMS_TO_TICKS(100)) == pdTRUE) {
             if (!nodeWsConnected) connectNodeServer();
             pumpNodeServerSocket();
@@ -6224,14 +6220,18 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 
 void reconnectMQTT() {
   if (offlineModeLocked || !networkAvailable() || currentMode == MODE_AI || networkIsQuiet() || isSpeaking || isProcessingAI) {
-    if (mqtt.connected()) {
-      mqtt.disconnect();
-      mqttClientNet->stop(); // Force stop to free TLS buffers
-      Serial.println("[MQTT] Paused while AI/audio/quiet mode is active");
+    if (mqttMux && xSemaphoreTake(mqttMux, pdMS_TO_TICKS(50)) == pdTRUE) {
+      if (mqtt.connected()) {
+        mqtt.disconnect();
+        mqttClientNet->stop(); // Force stop to free TLS buffers
+        Serial.println("[MQTT] Paused while AI/audio/quiet mode is active");
+      }
+      xSemaphoreGive(mqttMux);
     }
     return; 
   }
 
+  if (mqttMux && xSemaphoreTake(mqttMux, pdMS_TO_TICKS(50)) != pdTRUE) return;
 
   if (!mqtt.connected()) {
     if (millis() - lastMqttRetryMs > 10000) {
@@ -6243,20 +6243,26 @@ void reconnectMQTT() {
       
       // Ensure memory-safe state and insecure mode for each attempt
       mqttClientNet->setInsecure();
+      mqttClientNet->setNoDelay(true); // Disable TCP Nagle's buffering for instant delivery
       
       String clientId = "EllaBox-" + String(random(0xffff), HEX);
       if (mqtt.connect(clientId.c_str(), MQTT_USER, MQTT_PASS)) {
         Serial.println("[MQTT] connected");
         mqtt.subscribe("ella/commands/#");
         mqtt.subscribe("ella/settings/#");
+        
+        // Temporarily release mutex to allow inner status publishes to acquire it
+        xSemaphoreGive(mqttMux);
         publishStatusSnapshot(true);
         publishRobotAssistStatus(true);
+        xSemaphoreTake(mqttMux, portMAX_DELAY);
       } else {
         Serial.print("[MQTT] failed, rc=");
         Serial.println(mqtt.state());
       }
     }
   }
+  xSemaphoreGive(mqttMux);
 }
 
 void setup() {
@@ -6326,6 +6332,7 @@ void setup() {
   // Create Mutexes for socket safety
   nodeMux = xSemaphoreCreateMutex();
   vAgentMux = xSemaphoreCreateMutex();
+  mqttMux = xSemaphoreCreateMutex();
   
   // SHOW LOADING SCREEN IMMEDIATELY
   drawLoadingScreen("System Init...", 5);
@@ -7151,6 +7158,8 @@ void publishStatusSnapshot(bool force) {
   if (!force && millis() - lastStatusPublishMs < 250) return;
   if (audioTransitionIsQuiet()) return;
 
+  if (mqttMux && xSemaphoreTake(mqttMux, pdMS_TO_TICKS(50)) != pdTRUE) return;
+
   StaticJsonDocument<384> doc;
   doc["online"] = networkAvailable();
   doc["mode"] = currentMode == MODE_AI ? "AI" : "NORMAL";
@@ -7172,30 +7181,12 @@ void publishStatusSnapshot(bool force) {
   if (mqtt.publish("ella/status", payload.c_str(), true)) {
     lastStatusPublishMs = millis();
   }
-
-  // Also push to the Node control socket so Telegram /status replies instantly from cache
-  if (nodeWsConnected && currentMode == MODE_NORMAL) {
-    // Inject sensor readings into the status_update so the server cache is rich
-    StaticJsonDocument<512> nodeDoc;
-    nodeDoc["type"] = "status_update";
-    nodeDoc["mode"] = "NORMAL";
-    nodeDoc["temperature"] = isnan(temp_aht) ? 0.0f : temp_aht;
-    nodeDoc["humidity"] = isnan(humidity_aht) ? 0.0f : humidity_aht;
-    nodeDoc["aqi"] = aqi_val;
-    nodeDoc["heartRate"] = isnan(max30102_hr) ? 0.0f : max30102_hr;
-    nodeDoc["spo2"] = isnan(max30102_spo2) ? 0.0f : max30102_spo2;
-    nodeDoc["bodyTemp"] = isnan(max30102_temp) ? 0.0f : max30102_temp;
-    nodeDoc["tofDistanceCm"] = tofHasReading ? (tofFilteredMm / 10.0f) : 0.0f;
-    nodeDoc["guardMode"] = guardModeEnabled;
-    nodeDoc["isSpeaking"] = isSpeaking;
-    String nodePayload;
-    serializeJson(nodeDoc, nodePayload);
-    nodeWsSendText(nodePayload.c_str());
-  }
+  xSemaphoreGive(mqttMux);
 }
 
 void publishRoomMapSnapshot(uint16_t frontMm, uint16_t leftMm, uint16_t rightMm, float headingDeg) {
   if (!mqtt.connected()) return;
+  if (mqttMux && xSemaphoreTake(mqttMux, pdMS_TO_TICKS(50)) != pdTRUE) return;
 
   clearSlamMap();
   const int center = SLAM_MAP_SIZE / 2;
@@ -7217,6 +7208,7 @@ void publishRoomMapSnapshot(uint16_t frontMm, uint16_t leftMm, uint16_t rightMm,
   static const size_t encodedCap = ((packedBytes + 2) / 3) * 4 + 4;
   unsigned char encoded[encodedCap];
   if (mbedtls_base64_encode(encoded, sizeof(encoded) - 1, &encodedLen, packed, packedBytes) != 0) {
+    if (mqttMux) xSemaphoreGive(mqttMux);
     return;
   }
   encoded[encodedLen] = '\0';
@@ -7235,6 +7227,7 @@ void publishRoomMapSnapshot(uint16_t frontMm, uint16_t leftMm, uint16_t rightMm,
   String payload;
   serializeJson(doc, payload);
   mqtt.publish("ella/map", payload.c_str(), true);
+  xSemaphoreGive(mqttMux);
 }
 
 void enableMicAIInput() {
@@ -8884,7 +8877,7 @@ void drawAIScreen(bool force) {
         tft.setCursor(15, y);
       }
     }
-    lastInterimDisplay = currentInterimText;
+    lastInterimDisplay = text;
   }
 
   // ── 2. AI Response ────────────────────────────────────────────
@@ -8925,7 +8918,7 @@ void drawAIScreen(bool force) {
         tft.setCursor(15, y);
       }
     }
-    lastResponseDisplay = lastAiResponse;
+    lastResponseDisplay = text;
   }
 
   // ── 3. Calm Animation (Neural Pulse) ──────────────────────────
@@ -14279,15 +14272,17 @@ void checkSleepTracking() {
 void loop() {
   if (currentMode != MODE_AI) {
     reconnectMQTT();
-  } else if (mqtt.connected()) {
-    mqtt.disconnect();
-    mqttClientNet->stop();
-    Serial.println("[MQTT] Disconnected during AI mode");
+  } else if (mqttMux && xSemaphoreTake(mqttMux, pdMS_TO_TICKS(50)) == pdTRUE) {
+    if (mqtt.connected()) {
+      mqtt.disconnect();
+      mqttClientNet->stop();
+      Serial.println("[MQTT] Disconnected during AI mode");
+    }
+    xSemaphoreGive(mqttMux);
   }
 
-  if (currentMode != MODE_AI && mqtt.connected()) {
-    mqtt.loop();
-  }
+  // mqtt.loop() moved to Core 0 sttTask for extreme low latency!
+
   if (currentMode == MODE_AI) {
     serviceLlmWebSocketKeepAlive();
   } else if (llmWsConnected) {
@@ -14855,11 +14850,14 @@ void loop() {
 
 void pushSensorDataToMQTT(FirebaseJson& json) {
   if (currentMode == MODE_AI || networkIsQuiet() || !mqtt.connected()) return;
-  if (mqtt.connected()) {
-    String mqttPayload;
-    json.toString(mqttPayload);
-    mqtt.publish("ella/vitals", mqttPayload.c_str());
-    Serial.println("[MQTT] Published vitals to ella/vitals");
+  if (mqttMux && xSemaphoreTake(mqttMux, pdMS_TO_TICKS(50)) == pdTRUE) {
+    if (mqtt.connected()) {
+      String mqttPayload;
+      json.toString(mqttPayload);
+      mqtt.publish("ella/vitals", mqttPayload.c_str());
+      Serial.println("[MQTT] Published vitals to ella/vitals");
+    }
+    xSemaphoreGive(mqttMux);
   }
 }
 

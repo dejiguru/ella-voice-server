@@ -10,6 +10,361 @@
 
 // Increase loop() task stack from default 8KB to 16KB
 // Prevents stack overflow in deep call chains (askAI → Firebase → TTS)
+#line 11 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+size_t getArduinoLoopTaskStackSize();
+#line 501 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+size_t nodeAudioAvailable();
+#line 507 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+static void nodeAudioEnqueue(const uint8_t* data, size_t len);
+#line 607 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+bool audioTransitionIsQuiet();
+#line 618 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+bool networkIsQuiet();
+#line 662 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void setSpeakingStatusFirebase(bool speaking);
+#line 675 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void setLastResponseFirebase(const String& text);
+#line 689 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void flushPendingSpeakingStatus();
+#line 696 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void flushPendingLastResponse();
+#line 755 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void setModeStatusFirebase(const char* modeText);
+#line 768 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void flushPendingModeStatus();
+#line 795 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void clearMicAIReconnectSchedule();
+#line 800 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void scheduleMicAIReconnect(unsigned long delayMs, const char* reason);
+#line 882 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+bool touchUiRecentlyHandled();
+#line 1164 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void removeAllOccurrencesIgnoreCase(String& text, const char* needle);
+#line 1181 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+String stripDecorativeChatFormatting(String text);
+#line 1222 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+String tightenAiReply(String reply, bool longForm);
+#line 1340 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void reserveHeapAfterAI();
+#line 1401 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+bool ensureHeapForAICall();
+#line 1500 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+String sanitizeMusicRequest(String raw);
+#line 1544 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void clearStringKeepCapacity(String& value);
+#line 1560 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+String stripBracketTags(String text);
+#line 1584 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void trimConversationSummary();
+#line 1597 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+static bool getCurrentUnixTimeSeconds(unsigned long& epochSeconds);
+#line 1754 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+String buildSensorContext();
+#line 1795 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void sendCurrentNodeContext();
+#line 1912 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void stagePendingReminder(const String& title, const String& timeStr, const String& typeStr, bool needsCloudSync);
+#line 1969 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void tcaselect(uint8_t i);
+#line 2014 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void clearMicBuffer();
+#line 2021 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void clearNodeAudioState();
+#line 2032 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void resumeAiMicAfterSpeech(const char* reason);
+#line 2056 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+static bool readAaiBytes(uint8_t* dst, size_t len, unsigned long timeoutMs);
+#line 2084 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+static String makeWebSocketKey();
+#line 2106 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+static bool sendWebSocketFrame(uint8_t opcode, const uint8_t* payload, size_t length);
+#line 2133 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+static bool sendWebSocketText(const char* text);
+#line 2138 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+static bool sendWebSocketBinary(const uint8_t* payload, size_t len);
+#line 2142 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+static bool sendWebSocketPong(const uint8_t* payload, size_t len);
+#line 2146 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+static bool sendWsFrameToClient(WiFiClientSecure* client, uint8_t opcode, const uint8_t* payload, size_t length);
+#line 2186 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+static bool sendWsTextToClient(WiFiClientSecure* client, const String& text);
+#line 2190 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+static bool readWsFrameFromClient(WiFiClientSecure* client, uint8_t& opcode, uint8_t* payload, size_t payloadCapacity, size_t& payloadLen, unsigned long timeoutMs);
+#line 2265 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+static bool connectLlmWebSocket();
+#line 2324 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+static bool ensureLlmWebSocketSession(const String& systemPrompt);
+#line 2346 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+static void serviceLlmWebSocketKeepAlive();
+#line 2357 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+static String getLlmWebSocketResponse(const String& systemPrompt, const String& userText);
+#line 2446 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+static void parseByteDanceResponse(uint8_t* data, size_t len);
+#line 2491 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+static bool sendByteDanceBinary(uint8_t type, const uint8_t* data, size_t len);
+#line 2516 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+static void sendByteDanceConfig();
+#line 2534 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+static bool ensureDeepgramBatchCapacity(size_t neededBytes);
+#line 2555 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+static void clearDeepgramBatchBuffer();
+#line 2561 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+static void handleAaiTextPayload(const char* payload, size_t length);
+#line 2664 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+static String deepgramExtractTranscript(const String& body);
+#line 2766 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void connectByteDanceASR();
+#line 2820 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void streamMicToByteDance();
+#line 2845 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void pumpByteDanceSocket();
+#line 3015 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void disconnectAssemblyAI(unsigned long reconnectDelayMs);
+#line 3030 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void streamMicToAAI();
+#line 3088 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void pumpAaiSocket();
+#line 3149 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+static bool nodeWsSendFrame(uint8_t opcode, const uint8_t* payload, size_t length);
+#line 3186 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+static bool nodeWsSendBinary(const uint8_t* payload, size_t len);
+#line 3190 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+static bool nodeWsSendText(const char* text);
+#line 3195 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+static int16_t applyMicGain(int16_t sample);
+#line 3203 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void disconnectNodeServer();
+#line 3217 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+static void serviceNodeWebSocketKeepAlive();
+#line 3228 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void connectNodeServer();
+#line 3314 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void streamMicToNodeServer();
+#line 3392 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+static bool readNodeBytes(uint8_t* dst, size_t len, unsigned long timeoutMs);
+#line 3420 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void pumpNodeServerSocket();
+#line 3748 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+static bool vAgentSendFrame(uint8_t opcode, const uint8_t* payload, size_t length);
+#line 3770 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+static bool vAgentSendText(const char* text);
+#line 3774 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+static bool vAgentSendBinary(const uint8_t* data, size_t len);
+#line 3972 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void playVoiceAgentAudio(const uint8_t* data, size_t len);
+#line 4010 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void drainNodeAudio();
+#line 4093 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void handleVoiceAgentText(const char* payload, size_t length);
+#line 4521 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void freeMicTestBuffer();
+#line 4531 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void resumeMicTestDeepgramIfNeeded();
+#line 4539 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void finalizeMicTestBufferHeader();
+#line 4750 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void setDrv8833Motor(uint8_t in1Pin, uint8_t in2Pin, int speed);
+#line 4766 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void setMotorL(int speed);
+#line 4770 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void setMotorR(int speed);
+#line 4774 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void moveNeck(int angle);
+#line 4786 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+bool imuProbeAddress(uint8_t addr);
+#line 4792 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+bool imuWriteReg(uint8_t reg, uint8_t value);
+#line 4800 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+bool imuReadRegs(uint8_t reg, uint8_t* buffer, size_t len);
+#line 4815 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+bool readIMUGyroZDps(float& gyroZDps);
+#line 4824 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+bool readIMUAccelG(float& accelXg, float& accelYg, float& accelZg);
+#line 4838 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+float normalizeAngleDeg(float angle);
+#line 4844 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void updateIMUOrientation();
+#line 4868 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+bool initIMU();
+#line 4900 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void calibrateIMUGyro();
+#line 4932 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+bool isManualForwardMotionActive();
+#line 4939 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void updateIMUNavigation();
+#line 5016 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void checkIMUSafety();
+#line 5103 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void stopMotorMotion(bool clearQueue);
+#line 5137 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void startTimedMotorMotion(int leftSpeed, int rightSpeed, int durationMs, bool holdStraight);
+#line 5156 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void startManualMotorMotion(int leftSpeed, int rightSpeed, bool holdStraight);
+#line 5175 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void startTimedIdleAction(int durationMs);
+#line 5196 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void startTimedTurnMotion(bool turnLeft, int speed, float targetDeg);
+#line 5220 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+String normalizeMovementCommand(String cmd);
+#line 5235 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+bool isFrontPathClearForShowyMotion();
+#line 5363 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+String performSpatialSurvey(bool exploreMode, bool speakFriendly);
+#line 5458 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+bool executeMovementCommand(String cmd);
+#line 5536 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+bool applyManualMotorCommand(String cmd);
+#line 5624 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void processMovementQueue();
+#line 5697 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+float readUltrasonicDistanceCm();
+#line 5759 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void publishRobotAssistStatus(bool force);
+#line 5796 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void clearGuardAlarm(bool redraw);
+#line 5809 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void triggerGuardAlarm(uint16_t distanceMm);
+#line 5927 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void updateGuardAlarmPattern();
+#line 6103 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void sttTask(void* parameter);
+#line 6221 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void reconnectMQTT();
+#line 6268 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void setup();
+#line 6857 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void processTouchScreen();
+#line 6980 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void processTactileSwitch();
+#line 7310 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void setAIInputMode(bool useMicInput, bool force);
+#line 7342 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+int extractCountAfterKeyword(const String& text, const char* keyword, int defaultCount);
+#line 7375 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+bool isWordBoundaryChar(char c);
+#line 7400 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+bool hasCommandPrefixBeforePhrase(const String& text, int phrasePos);
+#line 7427 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+String normalizeCommandText(String text);
+#line 7444 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+bool handleWebMotionChat(const String& msg, String& spokenReply);
+#line 7591 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void scheduleDeferredAiAction(int action, const String& param, unsigned long delayMs);
+#line 7739 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void drawMusicUI(bool force);
+#line 7851 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void read_max30102();
+#line 7959 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void drawNavigationBar();
+#line 7992 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void drawStatusDot(bool connected);
+#line 8000 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void drawNormalScreen(bool force);
+#line 8718 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void drawScreenSaver();
+#line 8765 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void drawAIScreen(bool force);
+#line 9306 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void drawLoadingScreen(String status, int percent);
+#line 9417 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void checkRemoteCommands();
+#line 9779 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void checkEnvironmentalAlerts();
+#line 9877 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void checkFocusMode();
+#line 9978 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void checkContextualAlerts();
+#line 10134 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void pollTelegramDirect();
+#line 10205 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void checkDailySummary();
+#line 10246 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void checkSmartRoutines();
+#line 10307 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void checkReminders();
+#line 10628 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+bool isRecallRequest(const String& userQuery);
+#line 10640 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+bool isNameMentionCheck(const String& userQuery);
+#line 10712 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+bool isExplicitCheckupRequest(const String& userQuery);
+#line 10723 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+bool inferFallbackActionFromUserQuery(const String& userQuery, String& cmd, String& param);
+#line 10947 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+String executeRobotActionTool(const String& action, const String& param, const String& title, const String& timeStr, const String& typeStr);
+#line 11133 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+String buildWebSearchSynthesisReply(const String& userText, const String& searchQuery, const String& searchResult);
+#line 11142 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void purgeUserIdentityMemoryNotes();
+#line 11222 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+static String extractMemoryTargetFromRequest(const String& msg, const char* phrase);
+#line 11327 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+uint8_t getRecentUserMessages(String messages[], uint8_t maxCount);
+#line 11350 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+bool recentMessagesContainNameClaim(String messages[], uint8_t count, String& matched);
+#line 11429 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+String buildRecallReply(const String& userQuery);
+#line 11454 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+String buildEnvironmentReportReply();
+#line 11538 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+String getNavigationContext();
+#line 12065 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+static bool llmReplyInvalid(const String& reply);
+#line 12069 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+static bool isCasualGreetingText(const String& text);
+#line 12083 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+static String requestLlmWithFallback(const String& systemPrompt, const String& userText);
+#line 12113 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+String getEllaSystemPrompt();
+#line 12264 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+String getEllaLiveContext();
+#line 12812 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+bool startOpenAITtsPlayback(const String& text);
+#line 12885 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+bool enqueueTtsChunk(const String& chunk);
+#line 12894 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+String dequeueTtsChunk();
+#line 12904 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+int findSpeakableCut(const String& text, int maxChars);
+#line 12924 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+bool splitTextIntoTtsChunks(const String& text, int chunkLimit);
+#line 12960 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+bool maybeScheduleEarlyTtsRetry(const char* reason, unsigned long startedMs);
+#line 12983 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+bool beginTtsSpeech(const String& text);
+#line 13107 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+bool startNextQueuedTtsChunk();
+#line 13185 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void speakText(const char* text, bool longForm);
+#line 13275 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void clearAIResponse();
+#line 13302 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+bool checkRemoteStopCommand();
+#line 13324 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void stopActiveAudioPlayback(bool scheduleMicRestart);
+#line 13504 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void audio_info(const char *info);
+#line 13542 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void audio_error(const char *info);
+#line 13573 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+bool looksLikePrintableCommand(const String& text);
+#line 13588 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+bool readCleanSerialLine(String& outLine);
+#line 13638 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void playMusic(String genre);
+#line 14049 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void updateGuidedMeditation();
+#line 14124 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void checkFallDetection();
+#line 14139 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void controlSmartLight(String action);
+#line 14160 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void syncAlertThresholds();
+#line 14272 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void loop();
+#line 15164 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
+void drawAutonomousScreen(bool force);
+#line 11 "/home/dejiguru/Arduino/ellabox/ellabox.ino"
 SET_LOOP_TASK_STACK_SIZE(16384);
 
 struct SpiRamAllocator {
@@ -485,6 +840,7 @@ WiFiClient*      nodeWsClient = nullptr;
 bool             nodeWsConnected = false;
 bool             nodeWsConnecting = false;
 SemaphoreHandle_t nodeMux = NULL; // Concurrency safety for Node Server
+SemaphoreHandle_t mqttMux = NULL; // Concurrency safety for MQTT
 unsigned long    nextNodeWsReconnectMs = 0;
 unsigned long    nodeAudioPendingSince = 0; // for stuck-state timeout
 unsigned long    lastNodeWsKeepAliveMs = 0; // for WebSocket ping keep-alive
@@ -3228,7 +3584,7 @@ static void serviceNodeWebSocketKeepAlive() {
 
 void connectNodeServer() {
   if (nodeWsConnecting || nodeWsConnected) return;
-  if (millis() < nextNodeWsReconnectMs) return;
+  if (!aiInputUsesMic || millis() < nextNodeWsReconnectMs) return;
   if (!networkAvailable()) return;
   
   nodeWsConnecting = true;
@@ -3309,17 +3665,7 @@ void connectNodeServer() {
   nodeWsConnecting = false;
   lastNodeWsKeepAliveMs = millis(); // Initialize keep-alive timer
   Serial.println("[NODE] Connected to Proxy Server!");
-  if (aiInputUsesMic && currentMode == MODE_AI) {
-    sendCurrentNodeContext(); // Only send full AI context in AI mode
-  } else {
-    // In Normal mode, announce ourselves so the server registers the connection
-    DynamicJsonDocument hb(128);
-    hb["type"] = "hello";
-    hb["mode"] = "NORMAL";
-    String hbStr; serializeJson(hb, hbStr);
-    nodeWsSendText(hbStr.c_str());
-    Serial.println("[NODE] Control socket ready (Normal Mode)");
-  }
+  sendCurrentNodeContext();
 }
 
 void streamMicToNodeServer() {
@@ -5773,6 +6119,8 @@ void publishRobotAssistStatus(bool force) {
 
   if (!force && millis() - lastRobotAssistPush < ROBOT_ASSIST_PUSH_INTERVAL_MS) return;
 
+  if (mqttMux && xSemaphoreTake(mqttMux, pdMS_TO_TICKS(50)) != pdTRUE) return;
+
   StaticJsonDocument<320> doc;
   doc["tofReady"] = tofReady;
   doc["tofHasReading"] = tofHasReading;
@@ -5798,6 +6146,7 @@ void publishRobotAssistStatus(bool force) {
   if (mqtt.publish("ella/robotAssist", payload.c_str(), true)) {
     lastRobotAssistPush = millis();
   }
+  xSemaphoreGive(mqttMux);
   publishStatusSnapshot(force);
 }
 
@@ -6111,15 +6460,17 @@ void updateRobotAssistModes() {
 void sttTask(void* parameter) {
     Serial.println("[STT Task] Started on Core 0");
     while (true) {
-        if (USE_NODE_SERVER && currentMode == MODE_NORMAL && networkAvailable()) {
-          // Control-only socket in Normal Mode: keep the server informed for Telegram/WebApp
-          if (nodeMux && xSemaphoreTake(nodeMux, pdMS_TO_TICKS(100)) == pdTRUE) {
-            if (!nodeWsConnected) connectNodeServer();
-            pumpNodeServerSocket();         // Receive telegram_command / motor frames
-            serviceNodeWebSocketKeepAlive(); // Keep the TCP connection alive
-            xSemaphoreGive(nodeMux);
+        // Core 0 MQTT Acceleration: Poll MQTT every 20ms in Normal Mode to ensure instant commands
+        if (currentMode == MODE_NORMAL && networkAvailable()) {
+          if (mqttMux && xSemaphoreTake(mqttMux, pdMS_TO_TICKS(10)) == pdTRUE) {
+            if (mqtt.connected()) {
+              mqtt.loop();
+            }
+            xSemaphoreGive(mqttMux);
           }
-        } else if (USE_NODE_SERVER && aiInputUsesMic && currentMode == MODE_AI && networkAvailable()) {
+        }
+
+        if (USE_NODE_SERVER && aiInputUsesMic && currentMode == MODE_AI && networkAvailable()) {
           if (nodeMux && xSemaphoreTake(nodeMux, pdMS_TO_TICKS(100)) == pdTRUE) {
             if (!nodeWsConnected) connectNodeServer();
             pumpNodeServerSocket();
@@ -6226,14 +6577,18 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 
 void reconnectMQTT() {
   if (offlineModeLocked || !networkAvailable() || currentMode == MODE_AI || networkIsQuiet() || isSpeaking || isProcessingAI) {
-    if (mqtt.connected()) {
-      mqtt.disconnect();
-      mqttClientNet->stop(); // Force stop to free TLS buffers
-      Serial.println("[MQTT] Paused while AI/audio/quiet mode is active");
+    if (mqttMux && xSemaphoreTake(mqttMux, pdMS_TO_TICKS(50)) == pdTRUE) {
+      if (mqtt.connected()) {
+        mqtt.disconnect();
+        mqttClientNet->stop(); // Force stop to free TLS buffers
+        Serial.println("[MQTT] Paused while AI/audio/quiet mode is active");
+      }
+      xSemaphoreGive(mqttMux);
     }
     return; 
   }
 
+  if (mqttMux && xSemaphoreTake(mqttMux, pdMS_TO_TICKS(50)) != pdTRUE) return;
 
   if (!mqtt.connected()) {
     if (millis() - lastMqttRetryMs > 10000) {
@@ -6245,20 +6600,26 @@ void reconnectMQTT() {
       
       // Ensure memory-safe state and insecure mode for each attempt
       mqttClientNet->setInsecure();
+      mqttClientNet->setNoDelay(true); // Disable TCP Nagle's buffering for instant delivery
       
       String clientId = "EllaBox-" + String(random(0xffff), HEX);
       if (mqtt.connect(clientId.c_str(), MQTT_USER, MQTT_PASS)) {
         Serial.println("[MQTT] connected");
         mqtt.subscribe("ella/commands/#");
         mqtt.subscribe("ella/settings/#");
+        
+        // Temporarily release mutex to allow inner status publishes to acquire it
+        xSemaphoreGive(mqttMux);
         publishStatusSnapshot(true);
         publishRobotAssistStatus(true);
+        xSemaphoreTake(mqttMux, portMAX_DELAY);
       } else {
         Serial.print("[MQTT] failed, rc=");
         Serial.println(mqtt.state());
       }
     }
   }
+  xSemaphoreGive(mqttMux);
 }
 
 void setup() {
@@ -6328,6 +6689,7 @@ void setup() {
   // Create Mutexes for socket safety
   nodeMux = xSemaphoreCreateMutex();
   vAgentMux = xSemaphoreCreateMutex();
+  mqttMux = xSemaphoreCreateMutex();
   
   // SHOW LOADING SCREEN IMMEDIATELY
   drawLoadingScreen("System Init...", 5);
@@ -7153,6 +7515,8 @@ void publishStatusSnapshot(bool force) {
   if (!force && millis() - lastStatusPublishMs < 250) return;
   if (audioTransitionIsQuiet()) return;
 
+  if (mqttMux && xSemaphoreTake(mqttMux, pdMS_TO_TICKS(50)) != pdTRUE) return;
+
   StaticJsonDocument<384> doc;
   doc["online"] = networkAvailable();
   doc["mode"] = currentMode == MODE_AI ? "AI" : "NORMAL";
@@ -7174,30 +7538,12 @@ void publishStatusSnapshot(bool force) {
   if (mqtt.publish("ella/status", payload.c_str(), true)) {
     lastStatusPublishMs = millis();
   }
-
-  // Also push to the Node control socket so Telegram /status replies instantly from cache
-  if (nodeWsConnected && currentMode == MODE_NORMAL) {
-    // Inject sensor readings into the status_update so the server cache is rich
-    StaticJsonDocument<512> nodeDoc;
-    nodeDoc["type"] = "status_update";
-    nodeDoc["mode"] = "NORMAL";
-    nodeDoc["temperature"] = isnan(temp_aht) ? 0.0f : temp_aht;
-    nodeDoc["humidity"] = isnan(humidity_aht) ? 0.0f : humidity_aht;
-    nodeDoc["aqi"] = aqi_val;
-    nodeDoc["heartRate"] = isnan(max30102_hr) ? 0.0f : max30102_hr;
-    nodeDoc["spo2"] = isnan(max30102_spo2) ? 0.0f : max30102_spo2;
-    nodeDoc["bodyTemp"] = isnan(max30102_temp) ? 0.0f : max30102_temp;
-    nodeDoc["tofDistanceCm"] = tofHasReading ? (tofFilteredMm / 10.0f) : 0.0f;
-    nodeDoc["guardMode"] = guardModeEnabled;
-    nodeDoc["isSpeaking"] = isSpeaking;
-    String nodePayload;
-    serializeJson(nodeDoc, nodePayload);
-    nodeWsSendText(nodePayload.c_str());
-  }
+  xSemaphoreGive(mqttMux);
 }
 
 void publishRoomMapSnapshot(uint16_t frontMm, uint16_t leftMm, uint16_t rightMm, float headingDeg) {
   if (!mqtt.connected()) return;
+  if (mqttMux && xSemaphoreTake(mqttMux, pdMS_TO_TICKS(50)) != pdTRUE) return;
 
   clearSlamMap();
   const int center = SLAM_MAP_SIZE / 2;
@@ -7219,6 +7565,7 @@ void publishRoomMapSnapshot(uint16_t frontMm, uint16_t leftMm, uint16_t rightMm,
   static const size_t encodedCap = ((packedBytes + 2) / 3) * 4 + 4;
   unsigned char encoded[encodedCap];
   if (mbedtls_base64_encode(encoded, sizeof(encoded) - 1, &encodedLen, packed, packedBytes) != 0) {
+    if (mqttMux) xSemaphoreGive(mqttMux);
     return;
   }
   encoded[encodedLen] = '\0';
@@ -7237,6 +7584,7 @@ void publishRoomMapSnapshot(uint16_t frontMm, uint16_t leftMm, uint16_t rightMm,
   String payload;
   serializeJson(doc, payload);
   mqtt.publish("ella/map", payload.c_str(), true);
+  xSemaphoreGive(mqttMux);
 }
 
 void enableMicAIInput() {
@@ -14281,15 +14629,17 @@ void checkSleepTracking() {
 void loop() {
   if (currentMode != MODE_AI) {
     reconnectMQTT();
-  } else if (mqtt.connected()) {
-    mqtt.disconnect();
-    mqttClientNet->stop();
-    Serial.println("[MQTT] Disconnected during AI mode");
+  } else if (mqttMux && xSemaphoreTake(mqttMux, pdMS_TO_TICKS(50)) == pdTRUE) {
+    if (mqtt.connected()) {
+      mqtt.disconnect();
+      mqttClientNet->stop();
+      Serial.println("[MQTT] Disconnected during AI mode");
+    }
+    xSemaphoreGive(mqttMux);
   }
 
-  if (currentMode != MODE_AI && mqtt.connected()) {
-    mqtt.loop();
-  }
+  // mqtt.loop() moved to Core 0 sttTask for extreme low latency!
+
   if (currentMode == MODE_AI) {
     serviceLlmWebSocketKeepAlive();
   } else if (llmWsConnected) {
@@ -14857,11 +15207,14 @@ void loop() {
 
 void pushSensorDataToMQTT(FirebaseJson& json) {
   if (currentMode == MODE_AI || networkIsQuiet() || !mqtt.connected()) return;
-  if (mqtt.connected()) {
-    String mqttPayload;
-    json.toString(mqttPayload);
-    mqtt.publish("ella/vitals", mqttPayload.c_str());
-    Serial.println("[MQTT] Published vitals to ella/vitals");
+  if (mqttMux && xSemaphoreTake(mqttMux, pdMS_TO_TICKS(50)) == pdTRUE) {
+    if (mqtt.connected()) {
+      String mqttPayload;
+      json.toString(mqttPayload);
+      mqtt.publish("ella/vitals", mqttPayload.c_str());
+      Serial.println("[MQTT] Published vitals to ella/vitals");
+    }
+    xSemaphoreGive(mqttMux);
   }
 }
 
