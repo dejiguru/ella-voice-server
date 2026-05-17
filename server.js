@@ -1,4 +1,5 @@
 const WebSocket = require('ws');
+const mqtt = require('mqtt');
 const express = require('express');
 const http = require('http');
 const fetch = (...args) => import('node-fetch').then(({ default: f }) => f(...args));
@@ -15,6 +16,56 @@ let TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 let TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 let telegramBot = null;
 let esp32Connection = null; // Track active ESP32 connection
+
+// Cache of the latest ELLA status — populated from MQTT and WebSocket
+let ellaStatusCache = null;    // Last full status payload from ESP32
+let ellaLastSeenMs = 0;        // Timestamp of last message from ESP32
+const ELLA_ONLINE_TIMEOUT_MS = 60000; // 60s — if no message, consider offline
+
+// ELLA is online if she either has an active WebSocket or has pushed MQTT/vitals recently
+const isEllaOnline = () => {
+    const wsOpen = esp32Connection && esp32Connection.readyState === WebSocket.OPEN;
+    const recentlySeen = (Date.now() - ellaLastSeenMs) < ELLA_ONLINE_TIMEOUT_MS;
+    return wsOpen || recentlySeen;
+};
+
+// HiveMQ MQTT Integration to pull status snapshots & vitals while allowing Render to sleep
+const MQTT_HOST = process.env.MQTT_HOST || "29a395ae67d44ef5a9803532efe719ce.s1.eu.hivemq.cloud";
+const MQTT_PORT = process.env.MQTT_PORT || 8883;
+const MQTT_USER = process.env.MQTT_USER || "ellarobot";
+const MQTT_PASS = process.env.MQTT_PASS || "Ella1234";
+
+const mqttClient = mqtt.connect(`mqtts://${MQTT_HOST}:${MQTT_PORT}`, {
+    username: MQTT_USER,
+    password: MQTT_PASS,
+    rejectUnauthorized: false
+});
+
+mqttClient.on('connect', () => {
+    console.log('[MQTT] Connected to HiveMQ Cloud broker!');
+    mqttClient.subscribe('ella/status');
+    mqttClient.subscribe('ella/robotAssist');
+    mqttClient.subscribe('ella/vitals');
+});
+
+mqttClient.on('message', (topic, message) => {
+    try {
+        const payload = JSON.parse(message.toString());
+        console.log(`[MQTT Server] Received on ${topic}:`, payload);
+        ellaLastSeenMs = Date.now();
+
+        // Update the central status cache for instant Telegram responses
+        if (topic === 'ella/status' || topic === 'ella/robotAssist' || topic === 'ella/vitals') {
+            ellaStatusCache = { ...ellaStatusCache, ...payload };
+        }
+    } catch (e) {
+        console.warn(`[MQTT Server] Failed to parse message on ${topic}:`, e.message);
+    }
+});
+
+mqttClient.on('error', (err) => {
+    console.error('[MQTT Server] Error:', err.message);
+});
 
 // Function to initialize or re-initialize the Telegram bot
 const initTelegramBot = (token, chatId = TELEGRAM_CHAT_ID) => {
@@ -61,14 +112,36 @@ const initTelegramBot = (token, chatId = TELEGRAM_CHAT_ID) => {
 
             // Handle commands
             if (text === '/status' || text === '/start') {
-                if (esp32Connection && esp32Connection.readyState === WebSocket.OPEN) {
-                    esp32Connection.send(JSON.stringify({ type: 'telegram_command', command: 'status' }));
+                if (isEllaOnline()) {
+                    if (ellaStatusCache) {
+                        // Reply instantly from cache
+                        const c = ellaStatusCache;
+                        const reply = `🤖 <b>ELLA Status</b>\n\n` +
+                            `🟢 <b>Online</b> | Mode: ${c.mode || 'NORMAL'}\n` +
+                            `🌡 Temp: <b>${c.temperature != null ? c.temperature.toFixed(1) + '°C' : 'N/A'}</b>\n` +
+                            `💧 Humidity: <b>${c.humidity != null ? c.humidity.toFixed(0) + '%' : 'N/A'}</b>\n` +
+                            `🌬 AQI: <b>${c.aqi != null ? c.aqi : 'N/A'}</b>\n` +
+                            `📡 ToF: <b>${c.tofDistanceCm != null ? c.tofDistanceCm.toFixed(1) + ' cm' : 'N/A'}</b>`;
+                        telegramBot.sendMessage(chatId, reply, { parse_mode: 'HTML' });
+                    } else {
+                        // Cache not populated yet — ask ESP32 directly
+                        esp32Connection.send(JSON.stringify({ type: 'telegram_command', command: 'status' }));
+                    }
                 } else {
                     telegramBot.sendMessage(chatId, '❌ ELLA is offline');
                 }
             } else if (text === '/health') {
-                if (esp32Connection && esp32Connection.readyState === WebSocket.OPEN) {
-                    esp32Connection.send(JSON.stringify({ type: 'telegram_command', command: 'health' }));
+                if (isEllaOnline()) {
+                    if (ellaStatusCache) {
+                        const c = ellaStatusCache;
+                        const reply = `❤️ <b>ELLA Health</b>\n\n` +
+                            `💓 Heart Rate: <b>${c.heartRate && c.heartRate > 0 ? c.heartRate.toFixed(0) + ' BPM' : 'No finger detected'}</b>\n` +
+                            `🩸 SpO2: <b>${c.spo2 && c.spo2 > 0 ? c.spo2.toFixed(0) + '%' : 'No finger detected'}</b>\n` +
+                            `🌡 Body Temp: <b>${c.bodyTemp && c.bodyTemp > 0 ? c.bodyTemp.toFixed(1) + '°C' : 'N/A'}</b>`;
+                        telegramBot.sendMessage(chatId, reply, { parse_mode: 'HTML' });
+                    } else {
+                        esp32Connection.send(JSON.stringify({ type: 'telegram_command', command: 'health' }));
+                    }
                 } else {
                     telegramBot.sendMessage(chatId, '❌ ELLA is offline');
                 }
@@ -1595,11 +1668,14 @@ wss.on('connection', (ws, request) => {
         if (isBinary) {
             const chunk = Buffer.isBuffer(message) ? message : Buffer.from(message);
             forwardAudioToDeepgram(chunk);
+            ellaLastSeenMs = Date.now(); // Binary audio = ELLA is alive
             return;
         }
 
         try {
             const data = JSON.parse(message.toString());
+            ellaLastSeenMs = Date.now(); // Any JSON message = ELLA is alive
+
             if (data.type === "context") {
                 latestContext = data.text;
                 if (data.text.includes("Mode: AI")) currentRobotMode = "AI";
@@ -1626,6 +1702,8 @@ wss.on('connection', (ws, request) => {
         console.log('ESP32 Disconnected');
         if (esp32Connection === ws) {
             esp32Connection = null;
+            // Don't clear ellaStatusCache — keeps last known state for a bit
+            console.log('[Control] ESP32 WebSocket closed');
         }
         if (dgKeepAliveInterval) clearInterval(dgKeepAliveInterval);
         if (dgReconnectTimer) clearTimeout(dgReconnectTimer);
